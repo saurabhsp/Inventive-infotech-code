@@ -1,0 +1,154 @@
+$pdfHtml = '
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    margin: 10px;
+  }
+
+  body {
+    font-family: DejaVu Sans, Arial, sans-serif;
+    font-size: 12px;
+    color:#111;
+  }
+
+  /* FULL PAGE BORDER – REPEATS ON EVERY PAGE */
+  .page-border {
+  position: fixed;
+  top: 10px;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  border: 1px solid #111;
+  z-index: -1;
+}
+
+
+  /* CONTENT INSIDE BORDER */
+  .page-content {
+    padding: 10px;
+    box-sizing: border-box;
+  }
+
+  .row { width:100%; border-collapse:collapse; }
+  .row td { vertical-align:top; }
+  .title { text-align:center; font-weight:bold; font-size:16px; padding:8px 0; }
+  .subtitle { text-align:center; font-size:11px; padding-bottom:6px; }
+  .pad { padding:8px; }
+  .b { font-weight:bold; }
+  .small { font-size:11px; }
+  .c { text-align:center; }
+  .r { text-align:right; }
+
+  .tbl { width:100%; border-collapse:collapse; }
+  .tbl th, .tbl td { border:1px solid #111; padding:6px; }
+  .tbl th { background:#e9e9e9; font-weight:bold; }
+  .totline td { border:1px solid #111; padding:6px; }
+
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+</style>
+</head>
+
+<body>
+
+<!-- PAGE BORDER (AUTO ON EVERY PAGE) -->
+<div class="page-border"></div>
+
+<!-- PAGE CONTENT -->
+<div class="page-content">
+
+  <div class="title">QUOTATION</div>
+  <div class="subtitle">(Subject to Satara Jurisdiction)</div>
+
+  <table class="row" style="border-top:1px solid #111;">
+    <tr>
+      <td style="width:50%; border-right:1px solid #111;" class="pad">
+        <div class="b">To,</div>
+        <div>'.$customerBlock.'</div>
+      </td>
+      <td style="width:50%;" class="pad">
+        '.($logoBase64 ? '<img src="'.$logoBase64.'" style="height:60px;"><br><br>' : '').'
+        <div style="font-size:16px; font-weight:bold;">
+    '.h($company['name'] ?? '').'
+</div>
+        <div class="small">'.h($company['addr']).'</div>
+        <div class="small">Ph: '.h($company['phone']).'</div>
+        <div class="small">Email: '.h($company['email']).'</div>
+        <div class="small">Web: '.h($company['web']).'</div>
+        <div class="small b">GST NO: '.h($company['gst']).'</div>
+        '.($company['cin'] ? '<div class="small b">CIN: '.h($company['cin']).'</div>' : '').'
+      </td>
+    </tr>
+  </table>
+
+  <table class="row" style="border-top:1px solid #111;">
+    <tr>
+      <td class="pad" style="width:50%; border-right:1px solid #111;">
+        <div><span class="b">Quotation No</span> : '.h($quoteNo).'</div>
+        <div><span class="b">Quotation Date</span> : '.h($qDate).'</div>
+      </td>
+      <td class="pad" style="width:50%;">
+        <div><span class="b">Kind Attn</span> : '.h($kindAttn).'</div>
+      </td>
+    </tr>
+  </table>
+
+  <div class="pad" style="border-top:1px solid #111;">
+    <div class="b">Subject:</div>
+    <div>'.nl2br(h($subject)).'</div>
+    <div style="margin-top:6px;"><span class="b">Ref:</span> '.nl2br(h($refe)).'</div>
+    <div style="margin-top:6px;">Dear Sir,</div>
+    <div>'.nl2br(h($descr)).'</div>
+  </div>
+
+  <table class="tbl" style="border-top:1px solid #111;">
+    <thead>
+      <tr>
+        <th width="45">Sr No</th>
+        <th>Description</th>
+        <th width="90">Qty</th>
+        <th width="110">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      '.$rowsHtml.'
+      <tr class="totline">
+        <td colspan="2" class="r b">Total</td>
+        <td class="r b">'.h(money2($totalQty)).'</td>
+        <td class="r b">'.h(money2($totalAmtLines ?: $subTotal)).'</td>
+      </tr>
+      <tr class="totline">
+        <td colspan="3" class="r b">Sub Total</td>
+        <td class="r b">'.h(money2($subTotal)).'</td>
+      </tr>
+      <tr class="totline">
+        <td colspan="3" class="r b">GST</td>
+        <td class="r b">'.h(money2($totalGst)).'</td>
+      </tr>
+      <tr class="totline">
+        <td colspan="3" class="r b">Basic Cost With GST</td>
+        <td class="r b">'.h(money2($basicWithGst)).'</td>
+      </tr>
+      '.$chargesHtml.'
+    </tbody>
+  </table>
+
+  <div class="pad" style="border-top:1px solid #111;">
+    <div class="b">Amount in Words:</div>
+    <div>'.h($amountWords).'</div>
+  </div>
+
+  '.(!empty($termsHtml) ? '
+  <div class="pad" style="border-top:1px solid #111;">
+    <div class="b">Terms & Conditions</div>
+    '.$termsHtml.'
+  </div>' : '').'
+
+
+</div>
+</body>
+</html>
+';
