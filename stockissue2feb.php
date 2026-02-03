@@ -1,7 +1,7 @@
 <?php
 /* ============================================================
- * operations/issuegatepass.php  —  Material Gate Pass Outward Issue (Core ERP, ui_autoshell)
- * Tables: jos_ierp_gatepass + jos_ierp_gatepass_grid
+ * operations/stock_issue.php  — Stock Issue (Core ERP, ui_autoshell)
+ * Tables: jos_ierp_stkrequest + jos_ierp_stkrequest_grid
  *
  * Updates in THIS build (as per your last msgs + screenshots):
  * ✅ UI placement restored like your OLD screen (SS1): Date+FY+Bill row, From+To row, Items, Remark at bottom, Save/clear center
@@ -30,14 +30,14 @@ if (!$con instanceof mysqli) { die('DB connection missing.'); }
 /* ============================================================
  * TABLES (FROZEN)
  * ============================================================ */
-$TABLE_HDR      = 'jos_ierp_gatepass';
-$TABLE_GRID     = 'jos_ierp_gatepass_grid';
+$TABLE_HDR      = 'jos_ierp_stkrequest';
+$TABLE_GRID     = 'jos_ierp_stkrequest_grid';
 $TABLE_LOC      = 'jos_erp_gidlocation';     // gid, location_name
 $TABLE_PRODUCTS = 'jos_crm_mproducts';
 $TABLE_MUNIT    = 'jos_ierp_munit';
 $TABLE_FY       = 'jos_ierp_mfinancialyear';
 
-const DOC_TYPE   = 27;
+const DOC_TYPE   = 5;
 const COMPANY_ID = 1;
 
 /* ============================================================
@@ -94,7 +94,7 @@ function flash_get($k){
 }
 
 function redirect_self(){
-  header('Location: issuegatepass.php');
+  header('Location: stock_issue.php');
   exit;
 }
 
@@ -418,7 +418,7 @@ $hdr = [
   'issue_date' => date('d-m-Y'),
   'from_gid'   => (string)$adminGid,
   'from_name'  => (string)$adminLocName,
-  'to_name'     => '',
+  'to_gid'     => '',
   'remark'     => '',
   'fy_code'    => '',
   'billno'     => '',
@@ -450,17 +450,10 @@ if ($mode === 'edit_load') {
       $hdr['issue_date'] = ymd_to_dmy($ymd);
       $hdr['from_gid']   = (string)($H['fromlc'] ?? $H['from_gid'] ?? $adminGid);
       $hdr['from_name']  = get_location_name_by_gid($con,$TABLE_LOC,(int)$hdr['from_gid']);
-      $hdr['to_name'] = (string)($H['tolc'] ?? '');
+      $hdr['to_gid']     = (string)($H['tolc'] ?? $H['to_gid'] ?? '');
       $hdr['remark']     = (string)($H['remark'] ?? '');
       $hdr['billno']     = (string)($H['billno'] ?? '');
       $hdr['yrid']       = (int)($H['yrid'] ?? 0);
-    //   foreach($locations as $L){
-    //     if($L['nm'] === $hdr['to_name']){
-    //         $hdr['to_gid'] = (string)$L['gid'];
-    //         break;
-    //     }
-    //     }
-
 
       if ($hdr['yrid'] > 0 && table_exists($con,$TABLE_FY) && col_exists($con,$TABLE_FY,'id')) {
         $st = $con->prepare("SELECT code FROM `$TABLE_FY` WHERE id=? LIMIT 1");
@@ -485,16 +478,15 @@ if ($mode === 'edit_load') {
       $st->bind_param("i",$edit_id);
       $st->execute();
       $rs = $st->get_result();
-      $unitMap = unit_map($con, $TABLE_MUNIT);
       while($r=$rs->fetch_assoc()){
         $rows[] = [
           'product_id' => (int)($r['propid'] ?? 0),
           'product_name' => (string)($r['product_name'] ?? ''),
           'qty' => (float)($r['qty'] ?? 0),
           'stock' => (string)($r['stock'] ?? ''),
-          //   'uom' => (string)($r['uom'] ?? ''),
+          // 'uom' => (string)($r['uom'] ?? ''),
           'uom_id'   => (int)($r['uom'] ?? 0),
-          'uom_name' => $unitMap[(string)($r['uom'] ?? '')] ?? '',
+          'uom_name' => unit_map($con,$TABLE_MUNIT)[(string)($r['uom'] ?? '')] ?? '',
           'sec_width' => (string)($r['sec_width'] ?? ''),
           'sec_height'=> (string)($r['sec_height'] ?? ''),
           'third_width' => (string)($r['third_width'] ?? ''),
@@ -555,7 +547,7 @@ if ($mode === 'save') {
   $from_gid = (int)($_POST['from_gid'] ?? 0);
   if ($from_gid <= 0) $from_gid = (int)$adminGid;
 
-  $to_name  = trim((string)($_POST['to_name'] ?? ''));
+  $to_gid   = (int)($_POST['to_gid'] ?? 0);
   $remark   = trim((string)($_POST['remark'] ?? ''));
 
   $rows_json = (string)($_POST['rows_json'] ?? '[]');
@@ -565,7 +557,7 @@ if ($mode === 'save') {
   $errors = [];
   if ($issue_date_ymd==='') $errors[]='Date is required.';
   if ($from_gid<=0) $errors[]='From location missing.';
-  if ($to_name === '') $errors[]='To location required.';
+  if ($to_gid<=0) $errors[]='To location required.';
   if (count($grid)===0) $errors[]='Add at least 1 item.';
 
   $fy = fy_from_date($con, $TABLE_FY, $issue_date_ymd);
@@ -576,7 +568,7 @@ if ($mode === 'save') {
   if ($errors){
     flash_set('err', implode(' ', $errors));
     $hdr['issue_date']=$issue_date_dmy;
-    $hdr['to_name']=(string)$to_name;
+    $hdr['to_gid']=(string)$to_gid;
     $hdr['remark']=$remark;
     $hdr['yrid']=$yrid;
     $hdr['fy_code']=$fy_code;
@@ -609,7 +601,7 @@ if ($mode === 'save') {
 
         add_set($con,$TABLE_HDR,$sets,$types,$vals,'date','s',$issue_date_ymd);
         add_set($con,$TABLE_HDR,$sets,$types,$vals,'yrid','i',$yrid);
-        add_set($con,$TABLE_HDR,$sets,$types,$vals,'tolc','s',$to_name);
+        add_set($con,$TABLE_HDR,$sets,$types,$vals,'tolc','i',$to_gid);
         add_set($con,$TABLE_HDR,$sets,$types,$vals,'fromlc','i',$from_gid);
         add_set($con,$TABLE_HDR,$sets,$types,$vals,'gid','i',$from_gid);
         add_set($con,$TABLE_HDR,$sets,$types,$vals,'doc','i',DOC_TYPE);
@@ -650,7 +642,7 @@ if ($mode === 'save') {
         add_ins($con,$TABLE_HDR,$cols,$types,$vals,'sysdate','s',$now);
         add_ins($con,$TABLE_HDR,$cols,$types,$vals,'date','s',$issue_date_ymd);
         add_ins($con,$TABLE_HDR,$cols,$types,$vals,'yrid','i',$yrid);
-        add_ins($con,$TABLE_HDR,$cols,$types,$vals,'tolc','s',$to_name);
+        add_ins($con,$TABLE_HDR,$cols,$types,$vals,'tolc','i',$to_gid);
         add_ins($con,$TABLE_HDR,$cols,$types,$vals,'fromlc','i',$from_gid);
         add_ins($con,$TABLE_HDR,$cols,$types,$vals,'doc','i',DOC_TYPE);
         add_ins($con,$TABLE_HDR,$cols,$types,$vals,'remark','s',$remark);
@@ -696,8 +688,8 @@ if ($mode === 'save') {
         ['yrid','i',$yrid],
         ['userid','i',$uid],
         ['fromlc','i',$from_gid],
-        ['tolc','s',$to_name],
-        ['uom','s',null],
+        ['tolc','i',$to_gid],
+        ['uom','i',0],
         ['gid','i',$from_gid],
         ['stock','i',0],
         ['remark','s',''],
@@ -746,8 +738,7 @@ if ($mode === 'save') {
             case 'date':   $vals[$i] = $issue_date_ymd; break;
             case 'propid': $vals[$i] = $pid; break;
             case 'qty':    $vals[$i] = $qty; break;
-            // case 'uom':   $vals[$i] = (string)($r['uom'] ?? '');  break;
-            case 'uom':  $vals[$i] = (int)($r['uom_id'] ?? 0);  break;
+            case 'uom':  $vals[$i] = (int)($r['uom_id'] ?? 0); break;
             case 'sec_qty': $vals[$i] = $sec_qty; break;
             case 'thirdqty': $vals[$i] = $thirdqty; break;
             case 'sec_width': $vals[$i] = $sec_w; break;
@@ -757,7 +748,7 @@ if ($mode === 'save') {
             case 'description': $vals[$i] = $desc; break;
             case 'yrid': $vals[$i] = $yrid; break;
             case 'fromlc': $vals[$i] = $from_gid; break;
-            case 'tolc': $vals[$i] = $to_name; break;
+            case 'tolc': $vals[$i] = $to_gid; break;
             case 'gid': $vals[$i] = $from_gid; break;
             case 'company': $vals[$i] = COMPANY_ID; break;
             case 'doc': $vals[$i] = DOC_TYPE; break;
@@ -778,7 +769,7 @@ if ($mode === 'save') {
       $con->rollback();
       flash_set('err','Save failed: '.$e->getMessage());
       $hdr['issue_date']=$issue_date_dmy;
-      $hdr['to_name']=(string)$to_name;
+      $hdr['to_gid']=(string)$to_gid;
       $hdr['remark']=$remark;
       $hdr['billno']=(string)$billno;
       $hdr['fy_code']=$fy_code;
@@ -793,7 +784,7 @@ if ($mode === 'save') {
 /* ============================================================
  * UI
  * ============================================================ */
-$pageTitle = 'Material Gate Pass Outward';
+$pageTitle = 'Stock Issue';
 ob_start();
 ?>
 <style>
@@ -841,7 +832,7 @@ ob_start();
 
 <div class="card" style="margin-bottom:14px;">
   <!-- page title like your Complaint Order -->
-  <div style="font-size:34px; font-weight:800; margin-bottom:12px;"> Material Gate Pass Outward</div>
+  <div style="font-size:34px; font-weight:800; margin-bottom:12px;">Stock Issue</div>
 
   <?php if ($m = flash_get('ok')): ?>
     <div class="alert success" style="margin-bottom:10px;"><?= h($m) ?></div>
@@ -885,30 +876,28 @@ ob_start();
         <input type="text" class="inp locked" value="<?= h($hdr['from_name']) ?>" readonly>
       </div>
       <div>
-          <label>To Location <span style="color:#ef4444;">*</span></label>
-          <input
-            type="text"
-            name="to_name"
-            class="inp"
-            required
-            value="<?= h($hdr['to_name'] ?? '') ?>"
-            placeholder="Enter To Location"
-          >
-        </div>
+        <label>To Location <span style="color:#ef4444;">*</span></label>
+        <select name="to_gid" class="inp" required>
+          <option value="">-- Select --</option>
+          <?php foreach($locations as $L): ?>
+            <option value="<?= (int)$L['gid'] ?>" <?= ((string)$hdr['to_gid']===(string)$L['gid'])?'selected':''; ?>>
+              <?= h($L['nm']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
     </div>
 
     <!-- Items header -->
     <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
       <div>
         <strong>Items</strong>
-        <div style="font-size:12px; opacity:.8; margin-top:3px;">
-          Product autocomplete from <code><?= h($TABLE_PRODUCTS) ?></code>.
-        </div>
+    
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
         <button type="button" class="btn primary" id="btnAdd">+ Add Product</button>
         <?php if ($edit_id > 0): ?>
-          <button type="button" class="btn secondary" id="btnDeleteDoc">Delete Doc</button>
+          <!--<button type="button" class="btn secondary" id="btnDeleteDoc">Delete Doc</button>-->
         <?php endif; ?>
       </div>
     </div>
@@ -1130,10 +1119,7 @@ function openModal(idx, r){
   document.getElementById('m_qty').value        = r ? (r.qty||1) : 1;
   document.getElementById('m_description').value = r ? (r.description || '') : '';
 
-//   document.getElementById('m_unit').value = r ? (r.uom || '') : '';
-  document.getElementById('m_unit').value = r ? (r.uom_name || '') : '';
-window._unit_id = r ? (r.uom_id || 0) : 0;
-
+  document.getElementById('m_unit').value = r ? (r.uom || '') : '';
 
 
   document.getElementById('m_unitconversion').value = r ? (r.unitconversion || '') : '';
@@ -1221,16 +1207,16 @@ function attachSuggest({
     box.className='suggest-box';
 
     list.forEach((it,i)=>{
-    const d=document.createElement('div');
+      const d=document.createElement('div');
       d.className='suggest-item';
       d.textContent=it.label;
       d.onclick=()=>{ onSelect(it); close(); };
       box.appendChild(d);
-  });
+    });
 
     items=[...box.children];
     host.appendChild(box);
-}
+  }
 
   input.addEventListener('input', async ()=>{
     const q=input.value.trim();
@@ -1246,14 +1232,14 @@ function attachSuggest({
     if(e.key==='ArrowUp'){ e.preventDefault(); active=Math.max(active-1,0); highlight(active); }
     if(e.key==='Enter' && active>=0){ e.preventDefault(); items[active].click(); }
     if(e.key==='Escape'){ close(); }
-});
+  });
 
   document.addEventListener('click',e=>{
     if(!box) return;
     if(e.target===input) return;
     if(box.contains(e.target)) return;
     close();
-});
+  });
 }
 
 
@@ -1299,11 +1285,8 @@ async function selectProduct(it){
     const j = await postForm({ ajax:'product_details', product_id:String(it.id||'') });
     if (j && j.ok && j.row){
       const r = j.row;
-    //   document.getElementById('m_unit').value = (r._unit_name || '');
-    document.getElementById('m_unit').value = (r._unit_name || '');
-    window._unit_id = parseInt(r.unit || 0, 10); // ✅ store unit ID
-
-
+      document.getElementById('m_unit').value = (r._unit_name || '');
+      window._unit_id = parseInt(r.unit || 0, 10); // ✅ ADD THIS
       window._sec_unitname = (r._secondary_name || '').trim();
       window._third_unitname = (r._third_name || '').trim();
 
@@ -1332,10 +1315,10 @@ document.getElementById('m_save').addEventListener('click', function(){
     product_name: product_name,
     description: description,
     qty: qty,
-    stock: stock,
-    uom_id: parseInt(window._unit_id || 0, 10),   // ✅ STORE ID
-    uom_name: document.getElementById('m_unit').value, // UI display
+    uom_id: parseInt(window._unit_id || 0, 10),
+    uom_name: document.getElementById('m_unit').value,
     // uom: document.getElementById('m_unit').value, 
+    stock: stock,
     // unit: document.getElementById('m_unit').value,
     secondaryunit: (window._sec_unitname || ''),
     thirdunit: (window._third_unitname || ''),
@@ -1357,7 +1340,7 @@ document.getElementById('m_save').addEventListener('click', function(){
 // ---------- clear ----------
 document.getElementById('btnClear').addEventListener('click', function(){
   if(!confirm('Clear form?')) return;
-  document.querySelector('[name="to_name"]').value='';
+  document.querySelector('[name="to_gid"]').value='';
   document.querySelector('[name="remark"]').value='';
   document.getElementById('billno').value='';
   document.getElementById('fy_code').value='';

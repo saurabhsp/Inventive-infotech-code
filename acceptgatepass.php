@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
- * operations/issuegatepass.php  —  Material Gate Pass Outward Issue (Core ERP, ui_autoshell)
+ * operations/materialgatepass_inward.php  —  Material Gate Pass inward Issue (Core ERP, ui_autoshell)
  * Tables: jos_ierp_gatepass + jos_ierp_gatepass_grid
  *
  * Updates in THIS build (as per your last msgs + screenshots):
@@ -37,7 +37,7 @@ $TABLE_PRODUCTS = 'jos_crm_mproducts';
 $TABLE_MUNIT    = 'jos_ierp_munit';
 $TABLE_FY       = 'jos_ierp_mfinancialyear';
 
-const DOC_TYPE   = 27;
+const DOC_TYPE   = 28;
 const COMPANY_ID = 1;
 
 /* ============================================================
@@ -94,7 +94,7 @@ function flash_get($k){
 }
 
 function redirect_self(){
-  header('Location: issuegatepass.php');
+  header('Location: materialgatepass_inward.php');
   exit;
 }
 
@@ -793,7 +793,7 @@ if ($mode === 'save') {
 /* ============================================================
  * UI
  * ============================================================ */
-$pageTitle = 'Material Gate Pass Outward';
+$pageTitle = 'Material Gate Pass Inward';
 ob_start();
 ?>
 <style>
@@ -841,7 +841,7 @@ ob_start();
 
 <div class="card" style="margin-bottom:14px;">
   <!-- page title like your Complaint Order -->
-  <div style="font-size:34px; font-weight:800; margin-bottom:12px;"> Material Gate Pass Outward</div>
+  <div style="font-size:34px; font-weight:800; margin-bottom:12px;"> Material Gate Pass Inward</div>
 
   <?php if ($m = flash_get('ok')): ?>
     <div class="alert success" style="margin-bottom:10px;"><?= h($m) ?></div>
@@ -901,15 +901,12 @@ ob_start();
     <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
       <div>
         <strong>Items</strong>
-        <div style="font-size:12px; opacity:.8; margin-top:3px;">
-          Product autocomplete from <code><?= h($TABLE_PRODUCTS) ?></code>.
-        </div>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
         <button type="button" class="btn primary" id="btnAdd">+ Add Product</button>
-        <?php if ($edit_id > 0): ?>
+        <?/*php if ($edit_id > 0): ?>
           <button type="button" class="btn secondary" id="btnDeleteDoc">Delete Doc</button>
-        <?php endif; ?>
+        <?php endif; */?>
       </div>
     </div>
 
@@ -944,11 +941,11 @@ ob_start();
       <button type="button" class="btn secondary" id="btnClear" style="min-width:120px;">Clear</button>
     </div>
 
-    <?php if ($edit_id <= 0): ?>
+    <?/*php if ($edit_id <= 0): ?>
       <div class="alert" style="margin-top:12px; opacity:.85;">
         Tip: Date change automatically loads FY Code + next Bill No.
       </div>
-    <?php endif; ?>
+    <?php endif; */?>
   </form>
 </div>
 

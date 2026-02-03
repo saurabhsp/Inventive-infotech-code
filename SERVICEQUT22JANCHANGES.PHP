@@ -1323,16 +1323,35 @@ ob_start();
              value="<?php echo h((string)($editingHeader['packing_amt'] ?? 0)); ?>">
     </div>
 
-    <div class="mini">
+    <!-- <div class="mini">
       <div class="mini-lbl">GST %</div>
       <input type="number" step="0.01" name="packing" id="packing" class="inp"
              value="<?php echo h((string)($editingHeader['packing'] ?? 0)); ?>">
-    </div>
+    </div> -->
 
     <div class="mini">
-      <div class="mini-lbl">Total</div>
+  <div class="mini-lbl">GST %</div>
+  <select name="packing" id="packing" class="inp">
+    <option value="0">GST</option>
+    <?php foreach ($gstSlabs as $gs): ?>
+      <option value="<?php echo h($gs['name']); ?>"
+        <?php echo ((string)($editingHeader['packing'] ?? '0') === (string)$gs['name']) ? 'selected' : ''; ?>>
+        <?php echo h($gs['name']); ?>
+      </option>
+    <?php endforeach; ?>
+  </select>
+</div>
+
+
+    <div class="mini">
+      <div class="mini-lbl"></div>
       <input type="text" name="packing_total" id="packing_total" class="inp" readonly
              value="<?php echo h((string)($editingHeader['packing_total'] ?? 0)); ?>">
+    </div>
+    <div class="mini">
+      <div class="mini-lbl">Total</div>
+      <input type="text" name="total2" id="total2" class="inp" readonly
+             value="<?php echo h((string)($editingHeader['total2'] ?? 0)); ?>">
     </div>
 
     <!-- ROW 2 (aligned under row 1) -->
@@ -1375,11 +1394,24 @@ ob_start();
         <input type="number" step="0.01" name="trans_amt" id="trans_amt" class="inp"
                value="<?php echo h((string)($editingHeader['trans_amt'] ?? 0)); ?>">
       </div>
-      <div class="mini">
-        <div class="mini-lbl">GST %</div>
-        <input type="number" step="0.01" name="trans" id="trans" class="inp"
-               value="<?php echo h((string)($editingHeader['trans'] ?? 0)); ?>">
-      </div>
+      <!--<div class="mini">-->
+      <!--  <div class="mini-lbl">GST %</div>-->
+      <!--  <input type="number" step="0.01" name="trans" id="trans" class="inp"-->
+      <!--         value="<?php echo h((string)($editingHeader['trans'] ?? 0)); ?>">-->
+      <!--</div>-->
+          <div class="mini">
+            <div class="mini-lbl">GST %</div>
+            <select name="trans" id="trans" class="inp">
+              <option value="0">GST</option>
+              <?php foreach ($gstSlabs as $gs): ?>
+                <option value="<?php echo h($gs['name']); ?>"
+                  <?php echo ((string)($editingHeader['trans'] ?? '0') === (string)$gs['name']) ? 'selected' : ''; ?>>
+                  <?php echo h($gs['name']); ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+        </div>
+
       <div class="mini">
         <div class="mini-lbl">Total</div>
         <input type="text" name="trans_total" id="trans_total" class="inp" readonly
@@ -1404,7 +1436,7 @@ ob_start();
     </div>
 
     <!-- Insurance -->
-    <div class="charge-row">
+    <div class="charge-row insurance-row">
       <div class="charge-title">Insurance (on Total + Transport)</div>
 
       <div class="mini">
@@ -1417,15 +1449,33 @@ ob_start();
         <input type="number" step="0.01" name="insurance_amt" id="insurance_amt" class="inp"
                value="<?php echo h((string)($editingHeader['insurance_amt'] ?? 0)); ?>">
       </div>
-      <div class="mini">
+      <!-- <div class="mini">
         <div class="mini-lbl">GST %</div>
         <input type="number" step="0.01" name="insurance" id="insurance" class="inp"
                value="<?php echo h((string)($editingHeader['insurance'] ?? 0)); ?>">
+      </div> -->
+      <div class="mini">
+        <div class="mini-lbl">GST %</div>
+          <select name="insurance" id="insurance" class="inp">
+            <option value="0">GST</option>
+              <?php foreach ($gstSlabs as $gs): ?>
+                <option value="<?php echo h($gs['name']); ?>"
+                <?php echo ((string)($editingHeader['insurance'] ?? '0') === (string)$gs['name']) ? 'selected' : ''; ?>>
+                <?php echo h($gs['name']); ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+      </div>
+
+      <div class="mini">
+       <div class="mini-lbl">Total</div>
+       <input type="text" name="insurance_total" id="insurance_total" class="inp" readonly
+              value="<?php echo h((string)($editingHeader['insurance_total'] ?? 0)); ?>">
       </div>
       <div class="mini">
-        <div class="mini-lbl">Total</div>
-        <input type="text" name="insurance_total" id="insurance_total" class="inp" readonly
-               value="<?php echo h((string)($editingHeader['insurance_total'] ?? 0)); ?>">
+        <div class="mini-lbl">Final Total</div>
+        <input type="text" name="total5" id="total5" class="inp" readonly
+               value="<?php echo h((string)($editingHeader['total5'] ?? 0)); ?>">
       </div>
 
     </div>
@@ -1444,22 +1494,35 @@ ob_start();
         <input type="number" step="0.01" name="commission_amt" id="commission_amt" class="inp"
                value="<?php echo h((string)($editingHeader['commission_amt'] ?? 0)); ?>">
       </div>
-      <div class="mini">
+      <!-- <div class="mini">
         <div class="mini-lbl">GST %</div>
         <input type="number" step="0.01" name="commission" id="commission" class="inp"
                value="<?php echo h((string)($editingHeader['commission'] ?? 0)); ?>">
-      </div>
+      </div> -->
+      <div class="mini">
+        <div class="mini-lbl">GST %</div>
+          <select name="commission" id="commission" class="inp">
+            <option value="0">GST</option>
+            <?php foreach ($gstSlabs as $gs): ?>
+              <option value="<?php echo h($gs['name']); ?>"
+                <?php echo ((string)($editingHeader['commission'] ?? '0') === (string)$gs['name']) ? 'selected' : ''; ?>>
+                <?php echo h($gs['name']); ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+      </div>`
+
       <div class="mini">
         <div class="mini-lbl">Total</div>
         <input type="text" name="commission_total" id="commission_total" class="inp" readonly
                value="<?php echo h((string)($editingHeader['commission_total'] ?? 0)); ?>">
       </div>
 
-       <div class="mini">
-        <div class="mini-lbl final-grand-lbl">Final Total</div>
-        <input type="text" name="total5" id="total5" class="inp" readonly
-               value="<?php echo h((string)($editingHeader['total5'] ?? 0)); ?>">
-      </div> 
+      <!-- <div class="mini">-->
+      <!--  <div class="mini-lbl final-grand-lbl">Final Total</div>-->
+      <!--  <input type="text" name="total5" id="total5" class="inp" readonly-->
+      <!--         value="<?php echo h((string)($editingHeader['total5'] ?? 0)); ?>">-->
+      <!--</div> -->
 
       <div class="mini">
         <div class="mini-lbl final-grand-lbl">Grand Total</div>
@@ -1700,7 +1763,9 @@ ob_start();
 
 
 /* READONLY */
-input[readonly]{ background:#f8fafc; color:#334155; cursor:not-allowed; }
+input[readonly]{ background:#eaeaea; color:#000000; cursor:not-allowed; }
+
+
 
 /* Totals: responsive 4 → 3 → 2 → 1 columns automatically */
 .totals-grid{
@@ -1812,6 +1877,10 @@ font-size:13px;
   .transport-row{
     grid-template-columns: 220px repeat(7, minmax(110px, 1fr));
   }
+  /* Insurance row – force single line */
+.insurance-row{
+    grid-template-columns: 220px repeat(7, minmax(110px, 1fr));
+}
 
   /* Commission row includes Final Total + Grand Total => title + 6 */
   .commission-row{
@@ -1823,6 +1892,7 @@ font-size:13px;
     .totals-grid{ grid-template-columns:repeat(3, minmax(160px, 1fr)); }
     .charge-row{ grid-template-columns: 180px repeat(2, minmax(140px, 1fr)); }
     .transport-row{ grid-template-columns: 180px repeat(2, minmax(140px, 1fr)); }
+    .insurance-row{ grid-template-columns: 180px repeat(2, minmax(140px, 1fr)); }
     .commission-row{ grid-template-columns: 180px repeat(2, minmax(140px, 1fr)); }
   }
   @media (max-width:700px){
@@ -1833,7 +1903,7 @@ font-size:13px;
 
 
 /* Highlight Final Total + Grand Total */
-#total5, #total{
+#total{
   font-size: 18px;
   font-weight: 800;
   padding: 10px 12px;
@@ -2489,7 +2559,17 @@ if(EXISTING_QTYPE && EXISTING_QTYPE > 0){
 
 /* ---------- TOTALS CALC ---------- */
 function val(id){ return num(document.getElementById(id)?.value); }
-function setv(id, v){ const el=document.getElementById(id); if(el) el.value = money(v); }
+// function setv(id, v){ const el=document.getElementById(id); if(el) el.value = money(v); }
+function setv(id, v){
+  const el = document.getElementById(id);
+  if(!el) return;
+
+  // ❌ Agar user manually type kar raha hai, overwrite mat karo
+  if (document.activeElement === el) return;
+
+  el.value = money(v);
+}
+
 
 function computeCharge(base, perId, amtId){
   const per = val(perId);
@@ -2562,7 +2642,7 @@ function computeTotals(){
   setv('basic_total', basicTotal);
   setv('gst', basicGST);
   setv('nettotal', basicWithGST);
-  setv('total2', basicWithGST);
+  // setv('total2', basicWithGST);
 
   /* -----------------------------
    * 5. PACKING
@@ -2570,7 +2650,14 @@ function computeTotals(){
 const packingBase = computeCharge(getBasicTotal(), 'packing_per', 'packing_amt');
   const packingTotal = computeChargeTotal(packingBase, val('packing'));
   setv('packing_total', packingTotal);
+  if (val('packing_per') > 0) {
   setv('packing_amt', packingBase);
+}
+  const total2 = basicWithGST + packingTotal ;
+
+setv('total2', total2);
+
+
 
   /* -----------------------------
    * 6. TRANSPORT
@@ -2578,8 +2665,11 @@ const packingBase = computeCharge(getBasicTotal(), 'packing_per', 'packing_amt')
 const transBase   = computeCharge(getBasicTotal(), 'trans_per', 'trans_amt');
   const transTotal = computeChargeTotal(transBase, val('trans'));
   setv('trans_total', transTotal);
+if (val('trans_per') > 0) {
   setv('trans_amt', transBase);
-
+}
+    const total3 = total2 + transTotal;
+  setv('total3', total3);
   const total4 = basicWithGST + packingTotal + transTotal;
   setv('total4', total4);
 
@@ -2594,8 +2684,9 @@ const transBase   = computeCharge(getBasicTotal(), 'trans_per', 'trans_amt');
     
     if (insurancePer > 0) {
       insuranceBaseAmt = (total4 * insurancePer) / 100;
-      setv('insurance_amt', insuranceBaseAmt); // ✅ keep UI in sync
-    } else if (insuranceAmtInput > 0) {
+if (val('insurance_per') > 0) {
+  setv('insurance_amt', insuranceBaseAmt);
+}    } else if (insuranceAmtInput > 0) {
       insuranceBaseAmt = insuranceAmtInput;
     }
 
@@ -2622,6 +2713,9 @@ const commissionTotal = computeChargeTotal(
   commissionBase,
   val('commission')
 );
+if (val('commission_per') > 0) {
+  setv('commission_amt', commissionBase);
+}
 setv('commission_total', commissionTotal);
 
 /* -----------------------------
@@ -2677,30 +2771,24 @@ function togglePerAmtLock(perId, amtId, baseFn){
   const amtEl = document.getElementById(amtId);
   if(!perEl || !amtEl) return;
 
-  const per = parseFloat((perEl.value ?? '').toString().trim()) || 0;
-  const amt = parseFloat((amtEl.value ?? '').toString().trim()) || 0;
+  const per = parseFloat(perEl.value) || 0;
+  const amt = parseFloat(amtEl.value) || 0;
 
-  // if per% entered -> amount auto + lock amount
- if(per > 0){
-  if(amt === 0){   // ✅ only auto-calc if empty
+  // ✅ If Per % is entered → auto amount + lock AMOUNT only
+  if(per > 0){
     const base = baseFn();
     amtEl.value = ((base * per) / 100).toFixed(2);
-  }
-  amtEl.readOnly = true;
-  return;
-}
-
-  // if amount entered -> lock per%
-  if(amt > 0){
-    perEl.readOnly = true;
-    amtEl.readOnly = false;
+    amtEl.readOnly = true;
+    perEl.readOnly = false;   // ✅ ALWAYS editable
     return;
   }
 
-  // if both empty/0 -> both editable
-  perEl.readOnly = false;
+  // ✅ If Per % is cleared → unlock amount
   amtEl.readOnly = false;
+  perEl.readOnly = false;
 }
+
+
 
 function hookPerAmt(perId, amtId, baseFn){
   const perEl = document.getElementById(perId);
@@ -2758,10 +2846,6 @@ hookPerAmt('commission_per','commission_amt',getBasicTotal);
 
 
 /* ---------- DOM READY ---------- */
-
-
-
-
 
 document.addEventListener('DOMContentLoaded', function(){
 
