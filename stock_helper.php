@@ -24,15 +24,12 @@ function get_actual_stock(
 
     $stock = ($grn + $accept + $sret)
         - ($issue + $sale + $pret + $damage  + $gatepassOut + $gatepassIn + $delChalan);
-
-
-
     return max(0, $stock);
 }
 
 function get_doc_stock(
     mysqli $con,
-    string $doc,
+    int $doc,
     int $product_id,
     int $gid,
     int $yrid,
