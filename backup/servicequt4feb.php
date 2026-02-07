@@ -78,7 +78,6 @@ function fmt_dmy($ymd)
   return $dt ? $dt->format('d-m-Y') : '';
 }
 
-
 /* CSRF */
 function csrf_token()
 {
@@ -123,7 +122,6 @@ function table_exists(mysqli $con, string $table): bool
   $st->close();
   return $ok;
 }
-
 
 /* ============================================================
  * MENU META + ACL (ERP Console)
@@ -942,15 +940,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['quotation_form']) && 
       'status' => 'i',
       'sequence' => 'i',
       // ✅ NEW FIELDS
-      'addiloyality_per'   => 'd',
-      'addiloyalilty_rs'    => 'd',
       'additionalloyality' => 'd',
-
-      'addidiscount_per'   => 'd',
-      'addidiscount_rs'    => 'd',
-      'additionaldiscount' => 'd',
-
-      'finalrate'         => 'd',
+      'additionadiscount'  => 'd',
     ];
 
     // keep only existing columns
@@ -983,36 +974,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['quotation_form']) && 
       $inst = (float)($r['instantdisc'] ?? 0);
       $gst = (float)($r['gst'] ?? 0);
       $seq = (int)($r['sequence'] ?? ($i + 1));
-      $totaldiscount = (float)($r['totaldiscount'] ?? 0);
-
-      $addloy_per = (float)($r['addiloyality_per'] ?? 0);
-      $addloy_rs  = (float)($r['addiloyalilty_rs'] ?? 0);
-      $afterLoy   = (float)($r['additionalloyality'] ?? 0);
-
-      $adddis_per = (float)($r['addidiscount_per'] ?? 0);
-      $adddis_rs  = (float)($r['addidiscount_rs'] ?? 0);
-      $afterAdd   = (float)($r['additionaldiscount'] ?? 0);
-
-      $finalRate  = (float)($r['finalrate'] ?? 0);
-
-      $discounted = $finalRate * $qty;
-      $gstamt = ($gst > 0) ? ($discounted * $gst / 100) : 0;
-      $amt = $discounted + $gstamt;
-      // $gstamt = ($gst > 0) ? (($finalRate * $qty) * $gst / 100) : 0;
-      // $amt    = ($finalRate * $qty) + $gstamt;
-
-
+      $additionalloyality = (float)($r['additionalloyality'] ?? '0');
+      $additionadiscount  = (float)($r['additionadiscount'] ?? '0');
 
       if ($pid <= 0 && $dsc === '' && $rate == 0 && $qty == 0) continue;
 
       // Computation (stable)
-      // $gross = $rate * $qty;
-      // $discAmt = ($disc > 0) ? ($gross * $disc / 100) : 0;
-      // $totaldiscount = $discAmt + $inst;
-      // $discounted = max(0, $gross - $totaldiscount);
-      // $gstamt = ($gst > 0) ? ($discounted * $gst / 100.0) : 0.0;
-      // $amt = $discounted + $gstamt;
-
+      $gross = $rate * $qty;
+      $discAmt = ($disc > 0) ? ($gross * $disc / 100) : 0;
+      $totaldiscount = $discAmt + $inst;
+      $discounted = max(0, $gross - $totaldiscount);
+      $gstamt = ($gst > 0) ? ($discounted * $gst / 100.0) : 0.0;
+      $amt = $discounted + $gstamt;
 
       $rowData = [
         'qutid' => $qutid,
@@ -1033,16 +1006,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['quotation_form']) && 
         'status' => 1,
         'sequence' => $seq,
         // ✅ NEW VALUES
-        'addiloyality_per'    => $addloy_per,
-        'addiloyalilty_rs'     => $addloy_rs,
-        'additionalloyality' => $afterLoy,
-
-        'addidiscount_per'    => $adddis_per,
-        'addidiscount_rs'     => $adddis_rs,
-        'additionaldiscount'  => $afterAdd,
-
-        'finalrate'          => $finalRate,
-
+        'additionalloyality' => $additionalloyality,
+        'additionadiscount'  => $additionadiscount,
       ];
 
       $bindVals = [];
@@ -1325,8 +1290,8 @@ ob_start();
                 <th>Description</th>
                 <th style="width:90px;">Rate</th>
                 <th style="width:80px;">Qty</th>
-                <!-- <th style="width:90px;">Disc(%)</th>
-                <th style="width:90px;">Disc(Rs.)</th> -->
+                <th style="width:90px;">Disc(%)</th>
+                <th style="width:90px;">Disc(Rs.)</th>
                 <th style="width:130px;">Discounted Amt</th>
                 <th style="width:90px;">GST%</th>
                 <th style="width:120px;">Amt</th>
@@ -1678,18 +1643,20 @@ ob_start();
         <label>HSN</label>
         <input type="text" id="rm_hsn" class="inp">
       </div>
-    </div>
-
-
-    <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:12px;">
       <div class="field">
-        <label>Basic Rate</label>
+        <label>Rate</label>
         <input type="number" step="0.01" id="rm_rate" class="inp" value="0">
       </div>
-    </div>
+      <div class="field">
+        <label>Qty</label>
+        <input type="number" step="0.01" id="rm_qty" class="inp" value="1">
+      </div>
 
-    <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:12px;">
 
+      <div class="field" style="grid-column:1 / span 2;">
+        <label>Description</label>
+        <input type="text" id="rm_desc" class="inp">
+      </div>
       <div class="field">
         <label>Disc in % </label>
         <input type="number" step="0.01" id="rm_disc" class="inp" value="0">
@@ -1698,68 +1665,40 @@ ob_start();
         <label>Discount in Rs.</label>
         <input type="number" step="0.01" id="rm_inst" class="inp" value="0">
       </div>
-      <div class="field">
-        <label>Total After Discount </label>
-        <input type="number" step="0.01" id="rm_inst_final" class="inp" value="0" readonly>
-      </div>
-    </div>
-
-
-
-    <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:12px;">
 
       <div class="field">
-        <label>Add. Loyality Benefits in %</label>
-        <input type="text" id="addiloyality_per" class="inp" value="0">
+        <label>Additional Loyality in %</label>
+        <input type="text" id="per_additionalloyality" class="inp" value="0">
       </div>
       <div class="field">
-        <label>Add. Loyality Benefits in Rs.</label>
-        <input type="text" id="addiloyalilty_rs" class="inp" value="0">
+        <label>Additional Loyality in Rs.</label>
+        <input type="text" id="amt_additionalloyality" class="inp" value="0">
       </div>
       <div class="field">
-        <label>Total After Loyalty Benefits </label>
-        <input type="text" id="additionalloyality_final" class="inp" value="0" readonly>
+        <label>Additional Loyality </label>
+        <input type="text" id="additionalloyality" class="inp" value="0" readonly>
       </div>
 
-    </div>
-
-    <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:12px;">
 
       <div class="field">
-        <label>Add. Discount in %</label>
-        <input type="text" id="addidiscount_per" class="inp" value="0">
+        <label>Additional Discount in %</label>
+        <input type="text" id="per_additionadiscount" class="inp" value="0">
       </div>
       <div class="field">
-        <label>Add. Discount in Rs.</label>
-        <input type="text" id="addidiscount_rs" class="inp" value="0">
+        <label>Additional Discount in Rs.</label>
+        <input type="text" id="amt_additionadiscount" class="inp" value="0">
       </div>
       <div class="field">
-        <label>Total After Add. Disc.</label>
-        <input type="text" id="additionadiscount_final" class="inp" value="0" readonly>
+        <label>Additional Discount</label>
+        <input type="text" id="additionadiscount" class="inp" value="0" readonly>
       </div>
 
     </div>
-
-
-
-
 
     <div class="form-group">
-      <!-- <label>Discounted Amount</label> -->
-      <label>Final Rate</label>
+      <label>Discounted Amount</label>
       <input type="text" id="rm_discounted_amt" class="inp" value="0" readonly>
-      <small class="muted">Final Rate of Single Unit</small>
-      <!-- <small class="muted">Discounted Rate before GST</small> -->
-    </div>
-
-    <div class="field">
-      <label>Qty</label>
-      <input type="number" step="0.01" id="rm_qty" class="inp" value="1">
-    </div>
-
-    <div class="field" style="grid-column:1 / span 2;">
-      <label>Description</label>
-      <input type="text" id="rm_desc" class="inp">
+      <small class="muted">Discounted Amt before GST</small>
     </div>
 
     <div class="field">
@@ -2299,107 +2238,26 @@ ob_start();
     }).then(r => r.json());
   }
 
-  // function calcRow(r) {
-  //   const rate = num(r.rate),
-  //     qty = num(r.qty),
-  //     disc = num(r.discount), // %
-  //     inst = num(r.instantdisc), // amount
-  //     gst = num(r.gst);
-
-  //   const gross = rate * qty;
-  //   const discAmt = gross * (disc / 100);
-  //   const net = Math.max(0, gross - (discAmt + inst));
-  //   const gstamt = gst > 0 ? (net * gst / 100) : 0;
-  //   const amt = net + gstamt;
-
-  //   r._gross = gross;
-  //   r._net = net;
-  //   r._gstamt = gstamt;
-  //   r._amt = amt;
-
-  //   return r;
-  // }
-
-
-  // 2nd 
-  // function calcRow(r) {
-  //   const rate = num(r.rate),
-  //     qty = num(r.qty),
-  //     disc = num(r.discount),
-  //     inst = num(r.instantdisc),
-  //     gst = num(r.gst);
-
-  //   const gross = rate * qty;
-  //   const discAmt = gross * (disc / 100);
-  //   const net = Math.max(0, gross - (discAmt + inst));
-  //   const gstamt = gst > 0 ? (net * gst / 100) : 0;
-  //   const amt = net + gstamt;
-
-  //   r._net = net;
-  //   r._gstamt = gstamt;
-  //   r._amt = amt;
-  // }
-
   function calcRow(r) {
+    const rate = num(r.rate),
+      qty = num(r.qty),
+      disc = num(r.discount), // %
+      inst = num(r.instantdisc), // amount
+      gst = num(r.gst);
 
-  const rate = num(r.rate);
-  const qty  = num(r.qty);
-  const gst  = num(r.gst);
+    const gross = rate * qty;
+    const discAmt = gross * (disc / 100);
+    const net = Math.max(0, gross - (discAmt + inst));
+    const gstamt = gst > 0 ? (net * gst / 100) : 0;
+    const amt = net + gstamt;
 
-  /* =========================
-   * 1️⃣ BASE (PER UNIT)
-   * ========================= */
-  let base = rate;
+    r._gross = gross;
+    r._net = net;
+    r._gstamt = gstamt;
+    r._amt = amt;
 
-  /* =========================
-   * 2️⃣ NORMAL DISCOUNT
-   * ========================= */
-  const discPer = num(r.discount);        // %
-  const discRs  = num(r.instantdisc);     // Rs
-
-  const normalDiscAmt = (base * discPer / 100) + discRs;
-  let afterNormal = base - normalDiscAmt;
-  if (afterNormal < 0) afterNormal = 0;
-
-  /* =========================
-   * 3️⃣ LOYALTY DISCOUNT
-   * ========================= */
-  const loyPer = num(r.addiloyality_per);   // %
-  const loyRs  = num(r.addiloyalilty_rs);   // Rs
-
-  const loyaltyAmt = (afterNormal * loyPer / 100) + loyRs;
-  let afterLoyalty = afterNormal - loyaltyAmt;
-  if (afterLoyalty < 0) afterLoyalty = 0;
-
-  /* =========================
-   * 4️⃣ ADDITIONAL DISCOUNT
-   * ========================= */
-  const addPer = num(r.addidiscount_per);   // %
-  const addRs  = num(r.addidiscount_rs);    // Rs
-
-  const additionalAmt = (afterLoyalty * addPer / 100) + addRs;
-  let finalRate = afterLoyalty - additionalAmt;
-  if (finalRate < 0) finalRate = 0;
-
-  /* =========================
-   * 5️⃣ FINAL AMOUNTS
-   * ========================= */
-  finalRate = Math.round(finalRate); // per-unit final rate (same as modal)
-
-  const net = finalRate * qty;        // discounted amount (before GST)
-  const gstamt = gst > 0 ? (net * gst / 100) : 0;
-  const amt = net + gstamt;
-
-  /* =========================
-   * 6️⃣ STORE RESULTS
-   * ========================= */
-  r.finalrate = finalRate; // keep grid & modal aligned
-  r._net      = net;
-  r._gstamt   = gstamt;
-  r._amt      = amt;
-}
-
-
+    return r;
+  }
 
 
 
@@ -2419,8 +2277,6 @@ ob_start();
 
     gridRows.forEach((r, idx) => {
       calcRow(r);
-      // <td>${money(r.discount)}</td>
-      // <td>${money(r.instantdisc)}</td>
       const tr = document.createElement('tr');
       tr.innerHTML = `
       <td class="muted">${idx+1}</td>
@@ -2429,7 +2285,9 @@ ob_start();
       <td>${escapeHtml(r.description||'')}</td>
       <td>${money(r.rate)}</td>
       <td>${money(r.qty)}</td>
-      <td><strong>${money((r.finalrate || 0) * (r.qty || 1))}</strong></td>
+      <td>${money(r.discount)}</td>
+      <td>${money(r.instantdisc)}</td>
+      <td><strong>${money(r._net || 0)}</strong></td>
       <td>${money(r.gst)}</td>
       <td><strong>${money(Math.round(r._amt || 0))}</strong></td>
       <td>
@@ -2484,177 +2342,47 @@ ob_start();
 
 
 
-  function calcPercentAmount(base, percent) {
-    return (base * percent) / 100;
-  }
-
-
-  // function updateRowModalPreview() {
-  //   const rate = n(document.getElementById('rm_rate')?.value);
-  //   const qty = n(document.getElementById('rm_qty')?.value);
-  //   let disc = n(document.getElementById('rm_disc')?.value);
-  //   let inst = n(document.getElementById('rm_inst')?.value);
-  //   const gstp = n(document.getElementById('rm_gst')?.value);
-
-  //   disc = Math.max(0, disc);
-  //   inst = Math.max(0, inst);
-
-  //   const gross = rate * qty;
-
-  //   // ✅ CONVERT DISCOUNT % TO AMOUNT
-  //   const discAmt = gross * (disc / 100);
-
-  //   let discounted = gross - (discAmt + inst);
-  //   if (discounted < 0) discounted = 0;
-
-  //   const gstAmt = discounted * (gstp / 100);
-  //   const finalAmt = discounted + gstAmt;
-
-  //   const elDiscAmt = document.getElementById('rm_discounted_amt');
-  //   if (elDiscAmt) elDiscAmt.value = money(discounted);
-
-  //   const elFinal = document.getElementById('rm_final_amt');
-  //   if (elFinal) elFinal.value = money(finalAmt);
-
-  //   const prev = document.getElementById('rm_amt');
-  //   if (prev) prev.textContent = money(finalAmt);
-  // }
-
-
-
-
-
-  //   function updateRowModalPreview() {
-
-  //   const rate = n(document.getElementById('rm_rate').value); // PER UNIT
-  //   const qty  = n(document.getElementById('rm_qty').value);
-
-  //   const discPer = n(document.getElementById('rm_disc').value);
-  //   const discRs  = n(document.getElementById('rm_inst').value);
-
-  //   const loyaltyPer = n(document.getElementById('addiloyality_per').value);
-  //   const addDiscPer = n(document.getElementById('addidiscount_per').value);
-
-  //   const gstPer = n(document.getElementById('rm_gst').value);
-
-  //   /* =================================================
-  //    * 1️⃣ BASE RATE (PER UNIT ONLY)
-  //    * ================================================= */
-  //   let base = rate;
-
-  //   /* =================================================
-  //    * 2️⃣ NORMAL DISCOUNT
-  //    * ================================================= */
-  //   const discPerAmt = base * (discPer / 100);
-  //   const totalDisc1 = discPerAmt + discRs;
-
-  //   document.getElementById('rm_inst_final').value =
-  //   Math.round(base - totalDisc1);
-  //   // document.getElementById('rm_inst_final').value = Math.round(totalDisc1);
-
-  //   let afterDisc1 = base - totalDisc1;
-  //   if (afterDisc1 < 0) afterDisc1 = 0;
-
-  //   /* =================================================
-  //    * 3️⃣ LOYALTY DISCOUNT
-  //    * ================================================= */
-  //   const loyaltyAmt = afterDisc1 * (loyaltyPer / 100);
-
-
-  //     Math.round(afterDisc1 - loyaltyAmt);
-
-  //   let afterLoyalty = afterDisc1 - loyaltyAmt;
-  //   if (afterLoyalty < 0) afterLoyalty = 0;
-
-  //   /* =================================================
-  //    * 4️⃣ ADDITIONAL DISCOUNT
-  //    * ================================================= */
-  //   const addDiscAmt = afterLoyalty * (addDiscPer / 100);
-
-  //   document.getElementById('additionaldiscount').value = money(addDiscAmt);
-  //   document.getElementById('additionadiscount_final').value =
-  //     Math.round(afterLoyalty - addDiscAmt);
-
-  //   let finalRatePerUnit = afterLoyalty - addDiscAmt;
-  //   if (finalRatePerUnit < 0) finalRatePerUnit = 0;
-
-  //   /* =================================================
-  //    * 5️⃣ FINAL RATE (PER UNIT)
-  //    * ================================================= */
-  //   finalRatePerUnit = Math.round(finalRatePerUnit);
-  //   document.getElementById('rm_discounted_amt').value = finalRatePerUnit;
-
-  //   /* =================================================
-  //    * 6️⃣ FINAL AMOUNT (RATE × QTY)
-  //    * ================================================= */
-  //   const amountBeforeGST = finalRatePerUnit * qty;
-  //   const gstAmt = amountBeforeGST * (gstPer / 100);
-  //   const finalAmt = amountBeforeGST + gstAmt;
-
-  //   document.getElementById('rm_final_amt').value = money(finalAmt);
-  // }
 
 
 
   function updateRowModalPreview() {
+    const rate = n(document.getElementById('rm_rate')?.value);
+    const qty = n(document.getElementById('rm_qty')?.value);
+    let disc = n(document.getElementById('rm_disc')?.value);
+    let inst = n(document.getElementById('rm_inst')?.value);
+    const gstp = n(document.getElementById('rm_gst')?.value);
 
-    const rate = n(document.getElementById('rm_rate').value); // per unit
-    const qty = n(document.getElementById('rm_qty').value);
+    disc = Math.max(0, disc);
+    inst = Math.max(0, inst);
 
-    // NORMAL DISCOUNT
-    const discPer = n(document.getElementById('rm_disc').value);
-    const discRs = n(document.getElementById('rm_inst').value);
+    const gross = rate * qty;
 
-    // LOYALTY
-    const loyPer = n(document.getElementById('addiloyality_per').value);
-    const loyRs = n(document.getElementById('addiloyalilty_rs').value);
+    // ✅ CONVERT DISCOUNT % TO AMOUNT
+    const discAmt = gross * (disc / 100);
 
-    // ADDITIONAL DISCOUNT
-    const addPer = n(document.getElementById('addidiscount_per').value);
-    const addRs = n(document.getElementById('addidiscount_rs').value);
+    let discounted = gross - (discAmt + inst);
+    if (discounted < 0) discounted = 0;
 
-    const gstPer = n(document.getElementById('rm_gst').value);
+    const gstAmt = discounted * (gstp / 100);
+    const finalAmt = discounted + gstAmt;
 
-    /* -------------------------
-     * 1️⃣ NORMAL DISCOUNT
-     * ------------------------- */
-    const discAmt = (rate * discPer / 100) + discRs;
-    let afterDisc = rate - discAmt;
-    if (afterDisc < 0) afterDisc = 0;
+    const elDiscAmt = document.getElementById('rm_discounted_amt');
+    if (elDiscAmt) elDiscAmt.value = money(discounted);
 
-   document.getElementById('rm_inst_final').value = Math.round(afterDisc);
+    const elFinal = document.getElementById('rm_final_amt');
+    if (elFinal) elFinal.value = money(finalAmt);
 
-
-    /* -------------------------
-     * 2️⃣ LOYALTY DISCOUNT (% + Rs)
-     * ------------------------- */
-    const loyAmt = (afterDisc * loyPer / 100) + loyRs;
-    let afterLoyalty = afterDisc - loyAmt;
-    if (afterLoyalty < 0) afterLoyalty = 0;
-
-    document.getElementById('additionalloyality_final').value = Math.round(afterLoyalty);
-
-    /* -------------------------
-     * 3️⃣ ADDITIONAL DISCOUNT (% + Rs)
-     * ------------------------- */
-    const addAmt = (afterLoyalty * addPer / 100) + addRs;
-    let finalRate = afterLoyalty - addAmt;
-    if (finalRate < 0) finalRate = 0;
-
-    finalRate = Math.round(finalRate);
-
-    document.getElementById('additionadiscount_final').value = Math.round(finalRate);
-    document.getElementById('rm_discounted_amt').value = Math.round(finalRate);
-
-    /* -------------------------
-     * 4️⃣ FINAL AMOUNT (× Qty + GST)
-     * ------------------------- */
-    const amountBeforeGST = finalRate * qty;
-    const gstAmt = amountBeforeGST * gstPer / 100;
-
-    document.getElementById('rm_final_amt').value =
-      money(amountBeforeGST + gstAmt);
+    const prev = document.getElementById('rm_amt');
+    if (prev) prev.textContent = money(finalAmt);
   }
+
+
+
+
+
+
+
+
 
 
 
@@ -2692,50 +2420,19 @@ ob_start();
     document.getElementById('rm_disc').value = r.discount || 0;
     document.getElementById('rm_inst').value = r.instantdisc || 0;
     document.getElementById('rm_gst').value = (r.gst || 0);
-
-    // 🔹 AFTER DISCOUNT
-    document.getElementById('rm_inst_final').value = r.totaldiscount || 0;
-
-    // 🔹 LOYALTY
-    document.getElementById('addiloyality_per').value = r.addiloyality_per || 0;
-    document.getElementById('addiloyalilty_rs').value = r.addiloyalilty_rs || 0;
-    document.getElementById('additionalloyality_final').value = r.additionalloyality || 0;
-
-    // 🔹 ADDITIONAL DISCOUNT
-    document.getElementById('addidiscount_per').value = r.addidiscount_per || 0;
-    document.getElementById('addidiscount_rs').value = r.addidiscount_rs || 0;
-    document.getElementById('additionadiscount_final').value = r.additionaldiscount || 0;
-
-    // 🔹 FINAL RATE + FINAL AMOUNT
-    document.getElementById('rm_discounted_amt').value = r.finalrate || 0;
-    document.getElementById('rm_final_amt').value = r.amt || 0;
+    document.getElementById('additionalloyality').value = r.additionalloyality ?? '0';
+    document.getElementById('additionadiscount').value = r.additionadiscount ?? '0';
 
 
-
-
-
-    // //✅ IMPORTANT: bind autocomplete AFTER modal is visible + inputs are filled
-    // setTimeout(() => {
-    //   if (typeof initProductAutocomplete === 'function') {
-    //     initProductAutocomplete();
-    //   }
-    //   if (typeof updateRowModalPreview === 'function') {
-    //     updateRowModalPreview();
-    //   }
-    // }, 50);
-    // ✅ IMPORTANT: bind autocomplete AFTER modal is visible + inputs are filled
+    //✅ IMPORTANT: bind autocomplete AFTER modal is visible + inputs are filled
     setTimeout(() => {
-      // Always init product search
       if (typeof initProductAutocomplete === 'function') {
         initProductAutocomplete();
       }
-
-      // 🔥 ONLY recalc for NEW ROW, NOT for EDIT
-      if (index < 0 && typeof updateRowModalPreview === 'function') {
+      if (typeof updateRowModalPreview === 'function') {
         updateRowModalPreview();
       }
     }, 50);
-
   }
   updateRowModalPreview();
 
@@ -2750,52 +2447,6 @@ ob_start();
 
   function money(v) {
     return (Math.round((n(v) + Number.EPSILON) * 100) / 100).toFixed(2);
-  }
-
-  /* =====================================================
-   * MODAL ONLY: % OR Rs (NO AUTO CALC)
-   * ===================================================== */
-  function toggleModalEitherOr(perId, amtId) {
-    const perEl = document.getElementById(perId);
-    const amtEl = document.getElementById(amtId);
-    if (!perEl || !amtEl) return;
-
-    const per = n(perEl.value);
-    const amt = n(amtEl.value);
-
-    // % entered → lock Rs
-    if (per > 0) {
-      amtEl.readOnly = true;
-      perEl.readOnly = false;
-      return;
-    }
-
-    // Rs entered → lock %
-    if (amt > 0) {
-      perEl.readOnly = true;
-      amtEl.readOnly = false;
-      return;
-    }
-
-    // both empty → unlock both
-    perEl.readOnly = false;
-    amtEl.readOnly = false;
-  }
-
-  function hookModalEitherOr(perId, amtId) {
-    const perEl = document.getElementById(perId);
-    const amtEl = document.getElementById(amtId);
-    if (!perEl || !amtEl) return;
-
-    const run = () => {
-      toggleModalEitherOr(perId, amtId);
-      updateRowModalPreview(); // calculations only
-    };
-
-    perEl.addEventListener('input', run);
-    amtEl.addEventListener('input', run);
-
-    setTimeout(run, 50); // initial state
   }
 
 
@@ -2820,31 +2471,20 @@ ob_start();
 
       rate: num(document.getElementById('rm_rate').value),
       qty: num(document.getElementById('rm_qty').value),
-
-      // 🔹 NORMAL DISCOUNT
-      discount: num(document.getElementById('rm_disc').value), // %
-      instantdisc: num(document.getElementById('rm_inst').value), // Rs
-      totaldiscount: num(document.getElementById('rm_inst_final').value),
-
-      // 🔹 LOYALTY (THIS WAS MISSING ❌)
-      addiloyality_per: num(document.getElementById('addiloyality_per').value),
-      addiloyalilty_rs: num(document.getElementById('addiloyalilty_rs').value),
-      additionalloyality: num(document.getElementById('additionalloyality_final').value),
-
-      // 🔹 ADDITIONAL DISCOUNT (THIS WAS MISSING ❌)
-      addidiscount_per: num(document.getElementById('addidiscount_per').value),
-      addidiscount_rs: num(document.getElementById('addidiscount_rs').value),
-      additionaldiscount: num(document.getElementById('additionadiscount_final').value),
-
-      // 🔹 FINAL
-      finalrate: num(document.getElementById('rm_discounted_amt').value),
+      discount: num(document.getElementById('rm_disc').value),
+      instantdisc: num(document.getElementById('rm_inst').value),
       gst: num(document.getElementById('rm_gst').value),
-      amt: num(document.getElementById('rm_final_amt').value),
 
-      sequence: (idx >= 0 ? idx + 1 : gridRows.length + 1)
+      // ✅ NEW FIELDS (NO CALC)
+      additionalloyality: document.getElementById('additionalloyality').value || '0',
+      additionadiscount: document.getElementById('additionadiscount').value || '0',
+
+      // ✅ STORE MODAL VALUES
+      _net: n(document.getElementById('rm_discounted_amt').value),
+      _amt: n(document.getElementById('rm_final_amt').value),
+
+      sequence: (idx >= 0 ? (idx + 1) : (gridRows.length + 1))
     };
-
-
 
     if (idx >= 0) gridRows[idx] = row;
     else gridRows.push(row);
@@ -3483,14 +3123,6 @@ ob_start();
     // hookPerAmt('insurance_per', 'insurance_amt', getTotal4);
     hookPerAmt('insurance_per', 'insurance_amt', baseForInsurance);
     hookPerAmt('commission_per', 'commission_amt', getBasicTotal);
-    // 1️⃣ Normal Discount (modal)
-    hookModalEitherOr('rm_disc', 'rm_inst');
-
-    // 2️⃣ Loyalty Discount (modal)
-    hookModalEitherOr('addiloyality_per', 'addiloyalilty_rs');
-
-    // 3️⃣ Additional Discount (modal)
-    hookModalEitherOr('addidiscount_per', 'addidiscount_rs');
   });
 
 
@@ -3510,19 +3142,13 @@ ob_start();
     initCustomerAutocomplete();
 
     // live preview changes in modal
-
-    [
-      'rm_rate', 'rm_qty', 'rm_disc', 'rm_inst', 'rm_gst',
-
-      'addiloyality_per', 'addiloyalilty_rs',
-      'addidiscount_per', 'addidiscount_rs'
-
-    ].forEach(id => {
+    ['rm_rate', 'rm_qty', 'rm_disc', 'rm_inst', 'rm_gst'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', updateRowModalPreview);
+
+
+
     });
-
-
 
     // terms type change => load master term
     const tmType = document.getElementById('tm-type');
@@ -3574,33 +3200,20 @@ ob_start();
 
     // load existing grid (edit mode)
     gridRows = (existingGrid || []).map((r, idx) => ({
-      propid: num(r.propid),
-      product_label: String(r.product_label || ''),
+      propid: parseInt(r.propid || 0, 10) || 0,
+      product_label: String(r.product_label || r.label || (r.propid ? ('#' + r.propid) : '')),
       hsncode: String(r.hsncode || ''),
       description: String(r.description || ''),
-
       rate: num(r.rate),
       qty: num(r.qty),
-
       discount: num(r.discount),
       instantdisc: num(r.instantdisc),
-      totaldiscount: num(r.totaldiscount),
-
-      addiloyality_per: num(r.addiloyality_per),
-      addiloyalilty_rs: num(r.addiloyalilty_rs),
-      additionalloyality: num(r.additionalloyality),
-
-      addidiscount_per: num(r.addidiscount_per),
-      addidiscount_rs: num(r.addidiscount_rs),
-      additionaldiscount: num(r.additionaldiscount),
-
-      finalrate: num(r.finalrate),
       gst: num(r.gst),
-      amt: num(r.amt),
-
-      sequence: parseInt(r.sequence || (idx + 1), 10)
+      // ✅ NEW FIELDS FROM DB
+      additionalloyality: num(r.additionalloyality),
+      additionadiscount: num(r.additionadiscount),
+      sequence: parseInt(r.sequence || (idx + 1), 10) || (idx + 1)
     }));
-
     renderGrid();
 
     // load existing terms

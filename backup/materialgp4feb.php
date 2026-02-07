@@ -445,8 +445,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['ajax'])) {
         $sql = "
         SELECT id, name
         FROM jos_ierp_msupermaster
-        WHERE mastertype = 1
-          AND name LIKE ?
+        WHERE name LIKE ?
         ORDER BY name ASC
         LIMIT 20
     ";
@@ -483,17 +482,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['ajax'])) {
         // TODAY → TODAY
         $today = date('Y-m-d');
 
+        $doc  = (int)($_POST['doc'] ?? 0);
+
         $stock = get_actual_stock(
             $con,
             $pid,
-            $today,
-            $today,
             $gid,
-            null,
             $yrid,
-            null,
-            COMPANY_ID
+            $doc,
+            null
         );
+
 
         json_out([
             'ok'    => true,
@@ -962,6 +961,9 @@ if ($mode === 'save') {
                         case 'actualweight':
                             $vals[$i] = (float)($r['actualweight'] ?? 0);
                             break;
+                        case 'stock':
+                            $vals[$i] = (float)($r['stock'] ?? 0);
+                            break;
                     }
                 }
 
@@ -1090,7 +1092,7 @@ ob_start();
 
             
             <div style="position:relative;">
-                <label>Supplier Name <span style="color:#ef4444;">*</span></label>
+                <label>Supplier Name<span style="color:#ef4444;">*</span></label>
 
                 <input type="hidden" name="supplier_id" id="supplier_id"
                     value="<?= (int)($hdr['supplier_id'] ?? 0) ?>">
@@ -1228,7 +1230,17 @@ ob_start();
             </div>
         </div>
         <div style="margin-top:12px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <div><label>Actual Weight (KG)</label><input type="text" name="actualweight" placeholder="Enter Actual Weight" id="actualweight" class="inp"></div>
+            <div><label>Actual Weight (KG)</label>
+            <input
+    type="text"
+    name="actualweight"
+    id="actualweight"
+    class="inp"
+    placeholder="Enter Actual Weight"
+    inputmode="decimal"
+     maxlength="10"
+    oninput="this.value=this.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1')">
+            </div>
         </div>
 
         <div style="margin-top:12px;">
@@ -1651,7 +1663,8 @@ ob_start();
                 ajax: 'get_stock',
                 pid: it.id,
                 from_gid: from_gid,
-                yrid: yrid
+                yrid: yrid,
+                doc:27
             });
 
             document.getElementById('m_stock').value =
@@ -1707,7 +1720,7 @@ ob_start();
             product_name: product_name,
             description: description,
             qty: qty,
-            stock: stock,
+            stock: stock, 
             uom_id: parseInt(window._unit_id || 0, 10), // ✅ STORE ID
             uom_name: document.getElementById('m_unit').value, // UI display
             // uom: document.getElementById('m_unit').value, 
@@ -1727,10 +1740,10 @@ ob_start();
 
         const stockVal = parseFloat(stock || '0');
 
-        // if (qty > stockVal) {
-        //     alert('Insufficient stock: You do not have sufficient stock balance for this product.');
-        //     return;
-        // }
+        if (qty > stockVal) {
+            alert('Insufficient stock: You do not have sufficient stock balance for this product.');
+            return;
+        }
         const idx = parseInt(document.getElementById('m_row_index').value || '-1', 10);
         if (idx >= 0) grid[idx] = row;
         else grid.push(row);

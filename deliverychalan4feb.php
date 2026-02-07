@@ -1,7 +1,7 @@
 <?php
 /* ============================================================
- * operations/materialgatepass_outward.php  —  Material Gate Pass Outward Issue (Core ERP, ui_autoshell)
- * Tables: jos_ierp_gatepass + jos_ierp_gatepass_grid
+ * operations/deliverychallanform.php  —  Delivery Challan  (Core ERP, ui_autoshell)
+ * Tables: jos_ierp_deliverychallan + jos_ierp_deliverychallan_grid
  *
  * Updates in THIS build (as per your last msgs + screenshots):
  * ✅ UI placement restored like your OLD screen (SS1): Date+FY+Bill row, From+To row, Items, Remark at bottom, Save/clear center
@@ -20,7 +20,6 @@ require_once __DIR__ . '/../includes/initialize.php';
 require_once __DIR__ . '/../includes/aclhelper.php';
 require_once __DIR__ . '/../includes/stock_helper.php';
 
-
 if (!function_exists('is_logged_in') || !is_logged_in()) {
     redirect('../login.php');
 }
@@ -34,14 +33,14 @@ if (!$con instanceof mysqli) {
 /* ============================================================
  * TABLES (FROZEN)
  * ============================================================ */
-$TABLE_HDR      = 'jos_ierp_gatepass';
-$TABLE_GRID     = 'jos_ierp_gatepass_grid';
+$TABLE_HDR      = 'jos_ierp_deliverychallan';
+$TABLE_GRID     = 'jos_ierp_deliverychallan_grid';
 $TABLE_LOC      = 'jos_erp_gidlocation';     // gid, location_name
 $TABLE_PRODUCTS = 'jos_crm_mproducts';
 $TABLE_MUNIT    = 'jos_ierp_munit';
 $TABLE_FY       = 'jos_ierp_mfinancialyear';
 
-const DOC_TYPE   = 27;
+const DOC_TYPE   = 29;
 const COMPANY_ID = 1;
 
 /* ============================================================
@@ -117,7 +116,7 @@ function flash_get($k)
 
 function redirect_self()
 {
-    header('Location: materialgatepass_outward.php');
+    header('Location: deliverychallanform.php');
     exit;
 }
 
@@ -433,7 +432,32 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['ajax'])) {
             'third_base_height' => $third_height,
         ]);
     }
+    if ($ajax === 'get_stock') {
 
+        $pid  = (int)($_POST['pid'] ?? 0);
+        $gid  = (int)($_POST['from_gid'] ?? 0);
+        $yrid = (int)($_POST['yrid'] ?? 0);
+
+        if ($pid <= 0 || $gid <= 0 || $yrid <= 0) {
+            json_out(['ok' => false, 'stock' => 0]);
+        }
+
+        $doc  = (int)($_POST['doc'] ?? 0);
+
+        $stock = get_actual_stock(
+            $con,
+            $pid,
+            $gid,
+            $yrid,
+            $doc,
+            null
+        );
+
+        json_out([
+            'ok'    => true,
+            'stock' => $stock
+        ]);
+    }
 
     if ($ajax === 'supplier_search') {
 
@@ -443,13 +467,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['ajax'])) {
         $like = "%" . $q . "%";
 
         $sql = "
-        SELECT id, name
-        FROM jos_ierp_msupermaster
-        WHERE mastertype = 1
-          AND name LIKE ?
-        ORDER BY name ASC
-        LIMIT 20
-    ";
+    SELECT id, name
+    FROM jos_ierp_msupermaster
+    WHERE name LIKE ?
+    ORDER BY name ASC
+    LIMIT 20
+  ";
 
         $st = $con->prepare($sql);
         $st->bind_param('s', $like);
@@ -461,46 +484,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['ajax'])) {
             $items[] = [
                 'id'    => (int)$r['id'],
                 'label' => $r['name'],
-                'name'  => $r['name']
+                'name'  => $r['name'],
             ];
         }
         $st->close();
 
         json_out(['ok' => true, 'items' => $items]);
     }
-
-
-    if ($ajax === 'get_stock') {
-
-        $pid  = (int)($_POST['pid'] ?? 0);
-        $gid  = (int)($_POST['from_gid'] ?? 0);
-        $yrid = (int)($_POST['yrid'] ?? 0);
-
-        if ($pid <= 0 || $gid <= 0 || $yrid <= 0) {
-            json_out(['ok' => false, 'stock' => 0]);
-        }
-
-        // TODAY → TODAY
-        $today = date('Y-m-d');
-
-        $stock = get_actual_stock(
-            $con,
-            $pid,
-            $today,
-            $today,
-            $gid,
-            null,
-            $yrid,
-            null,
-            COMPANY_ID
-        );
-
-        json_out([
-            'ok'    => true,
-            'stock' => $stock
-        ]);
-    }
-
 
 
     json_out(['ok' => false, 'msg' => 'Unknown ajax']);
@@ -544,15 +534,17 @@ $hdr = [
     'issue_date' => date('d-m-Y'),
     'from_gid'   => (string)$adminGid,
     'from_name'  => (string)$adminLocName,
-    'to_name'     => '',
+    'to_name'    => '',
     'remark'     => '',
     'fy_code'    => '',
     'billno'     => '',
     'yrid'       => 0,
-    'supplier' => 0,           // stores supplier ID
-    'supplier_name' => '',     // UI only
+    'supplier_id'   => 0,
+    'supplier_name' => '',
+    'vehicle'       => '',
 
 ];
+
 
 $rows = [];
 
@@ -583,6 +575,7 @@ if ($mode === 'edit_load') {
             $hdr['remark']     = (string)($H['remark'] ?? '');
             $hdr['billno']     = (string)($H['billno'] ?? '');
             $hdr['yrid']       = (int)($H['yrid'] ?? 0);
+            $hdr['vehicle'] = (string)($H['vehicle'] ?? '');
 
             $hdr['supplier_id'] = (int)($H['supplier'] ?? 0);
             $hdr['supplier_name'] = '';
@@ -598,7 +591,6 @@ if ($mode === 'edit_load') {
 
                 $hdr['supplier_name'] = $r['name'] ?? '';
             }
-
 
             //   foreach($locations as $L){
             //     if($L['nm'] === $hdr['to_name']){
@@ -705,6 +697,8 @@ if ($mode === 'save') {
 
     $to_name  = trim((string)($_POST['to_name'] ?? ''));
     $remark   = trim((string)($_POST['remark'] ?? ''));
+    $vehicle = trim((string)($_POST['vehicle'] ?? ''));
+
     $rows_json = (string)($_POST['rows_json'] ?? '[]');
     $grid = json_decode($rows_json, true);
     if (!is_array($grid)) $grid = [];
@@ -715,7 +709,6 @@ if ($mode === 'save') {
     if ($to_name === '') $errors[] = 'To location required.';
     if (count($grid) === 0) $errors[] = 'Add at least 1 item.';
     $supplier_id = (int)($_POST['supplier_id'] ?? 0);
-
     if ($supplier_id <= 0) {
         $errors[] = 'Supplier is required.';
     }
@@ -733,6 +726,8 @@ if ($mode === 'save') {
         $hdr['remark'] = $remark;
         $hdr['yrid'] = $yrid;
         $hdr['fy_code'] = $fy_code;
+        $hdr['vehicle'] = $vehicle;
+
         $rows = $grid;
         $mode = 'form';
     } else {
@@ -769,10 +764,14 @@ if ($mode === 'save') {
                 add_set($con, $TABLE_HDR, $sets, $types, $vals, 'gid', 'i', $from_gid);
                 add_set($con, $TABLE_HDR, $sets, $types, $vals, 'doc', 'i', DOC_TYPE);
                 add_set($con, $TABLE_HDR, $sets, $types, $vals, 'remark', 's', $remark);
+                add_set($con, $TABLE_HDR, $sets, $types, $vals, 'vehicle', 's', $vehicle);
+
 
                 add_set($con, $TABLE_HDR, $sets, $types, $vals, 'modifyby', 'i', $uid);
                 add_set($con, $TABLE_HDR, $sets, $types, $vals, 'modifydate', 's', $now);
                 add_set($con, $TABLE_HDR, $sets, $types, $vals, 'supplier', 'i', $supplier_id);
+
+
                 add_set($con, $TABLE_HDR, $sets, $types, $vals, 'company', 'i', COMPANY_ID);
 
                 // keep billno (do not change except if missing)
@@ -810,8 +809,12 @@ if ($mode === 'save') {
                 add_ins($con, $TABLE_HDR, $cols, $types, $vals, 'fromlc', 'i', $from_gid);
                 add_ins($con, $TABLE_HDR, $cols, $types, $vals, 'doc', 'i', DOC_TYPE);
                 add_ins($con, $TABLE_HDR, $cols, $types, $vals, 'remark', 's', $remark);
-                add_ins($con, $TABLE_HDR, $cols, $types, $vals, 'supplier', 'i', $supplier_id);
+                add_ins($con, $TABLE_HDR, $cols, $types, $vals, 'vehicle', 's', $vehicle);
+
+
                 add_ins($con, $TABLE_HDR, $cols, $types, $vals, 'company', 'i', COMPANY_ID);
+                add_ins($con, $TABLE_HDR, $cols, $types, $vals, 'supplier', 'i', $supplier_id);
+
 
                 // NOTE: intentionally NOT inserting stkno & status (as per you)
 
@@ -857,7 +860,7 @@ if ($mode === 'save') {
                 ['tolc', 's', $to_name],
                 ['uom', 's', null],
                 ['gid', 'i', $from_gid],
-                ['stock', 'i', 0],
+                ['stock', 'i', null],
                 ['remark', 's', ''],
                 ['actualweight', 'd', null],
                 // NOTE: intentionally NOT inserting stkno & status
@@ -882,6 +885,25 @@ if ($mode === 'save') {
                 $qty = (float)($r['qty'] ?? 0);
                 $pid = (int)($r['product_id'] ?? 0);
                 if ($pid <= 0 || $qty <= 0) continue;
+
+
+                /* ================= STOCK VALIDATION (ADD HERE) ================= */
+                $availableStock = get_actual_stock(
+                    $con,
+                    $pid,
+                    $from_gid,
+                    $yrid,
+                    null
+                );
+
+                if ($qty > $availableStock) {
+                    throw new Exception(
+                        'Insufficient stock for product ID ' . $pid .
+                            ' (Available: ' . $availableStock . ')'
+                    );
+                }
+                /* =============================================================== */
+
 
                 $sec_qty = (float)($r['unitconversion'] ?? 0);
                 $thirdqty = (float)($r['secondconversion'] ?? 0);
@@ -962,6 +984,9 @@ if ($mode === 'save') {
                         case 'actualweight':
                             $vals[$i] = (float)($r['actualweight'] ?? 0);
                             break;
+                        case 'stock':
+                            $vals[$i] = $availableStock;
+                            break;
                     }
                 }
 
@@ -983,7 +1008,6 @@ if ($mode === 'save') {
             $hdr['billno'] = (string)$billno;
             $hdr['fy_code'] = $fy_code;
             $hdr['yrid'] = $yrid;
-            $hdr['supplier'] = $supplier;
             $rows = $grid;
             $edit_id = $editing;
             $mode = 'form';
@@ -994,7 +1018,7 @@ if ($mode === 'save') {
 /* ============================================================
  * UI
  * ============================================================ */
-$pageTitle = 'Material Gate Pass Outward';
+$pageTitle = 'Delivery Challan ';
 ob_start();
 ?>
 <style>
@@ -1043,18 +1067,11 @@ ob_start();
         background: #2563eb;
         color: #fff;
     }
-    .suggest-box {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 100%;
-}
-
 </style>
 
 <div class="card" style="margin-bottom:14px;">
     <!-- page title like your Complaint Order -->
-    <div style="font-size:34px; font-weight:800; margin-bottom:12px;"> Material Gate Pass Outward</div>
+    <div style="font-size:34px; font-weight:800; margin-bottom:12px;"> Delivery Challan </div>
 
     <?php if ($m = flash_get('ok')): ?>
         <div class="alert success" style="margin-bottom:10px;"><?= h($m) ?></div>
@@ -1084,24 +1101,35 @@ ob_start();
             </div>
 
             <div>
-                <label>Bill No</label>
+                <label>DC No.</label>
                 <input type="text" id="billno" class="inp locked" value="<?= h($hdr['billno']) ?>" readonly>
             </div>
 
-            
             <div style="position:relative;">
                 <label>Supplier Name <span style="color:#ef4444;">*</span></label>
 
                 <input type="hidden" name="supplier_id" id="supplier_id"
-                    value="<?= (int)($hdr['supplier_id'] ?? 0) ?>">
+                    value="<?= (int)$hdr['supplier_id'] ?>">
 
                 <input type="text"
                     id="supplier_name"
                     class="inp"
                     placeholder="Search supplier..."
-                    value="<?= h($hdr['supplier_name'] ?? '') ?>">
+                    value="<?= h($hdr['supplier_name']) ?>">
             </div>
 
+            <div>
+                <label>Vehicle No.</label>
+                <input type="text"
+                    name="vehicle"
+                    id="vehicle"
+                    class="inp"
+                    value="<?= h($hdr['vehicle']) ?>">
+            </div>
+
+
+
+            <div></div>
         </div>
 
         <!-- ROW 2 (SS1): From + To same line -->
@@ -1110,6 +1138,7 @@ ob_start();
                 <label>From Location <span style="color:#ef4444;">*</span></label>
                 <input type="text" class="inp locked" value="<?= h($hdr['from_name']) ?>" readonly>
             </div>
+
             <div>
                 <label>To Location <span style="color:#ef4444;">*</span></label>
                 <input
@@ -1120,6 +1149,7 @@ ob_start();
                     value="<?= h($hdr['to_name'] ?? '') ?>"
                     placeholder="Enter To Location">
             </div>
+
         </div>
 
         <!-- Items header -->
@@ -1227,9 +1257,19 @@ ob_start();
                 <input type="text" id="m_third_measure" class="inp locked" readonly>
             </div>
         </div>
-        <div style="margin-top:12px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <div><label>Actual Weight (KG)</label><input type="text" name="actualweight" placeholder="Enter Actual Weight" id="actualweight" class="inp"></div>
+
+        <div style="margin-top:12px;">
+            <label>Actual Weight (KG)</label>
+            <input
+                type="text"
+                id="m_actualweight"
+                class="inp"
+                placeholder="Enter Actual Weight"
+                inputmode="decimal"
+                maxlength="10"
+                oninput="this.value=this.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1')">
         </div>
+
 
         <div style="margin-top:12px;">
             <label>Description</label>
@@ -1408,7 +1448,8 @@ ob_start();
         document.getElementById('m_stock').value = r ? (r.stock || '') : '';
         document.getElementById('m_qty').value = r ? (r.qty || 1) : 1;
         document.getElementById('m_description').value = r ? (r.description || '') : '';
-        document.getElementById('actualweight').value = r ? (r.actualweight || '') : '';
+        document.getElementById('m_actualweight').value = r ? (r.actualweight || '') : '';
+
 
 
         //   document.getElementById('m_unit').value = r ? (r.uom || '') : '';
@@ -1508,57 +1549,28 @@ ob_start();
             }
         }
 
-        // function render(list) {
-        //     close();
-        //     if (!list || !list.length) return;
-
-        //     const host = input.parentElement;
-        //     box = document.createElement('div');
-        //     box.className = 'suggest-box';
-
-        //     list.forEach((it, i) => {
-        //         const d = document.createElement('div');
-        //         d.className = 'suggest-item';
-        //         d.textContent = it.label;
-        //         d.onclick = () => {
-        //             onSelect(it);
-        //             close();
-        //         };
-        //         box.appendChild(d);
-        //     });
-
-        //     items = [...box.children];
-        //     host.appendChild(box);
-        // }
         function render(list) {
-    close();
-    if (!list || !list.length) return;
-
-    box = document.createElement('div');
-    box.className = 'suggest-box';
-
-    list.forEach(it => {
-        const d = document.createElement('div');
-        d.className = 'suggest-item';
-        d.textContent = it.label;
-        d.onclick = () => {
-            onSelect(it);
             close();
-        };
-        box.appendChild(d);
-    });
+            if (!list || !list.length) return;
 
-    document.body.appendChild(box);
+            const host = input.parentElement;
+            box = document.createElement('div');
+            box.className = 'suggest-box';
 
-    const r = input.getBoundingClientRect();
-    box.style.position = 'absolute';
-    box.style.left = (r.left + window.scrollX) + 'px';
-    box.style.top  = (r.bottom + window.scrollY) + 'px';
-    box.style.width = r.width + 'px';
+            list.forEach((it, i) => {
+                const d = document.createElement('div');
+                d.className = 'suggest-item';
+                d.textContent = it.label;
+                d.onclick = () => {
+                    onSelect(it);
+                    close();
+                };
+                box.appendChild(d);
+            });
 
-    items = [...box.children];
-}
-
+            items = [...box.children];
+            host.appendChild(box);
+        }
 
         input.addEventListener('input', async () => {
             const q = input.value.trim();
@@ -1639,29 +1651,34 @@ ob_start();
     });
 
     async function selectProduct(it) {
-
         document.getElementById('m_product').value = it.label || it.name || '';
         document.getElementById('m_product_id').value = it.id || '';
 
-        const from_gid = document.getElementById('from_gid').value;
-        const yrid = document.getElementById('yrid').value;
 
+        // ---- LOAD ACTUAL STOCK (STOCK ISSUE LOGIC) ----
         try {
-            const j = await postForm({
-                ajax: 'get_stock',
-                pid: it.id,
-                from_gid: from_gid,
-                yrid: yrid
-            });
+            const gid = parseInt(document.getElementById('from_gid').value || '0', 10);
+            const yrid = parseInt(document.getElementById('yrid').value || '0', 10);
 
-            document.getElementById('m_stock').value =
-                (j && j.ok) ? j.stock : '0';
+            if (gid > 0 && yrid > 0) {
+                const sj = await postForm({
+                    ajax: 'get_stock',
+                    pid: String(it.id),
+                    gid: String(gid),
+                    yrid: String(yrid)
+                });
 
+                if (sj && sj.ok) {
+                    document.getElementById('m_stock').value = sj.stock;
+                } else {
+                    document.getElementById('m_stock').value = '0';
+                }
+            }
         } catch (e) {
             document.getElementById('m_stock').value = '0';
         }
 
-        // product details (units)
+
         try {
             const j = await postForm({
                 ajax: 'product_details',
@@ -1669,8 +1686,10 @@ ob_start();
             });
             if (j && j.ok && j.row) {
                 const r = j.row;
+                //   document.getElementById('m_unit').value = (r._unit_name || '');
                 document.getElementById('m_unit').value = (r._unit_name || '');
-                window._unit_id = parseInt(r.unit || 0, 10);
+                window._unit_id = parseInt(r.unit || 0, 10); // ✅ store unit ID
+
 
                 window._sec_unitname = (r._secondary_name || '').trim();
                 window._third_unitname = (r._third_name || '').trim();
@@ -1683,7 +1702,6 @@ ob_start();
             }
         } catch (e) {}
     }
-
 
     // ---------- save modal row ----------
     document.getElementById('m_save').addEventListener('click', function() {
@@ -1720,17 +1738,16 @@ ob_start();
             sec_height: document.getElementById('m_sec_base_h').value,
             third_width: document.getElementById('m_third_base_w').value,
             third_height: document.getElementById('m_third_base_h').value,
-            actualweight: document.getElementById('actualweight').value || ''
+            actualweight: document.getElementById('m_actualweight').value || ''
         };
-
-
 
         const stockVal = parseFloat(stock || '0');
 
-        // if (qty > stockVal) {
-        //     alert('Insufficient stock: You do not have sufficient stock balance for this product.');
-        //     return;
-        // }
+        if (qty > stockVal) {
+            alert('Insufficient stock: You do not have sufficient stock balance for this product.');
+            return;
+        }
+
         const idx = parseInt(document.getElementById('m_row_index').value || '-1', 10);
         if (idx >= 0) grid[idx] = row;
         else grid.push(row);
@@ -1789,39 +1806,39 @@ ob_start();
         }
     });
 
-  let supplierSelecting = false;
+    let supplierSelecting = false;
 
-attachSuggest({
-    input: document.getElementById('supplier_name'),
+    attachSuggest({
+        input: document.getElementById('supplier_name'),
 
-    fetchItems: async (q) => {
-        const res = await fetch(location.href, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                ajax: 'supplier_search',
-                q: q
-            })
-        });
-        const j = await res.json();
-        return (j && j.ok) ? (j.items || []) : [];
-    },
+        fetchItems: async (q) => {
+            const res = await fetch(location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({
+                    ajax: 'supplier_search',
+                    q: q
+                })
+            });
+            const j = await res.json();
+            return (j && j.ok) ? (j.items || []) : [];
+        },
 
-    onSelect: (it) => {
-        supplierSelecting = true;
-        document.getElementById('supplier_name').value = it.name;
-        document.getElementById('supplier_id').value   = it.id;
-        supplierSelecting = false;
-    }
-});
+        onSelect: (it) => {
+            supplierSelecting = true;
+            document.getElementById('supplier_name').value = it.name;
+            document.getElementById('supplier_id').value = it.id;
+            supplierSelecting = false;
+        }
+    });
 
-document.getElementById('supplier_name').addEventListener('input', function () {
-    if (!supplierSelecting) {
-        document.getElementById('supplier_id').value = '';
-    }
-});
-
-
+    document.getElementById('supplier_name').addEventListener('input', function() {
+        if (!supplierSelecting) {
+            document.getElementById('supplier_id').value = '';
+        }
+    });
 </script>
 
 <?php
