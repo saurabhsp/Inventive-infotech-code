@@ -1339,9 +1339,6 @@ ob_start();
           </table>
         </div>
 
-        <div class="muted" style="margin-top:6px; font-size:12px;">
-          GST auto comes from product CGST% (split into CGST + SGST). You can edit GST%.
-        </div>
       </div>
 
       <!-- charges grouped (like old UI) -->
@@ -1443,7 +1440,7 @@ ob_start();
 
 
               <div class="mini">
-                <div class="mini-lbl"></div>
+                <div class="mini-lbl">GST + Amount</div>
                 <input type="text" name="packing_total" id="packing_total" class="inp" readonly
                   value="<?php echo h((string)($editingHeader['packing_total'] ?? 0)); ?>">
               </div>
@@ -3305,8 +3302,7 @@ ob_start();
       setv('trans_amt', transBase);
     }
     // total3 already includes TCS (calculated later)
-    const total3 = val('total3'); // 🔥 use already computed total3
-
+    const total3 = val('total3'); // 🔥 use already computed total
     const total4 = total3 + transTotal; // ✅ TOTAL + TRANSPORT
     setv('total4', total4);
 
