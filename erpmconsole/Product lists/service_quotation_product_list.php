@@ -15,8 +15,8 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 /* ==========================
    TABLE
 ========================== */
-$TABLE = 'jos_ierp_stkrequest';
-$TABLE_GRID   = 'jos_ierp_stkrequest_grid';
+$TABLE = 'jos_ierp_complaint_quotation';
+$TABLE_GRID   = 'jos_ierp_complaint_quotationgrid';
 $TABLE_PRODUCTS  = 'jos_crm_mproducts';
 
 /* ==========================
@@ -56,8 +56,6 @@ function fy_from_date($date)
 ========================== */
 $acl = erp_get_menu_meta_and_acl($con);
 $canView  = $acl['can_view'] ?? false;
-$canEdit  = $acl['can_edit'] ?? false;
-$canDelete  = $acl['can_delete'] ?? false;
 
 if (!$canView) {
     $CONTENT = '<div class="alert danger">Access Denied</div>';
@@ -71,12 +69,15 @@ if (!$canView) {
 $from = '';
 $to = '';
 $year = '';
-$billno = '';
+$qutid = '';
+$complaint_id = '';
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Reset button
     if (isset($_POST['reset'])) {
-        $from = $to = $year = $billno = '';
+        $from = $to = $year = $qutid = $complaint_id = '';
         $perpage = '25';
     }
 
@@ -86,7 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $from   = trim($_POST['from'] ?? '');
         $to     = trim($_POST['to'] ?? '');
         $year   = trim($_POST['year'] ?? '');
-        $billno = trim($_POST['billno'] ?? '');
+        $qutid = trim($_POST['qutid'] ?? '');
+        $complaint_id = trim($_POST['complaint_id'] ?? '');
         $perpage = $_POST['perpage'] ?? '25';
     }
 
@@ -95,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $from   = trim($_POST['from'] ?? '');
         $to     = trim($_POST['to'] ?? '');
         $year   = trim($_POST['year'] ?? '');
-        $billno = trim($_POST['billno'] ?? '');
+        $qutid = trim($_POST['qutid'] ?? '');
         $perpage = $_POST['perpage'] ?? '25';
     }
 }
@@ -128,7 +130,7 @@ $types = '';
 $params = [];
 
 /* ✅ Always filter doc = 5 */
-$where[] = 's.doc = 5';
+// $where[] = 's.doc = 5';
 
 if ($from) {
     $where[] = 's.date >= ?';
@@ -154,66 +156,50 @@ if ($year) {
     $params[] = $fromFY;
     $params[] = $toFY;
 }
-if ($billno) {
-    $where[] = 's.billno LIKE ?';
+if ($qutid) {
+    $where[] = 'g.qutid LIKE ?';
     $types .= 's';
-    $params[] = "%$billno%";
+    $params[] = "%$qutid%";
+}
+if ($complaint_id) {
+    $where[] = 's.complaint_id LIKE ?';
+    $types .= 's';
+    $params[] = "%$complaint_id%";
 }
 
 
-// $sql = "
-// SELECT
-//     s.id,
-//     s.billno,
-//     s.date,
-//     s.doc,
-//     s.modifydate,
-
-//     lf.location_name AS from_location,
-//     lt.location_name AS to_location,
-
-//     u.name AS created_by_name
-// FROM jos_ierp_stkrequest s
-
-// LEFT JOIN jos_erp_gidlocation lf ON lf.gid = s.fromlc
-// LEFT JOIN jos_erp_gidlocation lt ON lt.gid = s.tolc
-
-// LEFT JOIN jos_admin_users u ON u.id = s.created_by
-// ";
 
 $sql = "
-SELECT
+SELECT 
     s.id,
-    s.billno,
+    s.complaint_id,
     s.date,
-    s.modifydate,
 
-    lf.location_name AS from_location,
-    lt.location_name AS to_location,
-    u.name AS created_by_name,
-    g.propid,
+    cm.name AS customer_name,
+
+    g.qutid,
+    p.name AS product_name,
+    g.rate,
     g.qty,
-    g.description,
+    g.gstamt,
+    g.amt
 
-    p.name AS product_name
+FROM $TABLE s
 
-FROM jos_ierp_stkrequest s
+INNER JOIN $TABLE_GRID g 
+    ON g.qutid = s.id
 
-LEFT JOIN jos_ierp_stkrequest_grid g 
-    ON g.billid = s.id
+LEFT JOIN jos_ierp_customermaster cm
+    ON cm.id = s.custid
 
-LEFT JOIN jos_crm_mproducts p 
+LEFT JOIN jos_crm_mproducts p
     ON p.id = g.propid
-
-LEFT JOIN jos_erp_gidlocation lf 
-    ON lf.gid = s.fromlc
-
-LEFT JOIN jos_erp_gidlocation lt 
-    ON lt.gid = s.tolc
-
-LEFT JOIN jos_admin_users u 
-    ON u.id = s.created_by
 ";
+
+
+
+
+
 
 if ($where) {
     $sql .= " WHERE " . implode(' AND ', $where);
@@ -235,13 +221,12 @@ $totalPages = 1;
 if ($perpage !== 'all') {
 
     $countSql = "
-    SELECT COUNT(*) AS total
-    FROM jos_ierp_stkrequest s
-    LEFT JOIN jos_ierp_stkrequest_grid g 
-        ON g.billid = s.id
-    LEFT JOIN jos_crm_mproducts p 
-        ON p.id = g.propid
-    ";
+SELECT COUNT(*) AS total
+FROM $TABLE s
+LEFT JOIN $TABLE_GRID g 
+    ON g.qutid = s.id
+";
+
 
     if ($where) {
         $countSql .= " WHERE " . implode(' AND ', $where);
@@ -277,23 +262,24 @@ while ($r = $rs->fetch_assoc()) $rows[] = $r;
 $st->close();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['export'] ?? '') === 'excel') {
+
     header("Content-Type: application/vnd.ms-excel");
-    header("Content-Disposition: attachment; filename=stock_transfer_" . date('d-m-Y') . ".xls");
+    header("Content-Disposition: attachment; filename=service_quotation_products_" . date('d-m-Y') . ".xls");
     header("Pragma: no-cache");
     header("Expires: 0");
 
     echo "<table border='1'>";
     echo "<tr>
             <th>Sr No</th>
-            <th>Challan No</th>
+            <th>Quotation No</th>
             <th>Date</th>
-            <th>Document</th>
-            <th>From</th>
-            <th>To</th>
+            <th>Complaint No</th>
+            <th>Customer Name</th>
             <th>Product Name</th>
-            <th>Qty</th>
-            <th>User / Modify by</th>
-            <th>Modify Date</th>
+            <th>Rate</th>
+            <th>Quantity</th>
+            <th>GST Amt</th>
+            <th>Amount</th>
           </tr>";
 
     foreach ($rows as $i => $r) {
@@ -302,18 +288,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['export'] ?? '') === 'excel
             ? ($i + 1)
             : ($offset + $i + 1);
 
-        echo "<tr>
-                <td>{$sr}</td>
-                <td>" . fy_from_date($r['date']) . "/" . h($r['billno']) . "</td>
-                <td>" . dmy($r['date']) . "</td>
-                <td>Stock Transfer</td>
-                <td>" . h($r['from_location']) . "</td>
-                <td>" . h($r['to_location']) . "</td>
-                <td>" . h($r['product_name']) . "</td>
-                <td>" . h($r['qty']) . "</td>
-                <td>" . h($r['created_by_name']) . "</td>
-                <td>" . ($r['modifydate'] ? date('d-m-Y', strtotime($r['modifydate'])) : '') . "</td>
-              </tr>";
+        echo "<tr>";
+        echo "<td>" . $sr . "</td>";
+        echo "<td>" . fy_from_date($r['date']) . "/" . h($r['qutid']) . "</td>";
+        echo "<td>" . dmy($r['date']) . "</td>";
+        echo "<td>" . h($r['complaint_id']) . "</td>";
+        echo "<td>" . h($r['customer_name']) . "</td>";
+        echo "<td>" . h($r['product_name']) . "</td>";
+        echo "<td>" . h($r['rate']) . "</td>";
+        echo "<td>" . h($r['qty']) . "</td>";
+        echo "<td>" . h($r['gstamt']) . "</td>";
+        echo "<td>" . h($r['amt']) . "</td>";
+        echo "</tr>";
     }
 
     echo "</table>";
@@ -321,59 +307,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['export'] ?? '') === 'excel
 }
 
 
-
-/* ==========================
-   DELETE STOCK ISSUE (LIST PAGE)
-========================== */
-if (
-    $_SERVER['REQUEST_METHOD'] === 'POST'
-    && ($_POST['mode'] ?? '') === 'delete'
-    && isset($_POST['del_id'])
-) {
-
-    if (!$canDelete) {
-        die('Access denied');
-    }
-
-    $delId = (int)$_POST['del_id'];
-    if ($delId <= 0) {
-        $_SESSION['err'] = 'Invalid delete id';
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
-    }
-
-    $con->begin_transaction();
-
-    try {
-        /* 1️⃣ Delete GRID rows */
-        $st = $con->prepare(
-            "DELETE FROM jos_ierp_stkrequest_grid WHERE billid = ?"
-        );
-        $st->bind_param("i", $delId);
-        $st->execute();
-        $st->close();
-
-        /* 2️⃣ Delete HEADER row */
-        $st = $con->prepare(
-            "DELETE FROM jos_ierp_stkrequest WHERE id = ?"
-        );
-        $st->bind_param("i", $delId);
-        $st->execute();
-        $st->close();
-
-        $con->commit();
-
-        $_SESSION['ok'] = 'Stock Transfer deleted successfully';
-    } catch (Throwable $e) {
-
-        $con->rollback();
-        $_SESSION['err'] = 'Delete failed: ' . $e->getMessage();
-    }
-
-    // PRG pattern (VERY IMPORTANT)
-    header('Location: ' . $_SERVER['PHP_SELF']);
-    exit;
-}
 
 
 /* ==========================
@@ -387,11 +320,9 @@ ob_start();
     }
 </style>
 <div class="master-wrap">
-
     <div class="headbar">
         <div>
-            <h1 class="page-title">Stock Transfer Product List</h1>
-            <!-- <div class="page-subtitle">Internal Stock Movement</div> -->
+            <h1 class="page-title">Service Quotation Product List</h1>
         </div>
     </div>
 
@@ -433,8 +364,12 @@ ob_start();
 
 
                 <div class="field">
-                    <label>Challan No.</label>
-                    <input type="text" name="billno" class="inp" value="<?= h($billno) ?>">
+                    <label>Quotation No</label>
+                    <input type="text" name="qutid" class="inp" value="<?= h($qutid) ?>">
+                </div>
+                <div class="field">
+                    <label>Complaint No</label>
+                    <input type="text" name="complaint_id" class="inp" value="<?= h($complaint_id) ?>">
                 </div>
 
                 <div class="field">
@@ -469,16 +404,18 @@ ob_start();
                 <thead>
                     <tr>
                         <th>Sr No</th>
-                        <th>Challan No</th>
-                        <th>Document</th>
-                        <th>From</th>
-                        <th>To</th>
+                        <th>Quotation No</th>
+                        <th>Complaint No</th>
+                        <th>Customer Name</th>
                         <th>Product Name</th>
-                        <th>Qty</th>
-                        <th>User / Modify by</th>
-                        <th>Actions</th>
+                        <th>Rate</th>
+                        <th>Quantity</th>
+                        <th>GST Amt</th>
+                        <th>Amount</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
+
 
                 <tbody>
 
@@ -494,45 +431,37 @@ ob_start();
 
                             <td>
                                 <strong>
-                                    <?= fy_from_date($r['date']) ?>/<?= h($r['billno']) ?>
+                                    <?= fy_from_date($r['date']) ?>/<?= h($r['qutid']) ?>
                                 </strong>
                                 <br>
                                 <?= dmy($r['date']) ?>
                             </td>
 
+                            <td><?= h($r['complaint_id']) ?></td>
 
-                            <td>Stock Transfer</td>
-                            <td><?= h($r['from_location']) ?></td>
-                            <td><?= h($r['to_location']) ?></td>
+                            <td><?= h($r['customer_name']) ?></td>
+
                             <td><?= h($r['product_name']) ?></td>
+
+                            <td><?= h($r['rate']) ?></td>
+
                             <td><?= h($r['qty']) ?></td>
-                            <td class="muted">
-                                <?= h($r['created_by_name']) ?>
-                                <br>
-                                <?php
-                                $md = $r['modifydate'] ?? '';
-                                echo $md ? date('d-m-Y', strtotime($md)) : '';
-                                ?>
-                            <td>
-                                <div style="display:flex; gap:6px;">
 
-                                    <!-- PRINT (POST to separate print file; do not implement print here) -->
-                                    <form method="post" action="/operations/stock_transfer_print.php" style="margin:0;" target="_blank">
-                                        <input type="hidden" name="_csrf" value="<?php echo h(csrf_token()); ?>">
-                                        <input type="hidden" name="gatepass_id" value="<?php echo (int)$r['id']; ?>">
-                                        <!-- <button type="submit" class="btn secondary">Print</button> -->
-                                        <button type="submit" class="btn secondary" title="Print">
-                                            <i class="fa-solid fa-print"></i>
-                                        </button>
+                            <td><?= h($r['gstamt']) ?></td>
 
-                                    </form>
-
-
-                                </div>
+                            <td><?= h($r['amt']) ?></td>
+                            <td> <!-- PRINT (POST to separate print file; do not implement print here) -->
+                                <form method="post" action="service_quotation_print.php" style="margin:0;" target="_blank">
+                                    <input type="hidden" name="_csrf" value="<?php echo h(csrf()); ?>">
+                                    <input type="hidden" name="quotation_id" value="<?php echo (int)$r['id']; ?>">
+                                    <!-- <button type="submit" class="btn secondary">Print</button> -->
+                                    <button type="submit" class="btn secondary" title="Print">
+                                        <i class="fa-solid fa-print"></i>
+                                </form>
                             </td>
-
                         </tr>
                     <?php endforeach; ?>
+
 
 
 
