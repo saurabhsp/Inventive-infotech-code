@@ -1,17 +1,8 @@
-
-text/x-generic lead.php ( PHP script, UTF-8 Unicode text )
 <?php
-@ini_set('display_errors','1');
-@ini_set('display_startup_errors','1');
-@error_reporting(E_ALL);
-
+@ini_set('display_errors', '1'); @error_reporting(E_ALL);
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/initialize.php'; // $con, csrf_token(), verify_csrf()
 require_login();
-global $con;
-
-
-
-
 /* ============================================================
    lead.php — CRM Leads (UPDATED)
    FIXES ADDED NOW:
