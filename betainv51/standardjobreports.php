@@ -388,7 +388,8 @@ if (isset($_GET['apps'])) {
         <table class="table">
           <thead>
             <tr>
-              <th style="width:80px">ID</th>
+              <th>SR No.</th>
+              <th>Application ID</th>
               <th>Candidate</th>
               <th>Contact</th>
               <th>Applied On</th>
@@ -398,12 +399,15 @@ if (isset($_GET['apps'])) {
             </tr>
           </thead>
           <tbody>
-          <?php if(!$rows){ ?>
+          <?php
+          $sr = 1;
+          if(!$rows){ ?>
             <tr><td colspan="7" style="text-align:center;color:#9ca3af">No applications yet.</td></tr>
           <?php } else {
             foreach($rows as $r){
               $viewCandUrl = h(keep_params(['candidate'=>(int)$r['userid']]));
               echo '<tr>';
+              echo '<td>'.$sr++.'</td>';
               echo '<td>'.(int)$r['id'].'</td>';
               echo '<td>'.h($r['candidate_name'] ?: ('User #'.$r['userid'])).'</td>';
               echo '<td>';
@@ -639,7 +643,8 @@ $appStmt->close();
   <table class="table">
     <thead>
       <tr>
-        <th style="width:80px">Application ID</th>
+        <th>SR No.</th>
+        <th>Application ID</th>
         <th>Candidate</th>
         <th>Contact</th>
         <th>Applied On</th>
@@ -649,10 +654,13 @@ $appStmt->close();
       </tr>
     </thead>
     <tbody>
-      <?php foreach($appRows as $r): 
+      <?php 
+      $sr = 1;
+      foreach($appRows as $r): 
             $viewCandUrl = h(keep_params(['candidate'=>(int)$r['userid']]));
       ?>
       <tr>
+        <td><?=  $sr++ ?></td>
         <td><?= (int)$r['id'] ?></td>
 
         <td>
