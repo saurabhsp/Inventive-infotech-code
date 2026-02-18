@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Dashboard</title>
+
+<style>
+:root{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --text:#e2e8f0;
+  --muted:#94a3b8;
+  --border:#334155;
+  --primary:#3b82f6;
+  --shadow:0 4px 16px rgba(0,0,0,0.4);
+}
+
+body{
+  margin:0;
+  font-family:Segoe UI, Arial, sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+.wrapper{
+  max-width:1200px;
+  margin:auto;
+  padding:30px;
+}
+
+h1{ margin:0 0 5px 0; }
+
+.muted{ color:var(--muted); font-size:14px; }
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:25px;
+  flex-wrap:wrap;
+  gap:12px;
+}
+
+.range-buttons button{
+  background:var(--card);
+  border:1px solid var(--border);
+  color:var(--text);
+  padding:8px 14px;
+  border-radius:8px;
+  cursor:pointer;
+  margin-right:6px;
+  transition:.2s;
+}
+
+.range-buttons button:hover{
+  background:var(--primary);
+  color:white;
+  border-color:var(--primary);
+}
+
+.section-label{
+  margin:25px 0 15px;
+  font-weight:600;
+  font-size:18px;
+}
+
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:15px;
+}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:20px;
+  box-shadow:var(--shadow);
+  transition:.2s;
+  position:relative;
+}
+
+.card:hover{ transform:translateY(-3px); }
+
+/* UPDATED CARD TITLE (more visible + bold) */
+.card-title{
+  font-size:15px;
+  font-weight:700;
+  color:#ffffff;
+  letter-spacing:0.3px;
+  margin-bottom:5px;
+}
+
+.card-value{
+  font-size:34px;
+  font-weight:700;
+  margin:10px 0;
+}
+
+.kpi-card{
+  min-height:150px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+
+.btn-link{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  color:var(--primary);
+  font-size:12px;
+  text-decoration:none;
+  cursor:pointer;
+}
+
+.btn-link:hover{ text-decoration:underline; }
+
+.card-actions{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:8px;
+}
+
+.actions{
+  margin-top:20px;
+}
+
+.actions a{
+  color:var(--primary);
+  text-decoration:none;
+  margin-right:15px;
+}
+
+.actions a:hover{ text-decoration:underline; }
+
+/* Today date line */
+.todayline{
+  margin-top:6px;
+  font-size:13px;
+  color:var(--muted);
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+
+  <div class="topbar">
+    <div>
+      <h1>Dashboard</h1>
+      <div class="muted">Stats for logged-in user</div>
+      <div id="todayDate" class="todayline"></div>
+    </div>
+
+    <div class="range-buttons">
+      <button type="button" onclick="setRange('daily')">Today</button>
+      <button type="button" onclick="setRange('monthly')">This Month</button>
+      <button type="button" onclick="setRange('lifetime')">Lifetime</button>
+    </div>
+  </div>
+
+  <div class="section-label" id="rangeLabel">Daily Performance</div>
+
+  <div class="kpi-grid">
+
+    <div class="card kpi-card">
+      <div>
+        <div class="card-title">Assigned Employers</div>
+        <div class="card-value" id="assigned_emp">0</div>
+      </div>
+      <div class="card-actions">
+        <a class="btn-link" href="#" onclick="openBreakdown('employers_assigned'); return false;">View Details →</a>
+      </div>
+    </div>
+
+    <div class="card kpi-card">
+      <div>
+        <div class="card-title">Self Converted Employers</div>
+        <div class="card-value" id="self_converted">0</div>
+        <div class="muted" style="font-size:12px;">Converted by you</div>
+      </div>
+      <div class="card-actions">
+        <a class="btn-link" href="#" onclick="openBreakdown('employers_converted'); return false;">View Details →</a>
+      </div>
+    </div>
+
+    <div class="card kpi-card">
+      <div>
+        <div class="card-title">Assigned Leads</div>
+        <div class="card-value" id="assigned_leads">0</div>
+      </div>
+      <div class="card-actions">
+        <a class="btn-link" href="#" onclick="openBreakdown('leads_assigned'); return false;">View Details →</a>
+      </div>
+    </div>
+
+    <div class="card kpi-card">
+      <div>
+        <div class="card-title">Self Leads</div>
+        <div class="card-value" id="self_leads">0</div>
+      </div>
+      <div class="card-actions">
+        <a class="btn-link" href="#" onclick="openBreakdown('leads_self'); return false;">View Details →</a>
+      </div>
+    </div>
+
+    <div class="card kpi-card">
+      <div>
+        <div class="card-title">Revenue</div>
+        <div class="card-value" id="revenue">₹0</div>
+      </div>
+      <div class="card-actions">
+        <a class="btn-link" href="#" onclick="openBreakdown('revenue'); return false;">View Details →</a>
+      </div>
+    </div>
+
+    <div class="card kpi-card">
+      <div>
+        <div class="card-title">Conversion %</div>
+        <div class="card-value" id="conversion">0%</div>
+      </div>
+      <div class="card-actions">
+        <span class="muted" style="font-size:12px;">Self Converted / Self Leads</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="actions">
+    <a href="#" onclick="openBreakdown('leads_self'); return false;">View My Leads</a>
+    <a href="#" onclick="openBreakdown('employers_assigned'); return false;">View Employers</a>
+    <a href="#" onclick="openBreakdown('revenue'); return false;">Revenue Details</a>
+  </div>
+
+</div>
+
+<script>
+const DATA = {
+  daily:   { assigned_emp:3,  self_converted:1,  assigned_leads:8,   self_leads:2,  revenue:15000 },
+  monthly: { assigned_emp:10, self_converted:5,  assigned_leads:40,  self_leads:15, revenue:95000 },
+  lifetime:{ assigned_emp:50, self_converted:25, assigned_leads:200, self_leads:90, revenue:450000 }
+};
+
+let CURRENT_RANGE = "daily";
+
+function fmtMoney(n){ return "₹" + (n||0).toLocaleString("en-IN"); }
+
+function setRange(range){
+  CURRENT_RANGE = range;
+  const d = DATA[range];
+
+  document.getElementById("assigned_emp").innerText = d.assigned_emp;
+  document.getElementById("self_converted").innerText = d.self_converted;
+  document.getElementById("assigned_leads").innerText = d.assigned_leads;
+  document.getElementById("self_leads").innerText = d.self_leads;
+  document.getElementById("revenue").innerText = fmtMoney(d.revenue);
+
+  const conv = d.self_leads ? Math.round((d.self_converted/d.self_leads)*100) : 0;
+  document.getElementById("conversion").innerText = conv + "%";
+
+  document.getElementById("rangeLabel").innerText =
+    range==="daily" ? "Daily Performance" :
+    range==="monthly" ? "Monthly Performance" : "Lifetime Performance";
+}
+
+function openBreakdown(mode){
+  window.location.href = `breakdown.html?mode=${encodeURIComponent(mode)}&range=${encodeURIComponent(CURRENT_RANGE)}`;
+}
+
+function showTodayDate(){
+  const now = new Date();
+  const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const dayName = days[now.getDay()];
+  const options = { day: '2-digit', month: 'long', year: 'numeric' };
+  const formattedDate = now.toLocaleDateString("en-IN", options);
+  document.getElementById("todayDate").innerText = dayName + ", " + formattedDate;
+}
+
+showTodayDate();
+setRange("daily");
+</script>
+
+</body>
+</html>

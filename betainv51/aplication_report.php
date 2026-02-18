@@ -865,8 +865,21 @@ if ($mode === 'job') {
    ********************************************************************** */
 
 /* ----------------- filters ----------------- */
-$date_from    = get_str('from', '');      // YYYY-MM-DD on A.application_date
-$date_to      = get_str('to', '');        // YYYY-MM-DD
+// $date_from    = get_str('from', '');      // YYYY-MM-DD on A.application_date
+// $date_to      = get_str('to', '');        // YYYY-MM-DD
+$date_from = get_str('from', '');
+$date_to   = get_str('to', '');
+
+/* convert dd/mm/yyyy to yyyy-mm-dd for DB */
+if ($date_from) {
+  $d = DateTime::createFromFormat('d-m-Y', $date_from);
+  if ($d) $date_from = $d->format('Y-m-d');
+}
+if ($date_to) {
+  $d = DateTime::createFromFormat('d-m-Y', $date_to);
+  if ($d) $date_to = $d->format('Y-m-d');
+}
+
 $listing_type = get_int('lt', 0);         // 0=All, 1=Premium (walk-in), 2=Standard (vacancy)
 $status_id    = get_int('status_id', 0);  // jos_app_applicationstatus.id
 $candidate_name = get_str('candidate_name', '');
@@ -978,6 +991,9 @@ ob_start(); ?>
   <title>Applications – Date-wise</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="/adminconsole/assets/ui.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
   <style>
     .headbar {
       margin: 0;
@@ -1059,12 +1075,13 @@ ob_start(); ?>
         <div class="row">
           <div class="group">
             <label>From</label>
-            <input class="inp" type="date" name="from" value="<?= h($date_from) ?>" />
+            <input class="inp datepicker" type="text" name="from" value="<?= h($date_from) ?>" placeholder="DD-MM-YYYY" />
           </div>
           <div class="group">
             <label>To</label>
-            <input class="inp" type="date" name="to" value="<?= h($date_to) ?>" />
+            <input class="inp datepicker" type="text" name="to" value="<?= h($date_to) ?>" placeholder="DD-MM-YYYY" />
           </div>
+
           <div class="group">
             <label>Listing Type</label>
             <select class="inp" name="lt">
@@ -1166,6 +1183,17 @@ ob_start(); ?>
       </table>
     </div>
   </div>
+  <script>
+document.addEventListener("DOMContentLoaded", function() {
+  flatpickr(".datepicker", {
+    altInput: true,          // user sees formatted date
+    altFormat: "d-m-Y",      // display format
+    dateFormat: "Y-m-d",     // value sent to backend
+    allowInput: false
+  });
+});
+</script>
+
 </body>
 
 </html>
