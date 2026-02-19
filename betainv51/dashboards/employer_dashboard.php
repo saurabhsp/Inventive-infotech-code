@@ -70,7 +70,7 @@ if ($range === 'lifetime') {
         [$logged_admin_id]
     );
 } else {
-    
+
     $assignedEmployersCount = fetch_one(
         $con,
         "SELECT COUNT(*) as total 
@@ -408,10 +408,23 @@ if ($range === 'lifetime') {
 
     </div>
 
-    <script>
-        function openBreakdown(mode) {
-            window.location.href = `breakdown.html?mode=${encodeURIComponent(mode)}&range=${encodeURIComponent(CURRENT_RANGE)}`;
-        }
+   <form id="dashboardPostForm" method="post" action="/adminconsole/operations/lead_list.php" style="display:none;">
+    <input type="hidden" name="mode" id="f_mode">
+    <input type="hidden" name="range" value="<?= $range ?>">
+    <input type="hidden" name="admin_id" value="<?= $logged_admin_id ?>">
+    <input type="hidden" name="profile_type_id" value="1">
+    <input type="hidden" name="from" value="<?= $range !== 'lifetime' ? $from : '' ?>">
+    <input type="hidden" name="to" value="<?= $range !== 'lifetime' ? $to : '' ?>">
+</form>
+
+<script>
+function openBreakdown(mode) {
+
+    document.getElementById('f_mode').value = mode;
+    document.getElementById('dashboardPostForm').submit();
+
+}
+
 
         function showTodayDate() {
             const now = new Date();
