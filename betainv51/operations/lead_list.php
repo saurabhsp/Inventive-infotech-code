@@ -68,6 +68,13 @@ if ($ADMINUSERS) {
   while ($rs && $r = mysqli_fetch_assoc($rs)) $adminUsers[(int)$r['id']] = $r['nm'];
 }
 
+
+/* ---------------- POST Filters (Advanced) ---------------- */
+$ptypePost   = isset($_POST['profile_type_id']) ? (int)$_POST['profile_type_id'] : 0;
+$acmPost     = isset($_POST['ac_manager_id']) ? (int)$_POST['ac_manager_id'] : 0;
+$dateFrom    = !empty($_POST['date_from']) ? $_POST['date_from'] : '';
+$dateTo      = !empty($_POST['date_to']) ? $_POST['date_to'] : '';
+
 /* ---------------- Filters ---------------- */
 $q         = trim($_GET['q'] ?? '');
 $ptype     = (int)($_GET['ptype'] ?? 0);
@@ -87,6 +94,58 @@ $lim = $all ? 0 : 50;
 $whereBase = " WHERE 1=1 ";
 $bindBase  = [];
 $typesBase = '';
+
+
+/* ---------------- Dashboard Mode Filters ---------------- */
+
+$mode        = $_POST['mode'] ?? '';
+$admin_id    = isset($_POST['admin_id']) ? (int)$_POST['admin_id'] : 0;
+$profileType = isset($_POST['profile_type_id']) ? (int)$_POST['profile_type_id'] : 0;
+$dateFrom    = $_POST['from'] ?? '';
+$dateTo      = $_POST['to'] ?? '';
+
+/* Show debug info (REMOVE after testing) */
+// if ($mode) {
+//     echo "<div style='background:#1e293b;padding:10px;margin:10px 0;border-radius:6px'>
+//             <strong>Dashboard Params:</strong><br>
+//             Mode: {$mode} <br>
+//             Admin ID: {$admin_id} <br>
+//             Profile Type: {$profileType} <br>
+//             From: {$dateFrom} <br>
+//             To: {$dateTo}
+//           </div>";
+//           exit();
+// }
+
+
+if ($profileType > 0) {
+    $whereBase .= " AND l.profile_type = ?";
+    $bindBase[] = $profileType;
+    $typesBase .= 'i';
+}
+
+if ($admin_id > 0) {
+
+    if ($mode === 'leads_assigned') {
+        $whereBase .= " AND l.assigned_to = ?";
+        $bindBase[] = $admin_id;
+        $typesBase .= 'i';
+    }
+
+    if ($mode === 'leads_self') {
+        $whereBase .= " AND l.created_by = ?";
+        $bindBase[] = $admin_id;
+        $typesBase .= 'i';
+    }
+}
+
+if ($dateFrom && $dateTo) {
+    $whereBase .= " AND l.created_at BETWEEN ? AND ?";
+    $bindBase[] = $dateFrom;
+    $bindBase[] = $dateTo;
+    $typesBase .= 'ss';
+}
+
 
 if ($ptype === 1 || $ptype === 2) { $whereBase .= " AND l.profile_type=?"; $bindBase[]=$ptype; $typesBase.='i'; }
 if ($srcFilter > 0)              { $whereBase .= " AND l.source_id=?";    $bindBase[]=$srcFilter; $typesBase.='i'; }
@@ -112,6 +171,8 @@ if ($stFilter > 0) {
   $bindFull[] = $stFilter;
   $typesFull .= 'i';
 }
+
+
 
 /* ---------------- Top Cards Counts (by status) ---------------- */
 $statusCounts = []; // status_id => cnt
