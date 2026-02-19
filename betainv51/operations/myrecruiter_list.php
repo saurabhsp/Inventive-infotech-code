@@ -82,6 +82,44 @@ if (!defined('DOMAIN_URL')) { define('DOMAIN_URL', '/'); }
 $u = function_exists('current_user') ? current_user() : [];
 $logged_admin_id = (int)($u['id'] ?? 0);
 
+/* ============================================================
+   DASHBOARD POST SUPPORT (Assigned Recruiters)
+============================================================ */
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $mode  = $_POST['mode'] ?? '';
+    $from  = $_POST['from'] ?? '';
+    $to    = $_POST['to'] ?? '';
+    $range = $_POST['range'] ?? '';
+
+    // 🔐 Security: ignore posted admin_id and use logged one only
+    if ($logged_admin_id <= 0) {
+        die("Unauthorized access.");
+    }
+
+    // Only apply when coming from dashboard
+    if ($mode === 'employers_assigned') {
+
+        if ($range !== 'lifetime' && !empty($from) && !empty($to)) {
+
+            // Convert datetime to Y-m-d (for DATE comparison)
+            $created_from = date('Y-m-d', strtotime($from));
+            $created_to   = date('Y-m-d', strtotime($to));
+
+            // Force override GET date filters
+            $_GET['created_from'] = date('d-m-Y', strtotime($from));
+            $_GET['created_to']   = date('d-m-Y', strtotime($to));
+        }
+
+        // Optional: Clear other filters when coming from dashboard
+        $_GET['q'] = '';
+        $_GET['plan_id'] = null;
+        $_GET['page'] = 1;
+    }
+}
+
+
 ob_start();
 ?>
 <link rel="stylesheet" href="/adminconsole/assets/ui.css">

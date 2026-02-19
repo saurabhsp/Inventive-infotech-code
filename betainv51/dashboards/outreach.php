@@ -86,7 +86,7 @@ if ($range === 'lifetime') {
 
 
 
-/* 2️⃣ Self Converted Employers (No logic for now) */
+/* 2️⃣ Self Converted Jobseekers (No logic for now) */
 $selfConvertedEmployersCount = 0;
 
 
@@ -340,7 +340,7 @@ if ($range === 'lifetime') {
 
             <div class="card kpi-card">
                 <div>
-                    <div class="card-title">Assigned Employers</div>
+                    <div class="card-title">Assigned Jobseekers</div>
                     <div class="card-value" id="assigned_emp"><?= $assignedEmployersCount ?></div>
                 </div>
                 <div class="card-actions">
@@ -350,7 +350,7 @@ if ($range === 'lifetime') {
 
             <div class="card kpi-card">
                 <div>
-                    <div class="card-title">Self Converted Employers</div>
+                    <div class="card-title">Self Converted Jobseekers</div>
                     <div class="card-value" id="self_converted"> <?= $selfConvertedEmployersCount ?></div>
                 </div>
                 <div class="card-actions">
@@ -402,28 +402,39 @@ if ($range === 'lifetime') {
 
         <div class="actions">
             <a href="#" onclick="openBreakdown('leads_self'); return false;">View My Leads</a>
-            <a href="#" onclick="openBreakdown('employers_assigned'); return false;">View Employers</a>
+            <a href="#" onclick="openBreakdown('employers_assigned'); return false;">View Jobseekers</a>
             <a href="#" onclick="openBreakdown('revenue'); return false;">Revenue Details</a>
         </div>
 
     </div>
 
-   <form id="dashboardPostForm" method="post" action="/adminconsole/operations/lead_list.php" style="display:none;">
-    <input type="hidden" name="mode" id="f_mode">
-    <input type="hidden" name="range" value="<?= $range ?>">
-    <input type="hidden" name="admin_id" value="<?= $logged_admin_id ?>">
-    <input type="hidden" name="profile_type_id" value="2">
-    <input type="hidden" name="from" value="<?= $range !== 'lifetime' ? $from : '' ?>">
-    <input type="hidden" name="to" value="<?= $range !== 'lifetime' ? $to : '' ?>">
-</form>
+    <form id="dashboardPostForm" method="post" style="display:none;">
+        <input type="hidden" name="mode" id="f_mode">
+        <input type="hidden" name="range" value="<?= $range ?>">
+        <input type="hidden" name="admin_id" value="<?= $logged_admin_id ?>">
+        <input type="hidden" name="profile_type_id" value="2">
+        <input type="hidden" name="from" value="<?= $range !== 'lifetime' ? $from : '' ?>">
+        <input type="hidden" name="to" value="<?= $range !== 'lifetime' ? $to : '' ?>">
+    </form>
 
-<script>
-function openBreakdown(mode) {
+    <script>
+        function openBreakdown(mode) {
 
-    document.getElementById('f_mode').value = mode;
-    document.getElementById('dashboardPostForm').submit();
+            const form = document.getElementById('dashboardPostForm');
 
-}
+            document.getElementById('f_mode').value = mode;
+
+            // 🔹 Assigned Jobseekers → POST to my_jobseeker_list.php
+            if (mode === 'employers_assigned') {
+                form.action = "/adminconsole/operations/my_jobseeker_list.php";
+            } else {
+                // 🔹 Default → lead list
+                form.action = "/adminconsole/operations/lead_list.php";
+            }
+
+            form.submit();
+        }
+
 
 
         function showTodayDate() {

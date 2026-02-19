@@ -873,6 +873,13 @@ $page_title = 'Users – Candidate-wise List';
 $me = function_exists('current_user') ? current_user() : [];
 $logged_admin_id = (int)($me['id'] ?? 0);
 
+/* ==========================================================
+   DASHBOARD POST FILTER SUPPORT (Assigned Jobseekers)
+========================================================== */
+
+
+
+
 /* ---- filters (GET) ---- */
 $profile_type_id     = 2;                           // ONLY candidates
 $q                   = get_str('q','');
@@ -887,6 +894,38 @@ $created_from_raw    = get_str('created_from','');
 $created_to_raw      = get_str('created_to','');
 $created_from_sql    = normalize_reg_date($created_from_raw);
 $created_to_sql      = normalize_reg_date($created_to_raw);
+
+
+
+/* ==========================================================
+   DASHBOARD POST FILTER SUPPORT (Assigned Jobseekers)
+========================================================== */
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $posted_admin_id = (int)($_POST['admin_id'] ?? 0);
+    $range           = $_POST['range'] ?? '';
+    $from            = $_POST['from'] ?? '';
+    $to              = $_POST['to'] ?? '';
+
+    // 🔐 Security: Prevent tampering
+    if ($posted_admin_id !== $logged_admin_id) {
+        die("Unauthorized access.");
+    }
+
+    // Override date filters ONLY if coming from dashboard
+    if ($range !== 'lifetime' && !empty($from) && !empty($to)) {
+        $created_from_sql = date('Y-m-d', strtotime($from));
+        $created_to_sql   = date('Y-m-d', strtotime($to));
+    }
+
+    // Optional: Clear GET filters when coming from dashboard
+    $q = '';
+    $city_id = '';
+    $status_id = -1;
+    $subscription_status = '';
+}
+
 
 /* Plan filter (via cards) */
 $plan_id_filter      = get_int('plan_id', 0); // 0=All Plans
@@ -1196,13 +1235,17 @@ ob_start();
 
         <div style="display:flex;flex-direction:column;min-width:180px">
           <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Registration Date From</span>
-          <input class="inp" type="date" name="created_from" value="<?= h($created_from_sql ?: $created_from_raw) ?>">
-        </div>
+<input class="inp datepicker" type="text"
+       name="created_from"
+       value="<?= h($created_from_raw) ?>"
+       placeholder="DD-MM-YYYY">        </div>
 
         <div style="display:flex;flex-direction:column;min-width:180px">
           <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Registration Date To</span>
-          <input class="inp" type="date" name="created_to" value="<?= h($created_to_sql ?: $created_to_raw) ?>">
-        </div>
+<input class="inp datepicker" type="text"
+       name="created_to"
+       value="<?= h($created_to_raw) ?>"
+       placeholder="DD-MM-YYYY">        </div>
 
         <select class="inp" name="status_id" title="Status">
           <option value="-1" <?= $status_id===-1?'selected':''?>>Status: Any</option>

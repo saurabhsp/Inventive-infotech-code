@@ -418,12 +418,23 @@ if ($range === 'lifetime') {
 </form>
 
 <script>
-function openBreakdown(mode) {
+  function openBreakdown(mode) {
 
-    document.getElementById('f_mode').value = mode;
-    document.getElementById('dashboardPostForm').submit();
+            const form = document.getElementById('dashboardPostForm');
 
-}
+            document.getElementById('f_mode').value = mode;
+
+            // 🔹 Assigned Jobseekers → POST to my_recruiter_list.php
+            if (mode === 'employers_assigned') {
+                form.action = "/adminconsole/operations/my_recruiter_list.php";
+            } else {
+                // 🔹 Default → lead list
+                form.action = "/adminconsole/operations/lead_list.php";
+            }
+
+            form.submit();
+        }
+
 
 
         function showTodayDate() {
