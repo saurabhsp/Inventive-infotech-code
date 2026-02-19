@@ -5,6 +5,10 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/initialize.php'; // $con, csrf_token(), verify_csrf()
 require_login();
+/* ---------------- Logged In User ---------------- */
+$loggedUserId = (int)($_SESSION['admin_user']['id'] ?? 0);
+$loggedRoleId = (int)($_SESSION['admin_user']['role_id'] ?? 0);
+
 
 global $con;
 
@@ -144,6 +148,21 @@ if ($dateFrom && $dateTo) {
     $bindBase[] = $dateFrom;
     $bindBase[] = $dateTo;
     $typesBase .= 'ss';
+}
+
+/* ---------------- Default Role Based Restriction ---------------- */
+/* Apply ONLY when coming normally (not from dashboard mode) */
+
+if (empty($mode)) {
+
+    // If NOT Super Admin (role_id != 1)
+    if ($loggedRoleId !== 1 && $loggedUserId > 0) {
+
+        $whereBase .= " AND (l.created_by = ? OR l.assigned_to = ?)";
+        $bindBase[] = $loggedUserId;
+        $bindBase[] = $loggedUserId;
+        $typesBase .= 'ii';
+    }
 }
 
 
