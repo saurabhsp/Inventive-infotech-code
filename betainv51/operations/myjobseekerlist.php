@@ -95,12 +95,22 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
-function get_int($key,$default=0){ return isset($_GET[$key]) ? (int)$_GET[$key] : $default; }
-function get_str($key,$default=''){ return isset($_GET[$key]) ? trim((string)$_GET[$key]) : $default; }
+function h($s)
+{
+    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
+}
+function get_int($key, $default = 0)
+{
+    return isset($_GET[$key]) ? (int)$_GET[$key] : $default;
+}
+function get_str($key, $default = '')
+{
+    return isset($_GET[$key]) ? trim((string)$_GET[$key]) : $default;
+}
 
 /* Date helpers – hide weird / zero dates */
-function fmt_date($s){
+function fmt_date($s)
+{
     $s = trim((string)$s);
     if ($s === '' || $s === '0000-00-00' || $s === '0000-00-00 00:00:00') return '';
     $ts = strtotime($s);
@@ -109,7 +119,8 @@ function fmt_date($s){
     if ($y <= 0) return '';
     return date('d M Y', $ts);
 }
-function fmt_dt_ampm($s){
+function fmt_dt_ampm($s)
+{
     $s = trim((string)$s);
     if ($s === '' || $s === '0000-00-00' || $s === '0000-00-00 00:00:00') return '';
     $ts = strtotime($s);
@@ -118,7 +129,8 @@ function fmt_dt_ampm($s){
     if ($y <= 0) return '';
     return date('d M Y h:i A', $ts);
 }
-function fmt_reg_short($s){
+function fmt_reg_short($s)
+{
     $s = trim((string)$s);
     if ($s === '' || $s === '0000-00-00' || $s === '0000-00-00 00:00:00') return '';
     $ts = strtotime($s);
@@ -129,74 +141,103 @@ function fmt_reg_short($s){
 }
 
 /* Registration dates: allow Y-m-d to pass as-is; still accept dd-mm-yy if user types it manually */
-function normalize_reg_date($s){
+function normalize_reg_date($s)
+{
     $s = trim((string)$s);
-    if($s==='') return '';
-    if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$s)) return $s; // already Y-m-d
-    if(preg_match('/^\d{2}-\d{2}-\d{2,4}$/',$s)){
-        $dt = DateTime::createFromFormat('d-m-Y',$s);
-        if(!$dt){ $dt = DateTime::createFromFormat('d-m-y',$s); }
-        if($dt){ return $dt->format('Y-m-d'); }
+    if ($s === '') return '';
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $s)) return $s; // already Y-m-d
+    if (preg_match('/^\d{2}-\d{2}-\d{2,4}$/', $s)) {
+        $dt = DateTime::createFromFormat('d-m-Y', $s);
+        if (!$dt) {
+            $dt = DateTime::createFromFormat('d-m-y', $s);
+        }
+        if ($dt) {
+            return $dt->format('Y-m-d');
+        }
     }
     return '';
 }
 
-function keep_params(array $changes=[]){
+function keep_params(array $changes = [])
+{
     $qs = $_GET;
-    foreach($changes as $k=>$v){
-        if($v===null){ unset($qs[$k]); } else { $qs[$k]=$v; }
+    foreach ($changes as $k => $v) {
+        if ($v === null) {
+            unset($qs[$k]);
+        } else {
+            $qs[$k] = $v;
+        }
     }
     $q = http_build_query($qs);
-    return $q ? ('?'.$q) : '';
+    return $q ? ('?' . $q) : '';
 }
 
 /* ---- robust fetch-all for prepared statements (no mysqlnd) ---- */
-function stmt_fetch_all_assoc(mysqli_stmt $stmt){
+function stmt_fetch_all_assoc(mysqli_stmt $stmt)
+{
     $meta = $stmt->result_metadata();
-    if(!$meta){ return []; }
-    $out = []; $fields = []; $row = []; $bind = [];
-    while($f = $meta->fetch_field()){
-        $fields[] = $f->name; $row[$f->name] = null; $bind[] = &$row[$f->name];
+    if (!$meta) {
+        return [];
     }
-    call_user_func_array([$stmt,'bind_result'], $bind);
-    while($stmt->fetch()){
+    $out = [];
+    $fields = [];
+    $row = [];
+    $bind = [];
+    while ($f = $meta->fetch_field()) {
+        $fields[] = $f->name;
+        $row[$f->name] = null;
+        $bind[] = &$row[$f->name];
+    }
+    call_user_func_array([$stmt, 'bind_result'], $bind);
+    while ($stmt->fetch()) {
         $copy = [];
-        foreach($fields as $f){ $copy[$f] = $row[$f]; }
+        foreach ($fields as $f) {
+            $copy[$f] = $row[$f];
+        }
         $out[] = $copy;
     }
     return $out;
 }
-function stmt_fetch_one_assoc(mysqli_stmt $stmt){
+function stmt_fetch_one_assoc(mysqli_stmt $stmt)
+{
     $rows = stmt_fetch_all_assoc($stmt);
     return $rows ? $rows[0] : null;
 }
 
 /* Back to main list URL (works even when no records found) */
-function back_to_list_url(){
+function back_to_list_url()
+{
     $path = $_SERVER['PHP_SELF'] ?? '';
     $qs = $_GET;
-    unset($qs['mode'],$qs['userid'],$qs['id'],$qs['lt'],$qs['from']);
+    unset($qs['mode'], $qs['userid'], $qs['id'], $qs['lt'], $qs['from']);
     $q = http_build_query($qs);
-    return $path.($q?('?'.$q):'');
+    return $path . ($q ? ('?' . $q) : '');
 }
 
 /* ======================================================================
    MODE ROUTER
    ====================================================================== */
-$mode = get_str('mode','');
+$mode = get_str('mode', '');
 
 /* **********************************************************************
    MODE: CANDIDATE PROFILE  (?mode=candidate&userid=123)
    ********************************************************************** */
 if ($mode === 'candidate') {
     $userid = get_int('userid', 0);
-    if ($userid <= 0){ die('Invalid userid'); }
+    if ($userid <= 0) {
+        die('Invalid userid');
+    }
 
     // user basics
     $u_sql = "SELECT active_plan_id, myreferral_code FROM jos_app_users WHERE id=? LIMIT 1";
-    $st = $con->prepare($u_sql); $st->bind_param('i',$userid); $st->execute();
-    $U = stmt_fetch_one_assoc($st); $st->close();
-    if (!$U) { die('User not found'); }
+    $st = $con->prepare($u_sql);
+    $st->bind_param('i', $userid);
+    $st->execute();
+    $U = stmt_fetch_one_assoc($st);
+    $st->close();
+    if (!$U) {
+        die('User not found');
+    }
     $active_plan_id  = (int)$U['active_plan_id'];
     $myreferral_code = $U['myreferral_code'];
 
@@ -217,18 +258,25 @@ if ($mode === 'candidate') {
              ON (CAST(c.experience_period AS UNSIGNED)=ep.id OR LOWER(c.experience_period)=LOWER(ep.name))
       WHERE c.userid = ?
       LIMIT 1";
-    $st = $con->prepare($c_sql); $st->bind_param('i',$userid); $st->execute();
-    $C = stmt_fetch_one_assoc($st); $st->close();
-    if (!$C) { die('Candidate profile not found'); }
+    $st = $con->prepare($c_sql);
+    $st->bind_param('i', $userid);
+    $st->execute();
+    $C = stmt_fetch_one_assoc($st);
+    $st->close();
+    if (!$C) {
+        die('Candidate profile not found');
+    }
 
     // job positions
     $job_positions = [];
-    if (!empty($C['job_position_ids'])){
+    if (!empty($C['job_position_ids'])) {
         $ids = array_filter(array_map('intval', explode(',', (string)$C['job_position_ids'])));
-        if ($ids){
-            $id_list = implode(',',$ids);
+        if ($ids) {
+            $id_list = implode(',', $ids);
             $rs = mysqli_query($con, "SELECT name FROM jos_crm_jobpost WHERE id IN ($id_list)");
-            while($r=mysqli_fetch_assoc($rs)){ $job_positions[] = $r['name']; }
+            while ($r = mysqli_fetch_assoc($rs)) {
+                $job_positions[] = $r['name'];
+            }
         }
     }
 
@@ -243,165 +291,222 @@ if ($mode === 'candidate') {
     }
 
     // subscription
-    $subscription = ['status'=>'no_subscription','valid_from'=>'','valid_to'=>'','plan_name'=>'','validity_months'=>null];
-    if ($active_plan_id > 0){
+    $subscription = ['status' => 'no_subscription', 'valid_from' => '', 'valid_to' => '', 'plan_name' => '', 'validity_months' => null];
+    if ($active_plan_id > 0) {
         $sq = "
           SELECT log.start_date, log.end_date, plan.plan_name, plan.validity_months
           FROM jos_app_usersubscriptionlog log
           LEFT JOIN jos_app_subscription_plans plan ON plan.id=log.plan_id
           WHERE log.userid=? AND log.plan_id=? AND log.payment_status='success'
           ORDER BY log.start_date DESC LIMIT 1";
-        $st = $con->prepare($sq); $st->bind_param('ii',$userid,$active_plan_id); $st->execute();
-        $S = stmt_fetch_one_assoc($st); $st->close();
-        if($S){
+        $st = $con->prepare($sq);
+        $st->bind_param('ii', $userid, $active_plan_id);
+        $st->execute();
+        $S = stmt_fetch_one_assoc($st);
+        $st->close();
+        if ($S) {
             $today = date('Y-m-d');
             $subscription = [
-              'status' => (!empty($S['end_date']) && $S['end_date'] >= $today) ? 'active' : 'expired',
-              'valid_from' => fmt_date($S['start_date']),
-              'valid_to' => fmt_date($S['end_date']),
-              'plan_name' => $S['plan_name'],
-              'validity_months' => is_null($S['validity_months']) ? null : (int)$S['validity_months'],
+                'status' => (!empty($S['end_date']) && $S['end_date'] >= $today) ? 'active' : 'expired',
+                'valid_from' => fmt_date($S['start_date']),
+                'valid_to' => fmt_date($S['end_date']),
+                'plan_name' => $S['plan_name'],
+                'validity_months' => is_null($S['validity_months']) ? null : (int)$S['validity_months'],
             ];
         }
     }
 
     // count applications for this candidate
     $apps_count = 0;
-    if ($rs = mysqli_query($con,"SELECT COUNT(*) AS c FROM jos_app_applications WHERE userid=".$userid)){
-        if($r = mysqli_fetch_assoc($rs)){ $apps_count = (int)$r['c']; }
+    if ($rs = mysqli_query($con, "SELECT COUNT(*) AS c FROM jos_app_applications WHERE userid=" . $userid)) {
+        if ($r = mysqli_fetch_assoc($rs)) {
+            $apps_count = (int)$r['c'];
+        }
     }
 
-    $apps_url = keep_params(['mode'=>'cand_apps','userid'=>$userid]);
+    $apps_url = keep_params(['mode' => 'cand_apps', 'userid' => $userid]);
     $back_url = back_to_list_url();
 
     ob_start(); ?>
     <!doctype html>
     <html lang="en">
+
     <head>
-      <meta charset="utf-8" />
-      <title>Candidate Profile</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <link rel="stylesheet" href="/adminconsole/assets/ui.css">
-      <style>
-        body { background:#020617; }
-        .headbar { margin: 0; padding: 8px 0 6px; position: sticky; top: 0; z-index:5; background:#020617; }
-        .chips{ display:flex; flex-wrap:wrap; gap:8px; }
-        .chip{ padding:4px 10px; border-radius:999px; border:1px solid #243045; background:#0b1220; color:#cbd5e1; font-size:12px; }
-        .grid{ display:grid; grid-template-columns:repeat(2,minmax(260px,1fr)); gap:12px 24px; }
-        .row{ display:flex; gap:8px; }
-        .lbl{ min-width:160px; color:#94a3b8; }
-        .val{ color:#e5e7eb; }
-        .muted{ color:#9aa0a6; }
-      </style>
-    </head>
-    <body>
-    <div class="master-wrap">
-      <div class="headbar" style="display:flex;align-items:center;gap:12px">
-        <h2>Candidate Profile</h2>
-        <div style="margin-left:auto;display:flex;gap:8px">
-          <?php if($apps_count > 0){ ?>
-            <a class="btn secondary" href="<?= h($apps_url) ?>">View Applications</a>
-          <?php } else { ?>
-            <span class="muted" style="font-size:12px;margin-top:2px;">No applications yet</span>
-          <?php } ?>
-          <a class="btn secondary" href="<?= h($back_url) ?>">← Back to List</a>
-          <button class="btn secondary" onclick="window.print()">Print</button>
-        </div>
-      </div>
-
-      <div class="card" style="padding:20px">
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
-          <div style="height:72px;width:72px;border-radius:50%;background:#111827;overflow:hidden;display:flex;align-items:center;justify-content:center">
-            <img src="<?= h($photo_url) ?>" alt="photo" style="height:100%;width:100%;object-fit:cover">
-          </div>
-          <div>
-            <div style="font-size:18px;font-weight:700;color:#fff"><?= h($C['candidate_name'] ?: 'Candidate') ?></div>
-            <div class="muted">
-              <?= h($C['email'] ?: '') ?><?= ($C['email'] && $C['mobile_no'])?' • ':'' ?><?= h($C['mobile_no'] ?: '') ?>
-            </div>
-            <?php if($job_positions){ ?>
-              <div style="margin-top:6px">
-                <div class="muted" style="font-size:12px;margin-bottom:4px">Preferred Job Positions</div>
-                <div class="chips">
-                  <?php foreach($job_positions as $jp){ ?><span class="chip"><?= h($jp) ?></span><?php } ?>
-                </div>
-              </div>
-            <?php } ?>
-          </div>
-        </div>
-
-        <div style="height:1px;background:#1f2937;margin:6px 0 16px"></div>
-
-        <div class="grid">
-          <?php
-            $specs = [
-              'Gender'            => $C['gender_name'] ?? '',
-              'Birthdate'         => fmt_date($C['birthdate'] ?? ''),
-              'Experience Type'   => $C['experience_type_name'] ?? '',
-              'Experience Period' => $C['experience_period_name'] ?? '',
-              'Address'           => $C['address'] ?? '',
-              'City'              => $C['city_id'] ?? '',
-              'Locality ID'       => $C['locality_id'] ?? '',
-              'Latitude'          => isset($C['latitude']) ? trim((string)$C['latitude']) : '',
-              'Longitude'         => isset($C['longitude']) ? trim((string)$C['longitude']) : '',
-              'Created'           => fmt_date($C['created_at'] ?? ''),
-            ];
-            foreach($specs as $label=>$val){
-              $val = trim((string)$val);
-              if($val==='') continue;
-              echo '<div class="row"><div class="lbl">'.h($label).'</div><div class="val">'.h($val).'</div></div>';
+        <meta charset="utf-8" />
+        <title>Candidate Profile</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="stylesheet" href="/adminconsole/assets/ui.css">
+        <style>
+            body {
+                background: #020617;
             }
-          ?>
-        </div>
 
-        <?php if(!empty($C['skills']) || !empty($C['exp_description'])){ ?>
-          <div style="height:1px;background:#1f2937;margin:16px 0"></div>
-        <?php } ?>
+            .headbar {
+                margin: 0;
+                padding: 8px 0 6px;
+                position: sticky;
+                top: 0;
+                z-index: 5;
+                background: #020617;
+            }
 
-        <?php if(!empty($C['skills'])){ ?>
-          <div style="margin-bottom:12px">
-            <div style="font-weight:600;color:#cbd5e1;margin-bottom:6px">Skills</div>
-            <div class="chips">
-              <?php foreach(array_filter(array_map('trim', explode(',', (string)$C['skills']))) as $s): ?>
-                <span class="chip"><?= h($s) ?></span>
-              <?php endforeach; ?>
-            </div>
-          </div>
-        <?php } ?>
+            .chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
 
-        <?php if(!empty($C['exp_description'])){ ?>
-          <div>
-            <div style="font-weight:600;color:#cbd5e1;margin-bottom:6px">Profile Summary</div>
-            <div style="white-space:pre-wrap;color:#e5e7eb"><?= h($C['exp_description']) ?></div>
-          </div>
-        <?php } ?>
+            .chip {
+                padding: 4px 10px;
+                border-radius: 999px;
+                border: 1px solid #243045;
+                background: #0b1220;
+                color: #cbd5e1;
+                font-size: 12px;
+            }
 
-        <div style="height:1px;background:#1f2937;margin:16px 0"></div>
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(260px, 1fr));
+                gap: 12px 24px;
+            }
 
-        <div class="grid">
-          <div class="row"><div class="lbl">Subscription</div>
-            <div class="val">
-              <?= h(ucfirst($subscription['status'])) ?>
-              <?php if($subscription['plan_name']){ echo ' • '.h($subscription['plan_name']); } ?>
-              <?php if($subscription['valid_from'] || $subscription['valid_to']){ ?>
-                <div class="muted">
-                  <?= $subscription['valid_from'] ? 'From: '.h($subscription['valid_from']) : '' ?>
-                  <?= ($subscription['valid_from'] && $subscription['valid_to'])?' • ':'' ?>
-                  <?= $subscription['valid_to'] ? 'To: '.h($subscription['valid_to']) : '' ?>
+            .row {
+                display: flex;
+                gap: 8px;
+            }
+
+            .lbl {
+                min-width: 160px;
+                color: #94a3b8;
+            }
+
+            .val {
+                color: #e5e7eb;
+            }
+
+            .muted {
+                color: #9aa0a6;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="master-wrap">
+            <div class="headbar" style="display:flex;align-items:center;gap:12px">
+                <h2>Candidate Profile</h2>
+                <div style="margin-left:auto;display:flex;gap:8px">
+                    <?php if ($apps_count > 0) { ?>
+                        <a class="btn secondary" href="<?= h($apps_url) ?>">View Applications</a>
+                    <?php } else { ?>
+                        <span class="muted" style="font-size:12px;margin-top:2px;">No applications yet</span>
+                    <?php } ?>
+                    <a class="btn secondary" href="<?= h($back_url) ?>">← Back to List</a>
+                    <button class="btn secondary" onclick="window.print()">Print</button>
                 </div>
-              <?php } ?>
             </div>
-          </div>
-          <?php if($myreferral_code){ ?>
-          <div class="row"><div class="lbl">Referral Code</div><div class="val"><?= h($myreferral_code) ?></div></div>
-          <?php } ?>
+
+            <div class="card" style="padding:20px">
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+                    <div style="height:72px;width:72px;border-radius:50%;background:#111827;overflow:hidden;display:flex;align-items:center;justify-content:center">
+                        <img src="<?= h($photo_url) ?>" alt="photo" style="height:100%;width:100%;object-fit:cover">
+                    </div>
+                    <div>
+                        <div style="font-size:18px;font-weight:700;color:#fff"><?= h($C['candidate_name'] ?: 'Candidate') ?></div>
+                        <div class="muted">
+                            <?= h($C['email'] ?: '') ?><?= ($C['email'] && $C['mobile_no']) ? ' • ' : '' ?><?= h($C['mobile_no'] ?: '') ?>
+                        </div>
+                        <?php if ($job_positions) { ?>
+                            <div style="margin-top:6px">
+                                <div class="muted" style="font-size:12px;margin-bottom:4px">Preferred Job Positions</div>
+                                <div class="chips">
+                                    <?php foreach ($job_positions as $jp) { ?><span class="chip"><?= h($jp) ?></span><?php } ?>
+                                </div>
+                            </div>
+                        <?php } ?>
+                    </div>
+                </div>
+
+                <div style="height:1px;background:#1f2937;margin:6px 0 16px"></div>
+
+                <div class="grid">
+                    <?php
+                    $specs = [
+                        'Gender'            => $C['gender_name'] ?? '',
+                        'Birthdate'         => fmt_date($C['birthdate'] ?? ''),
+                        'Experience Type'   => $C['experience_type_name'] ?? '',
+                        'Experience Period' => $C['experience_period_name'] ?? '',
+                        'Address'           => $C['address'] ?? '',
+                        'City'              => $C['city_id'] ?? '',
+                        'Locality ID'       => $C['locality_id'] ?? '',
+                        'Latitude'          => isset($C['latitude']) ? trim((string)$C['latitude']) : '',
+                        'Longitude'         => isset($C['longitude']) ? trim((string)$C['longitude']) : '',
+                        'Created'           => fmt_date($C['created_at'] ?? ''),
+                    ];
+                    foreach ($specs as $label => $val) {
+                        $val = trim((string)$val);
+                        if ($val === '') continue;
+                        echo '<div class="row"><div class="lbl">' . h($label) . '</div><div class="val">' . h($val) . '</div></div>';
+                    }
+                    ?>
+                </div>
+
+                <?php if (!empty($C['skills']) || !empty($C['exp_description'])) { ?>
+                    <div style="height:1px;background:#1f2937;margin:16px 0"></div>
+                <?php } ?>
+
+                <?php if (!empty($C['skills'])) { ?>
+                    <div style="margin-bottom:12px">
+                        <div style="font-weight:600;color:#cbd5e1;margin-bottom:6px">Skills</div>
+                        <div class="chips">
+                            <?php foreach (array_filter(array_map('trim', explode(',', (string)$C['skills']))) as $s): ?>
+                                <span class="chip"><?= h($s) ?></span>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php } ?>
+
+                <?php if (!empty($C['exp_description'])) { ?>
+                    <div>
+                        <div style="font-weight:600;color:#cbd5e1;margin-bottom:6px">Profile Summary</div>
+                        <div style="white-space:pre-wrap;color:#e5e7eb"><?= h($C['exp_description']) ?></div>
+                    </div>
+                <?php } ?>
+
+                <div style="height:1px;background:#1f2937;margin:16px 0"></div>
+
+                <div class="grid">
+                    <div class="row">
+                        <div class="lbl">Subscription</div>
+                        <div class="val">
+                            <?= h(ucfirst($subscription['status'])) ?>
+                            <?php if ($subscription['plan_name']) {
+                                echo ' • ' . h($subscription['plan_name']);
+                            } ?>
+                            <?php if ($subscription['valid_from'] || $subscription['valid_to']) { ?>
+                                <div class="muted">
+                                    <?= $subscription['valid_from'] ? 'From: ' . h($subscription['valid_from']) : '' ?>
+                                    <?= ($subscription['valid_from'] && $subscription['valid_to']) ? ' • ' : '' ?>
+                                    <?= $subscription['valid_to'] ? 'To: ' . h($subscription['valid_to']) : '' ?>
+                                </div>
+                            <?php } ?>
+                        </div>
+                    </div>
+                    <?php if ($myreferral_code) { ?>
+                        <div class="row">
+                            <div class="lbl">Referral Code</div>
+                            <div class="val"><?= h($myreferral_code) ?></div>
+                        </div>
+                    <?php } ?>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
     </body>
+
     </html>
-    <?php
-    echo ob_get_clean(); exit;
+<?php
+    echo ob_get_clean();
+    exit;
 }
 
 /* **********************************************************************
@@ -409,16 +514,24 @@ if ($mode === 'candidate') {
    ********************************************************************** */
 if ($mode === 'cand_apps') {
     $userid = get_int('userid', 0);
-    if ($userid <= 0){ die('Invalid userid'); }
+    if ($userid <= 0) {
+        die('Invalid userid');
+    }
 
     $c_sql = "SELECT candidate_name, mobile_no, email, city_id FROM jos_app_candidate_profile WHERE userid=? LIMIT 1";
-    $st = $con->prepare($c_sql); $st->bind_param('i',$userid); $st->execute();
-    $C = stmt_fetch_one_assoc($st); $st->close();
-    if(!$C){ die('Candidate not found'); }
+    $st = $con->prepare($c_sql);
+    $st->bind_param('i', $userid);
+    $st->execute();
+    $C = stmt_fetch_one_assoc($st);
+    $st->close();
+    if (!$C) {
+        die('Candidate not found');
+    }
 
-    $status_opts = []; $status_name_by_id = [];
-    if($rs = mysqli_query($con, "SELECT id,name FROM jos_app_applicationstatus WHERE status=1 ORDER BY COALESCE(order_by,0), id")){
-        while($r=mysqli_fetch_assoc($rs)){
+    $status_opts = [];
+    $status_name_by_id = [];
+    if ($rs = mysqli_query($con, "SELECT id,name FROM jos_app_applicationstatus WHERE status=1 ORDER BY COALESCE(order_by,0), id")) {
+        while ($r = mysqli_fetch_assoc($rs)) {
             $status_opts[] = $r;
             $status_name_by_id[(int)$r['id']] = $r['name'];
         }
@@ -448,102 +561,146 @@ if ($mode === 'cand_apps') {
     $q = implode("\n", $sql);
 
     $st = $con->prepare($q);
-    if(!$st){ die('Prepare failed: '.h($con->error)); }
-    $st->bind_param('i',$userid);
-    if(!$st->execute()){ die('Execute failed: '.h($st->error)); }
+    if (!$st) {
+        die('Prepare failed: ' . h($con->error));
+    }
+    $st->bind_param('i', $userid);
+    if (!$st->execute()) {
+        die('Execute failed: ' . h($st->error));
+    }
     $rows = stmt_fetch_all_assoc($st);
     $st->close();
 
-    $back_profile = $_SERVER['PHP_SELF'].'?'.http_build_query(['mode'=>'candidate','userid'=>$userid]);
+    $back_profile = $_SERVER['PHP_SELF'] . '?' . http_build_query(['mode' => 'candidate', 'userid' => $userid]);
     $back_list    = back_to_list_url();
 
     ob_start(); ?>
     <!doctype html>
     <html lang="en">
-    <head>
-      <meta charset="utf-8" />
-      <title>Applications – Candidate</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <link rel="stylesheet" href="/adminconsole/assets/ui.css">
-      <style>
-        body { background:#020617; }
-        .headbar { margin: 0; padding: 8px 0 6px; position: sticky; top: 0; z-index: 5; background: #020617; }
-        .table-wrap{ overflow:auto; }
-        .pill{ padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid #555; }
-        .pill-premium{ border-color:#d4af37; }
-        .pill-standard{ border-color:#666; }
-        .muted{ color:#9aa0a6; font-size:12px; }
-        .nowrap{ white-space:nowrap; }
-      </style>
-    </head>
-    <body>
-    <div class="master-wrap">
-      <div class="headbar">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div>
-            <h2 style="margin:0">Applications – Candidate</h2>
-            <div class="muted">
-              <?= h($C['candidate_name'] ?: ('User #'.$userid)) ?>
-              <?php if($C['city_id']){ ?> • <?= h($C['city_id']) ?><?php } ?>
-            </div>
-          </div>
-          <div style="margin-left:auto;display:flex;gap:8px">
-            <a class="btn secondary" href="<?= h($back_profile) ?>">← Back to Profile</a>
-            <a class="btn secondary" href="<?= h($back_list) ?>">Back to List</a>
-          </div>
-        </div>
-      </div>
 
-      <div class="card table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th style="width:60px;">SR</th>
-              <th>Applied On</th>
-              <th>Job</th>
-              <th>Company</th>
-              <th>Listing</th>
-              <th>Status</th>
-              <th style="width:200px;">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-          <?php if(empty($rows)): ?>
-            <tr><td colspan="7" style="text-align:center;padding:12px;">No applications found for this candidate</td></tr>
-          <?php else: $sr=1; foreach($rows as $r):
-            $lt_text = ((int)$r['job_lt']===1) ? 'Premium' : 'Standard';
-            $pill_cls = ((int)$r['job_lt']===1) ? 'pill-premium' : 'pill-standard';
-            $status = $r['status_name'] ?: ( $status_name_by_id[(int)$r['status_id']] ?? '—' );
-            $jobHref = keep_params([
-              'mode'   => 'job',
-              'lt'     => (int)$r['job_lt'],
-              'id'     => (int)$r['job_id'],
-              'userid' => $userid,
-              'from'   => 'candapps'
-            ]);
-            $appliedTs = $r['application_date'] ? strtotime($r['application_date']) : false;
-          ?>
-            <tr>
-              <td><?= $sr++ ?></td>
-              <td>
-                <div class="nowrap"><?= h(fmt_date($r['application_date'])) ?></div>
-                <div class="muted"><?= h($appliedTs ? date('h:i A',$appliedTs) : '') ?></div>
-              </td>
-              <td><?= h($r['job_position'] ?: '—') ?></td>
-              <td><?= h($r['company_name'] ?: '—') ?></td>
-              <td><span class="pill <?= $pill_cls ?>"><?= h($lt_text) ?></span></td>
-              <td><span class="badge"><?= h($status) ?></span></td>
-              <td><a class="btn secondary" href="<?= h($jobHref) ?>" target="_blank" rel="noopener">View Job</a></td>
-            </tr>
-          <?php endforeach; endif; ?>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <head>
+        <meta charset="utf-8" />
+        <title>Applications – Candidate</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="stylesheet" href="/adminconsole/assets/ui.css">
+        <style>
+            body {
+                background: #020617;
+            }
+
+            .headbar {
+                margin: 0;
+                padding: 8px 0 6px;
+                position: sticky;
+                top: 0;
+                z-index: 5;
+                background: #020617;
+            }
+
+            .table-wrap {
+                overflow: auto;
+            }
+
+            .pill {
+                padding: 2px 8px;
+                border-radius: 999px;
+                font-size: 12px;
+                border: 1px solid #555;
+            }
+
+            .pill-premium {
+                border-color: #d4af37;
+            }
+
+            .pill-standard {
+                border-color: #666;
+            }
+
+            .muted {
+                color: #9aa0a6;
+                font-size: 12px;
+            }
+
+            .nowrap {
+                white-space: nowrap;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="master-wrap">
+            <div class="headbar">
+                <div style="display:flex;align-items:center;gap:12px">
+                    <div>
+                        <h2 style="margin:0">Applications – Candidate</h2>
+                        <div class="muted">
+                            <?= h($C['candidate_name'] ?: ('User #' . $userid)) ?>
+                            <?php if ($C['city_id']) { ?> • <?= h($C['city_id']) ?><?php } ?>
+                        </div>
+                    </div>
+                    <div style="margin-left:auto;display:flex;gap:8px">
+                        <a class="btn secondary" href="<?= h($back_profile) ?>">← Back to Profile</a>
+                        <a class="btn secondary" href="<?= h($back_list) ?>">Back to List</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width:60px;">SR</th>
+                            <th>Applied On</th>
+                            <th>Job</th>
+                            <th>Company</th>
+                            <th>Listing</th>
+                            <th>Status</th>
+                            <th style="width:200px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($rows)): ?>
+                            <tr>
+                                <td colspan="7" style="text-align:center;padding:12px;">No applications found for this candidate</td>
+                            </tr>
+                            <?php else: $sr = 1;
+                            foreach ($rows as $r):
+                                $lt_text = ((int)$r['job_lt'] === 1) ? 'Premium' : 'Standard';
+                                $pill_cls = ((int)$r['job_lt'] === 1) ? 'pill-premium' : 'pill-standard';
+                                $status = $r['status_name'] ?: ($status_name_by_id[(int)$r['status_id']] ?? '—');
+                                $jobHref = keep_params([
+                                    'mode'   => 'job',
+                                    'lt'     => (int)$r['job_lt'],
+                                    'id'     => (int)$r['job_id'],
+                                    'userid' => $userid,
+                                    'from'   => 'candapps'
+                                ]);
+                                $appliedTs = $r['application_date'] ? strtotime($r['application_date']) : false;
+                            ?>
+                                <tr>
+                                    <td><?= $sr++ ?></td>
+                                    <td>
+                                        <div class="nowrap"><?= h(fmt_date($r['application_date'])) ?></div>
+                                        <div class="muted"><?= h($appliedTs ? date('h:i A', $appliedTs) : '') ?></div>
+                                    </td>
+                                    <td><?= h($r['job_position'] ?: '—') ?></td>
+                                    <td><?= h($r['company_name'] ?: '—') ?></td>
+                                    <td><span class="pill <?= $pill_cls ?>"><?= h($lt_text) ?></span></td>
+                                    <td><span class="badge"><?= h($status) ?></span></td>
+                                    <td><a class="btn secondary" href="<?= h($jobHref) ?>" target="_blank" rel="noopener">View Job</a></td>
+                                </tr>
+                        <?php endforeach;
+                        endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </body>
+
     </html>
-    <?php
-    echo ob_get_clean(); exit;
+<?php
+    echo ob_get_clean();
+    exit;
 }
 
 /* **********************************************************************
@@ -552,8 +709,12 @@ if ($mode === 'cand_apps') {
 if ($mode === 'job') {
     $lt = get_int('lt', 0); // 1=walk-in (premium), 2=vacancy (standard)
     $id = get_int('id', 0);
-    if ($lt!==1 && $lt!==2){ die('Invalid listing type'); }
-    if ($id<=0){ die('Invalid job id'); }
+    if ($lt !== 1 && $lt !== 2) {
+        die('Invalid listing type');
+    }
+    if ($id <= 0) {
+        die('Invalid job id');
+    }
 
     if ($lt === 1) {
         $sql = "SELECT
@@ -667,31 +828,39 @@ if ($mode === 'job') {
     }
 
     $st = $con->prepare($sql);
-    if(!$st){ die('Prepare failed: '.h($con->error)); }
-    $st->bind_param('i',$id); $st->execute();
-    $row = stmt_fetch_one_assoc($st); $st->close();
-    if(!$row){ die('Job not found'); }
+    if (!$st) {
+        die('Prepare failed: ' . h($con->error));
+    }
+    $st->bind_param('i', $id);
+    $st->execute();
+    $row = stmt_fetch_one_assoc($st);
+    $st->close();
+    if (!$row) {
+        die('Job not found');
+    }
 
-    $company_logo = DOMAIN_URL.'webservices/uploads/nologo.png';
+    $company_logo = DOMAIN_URL . 'webservices/uploads/nologo.png';
     if (!empty($row['recruiter_id'])) {
         $rid = (int)$row['recruiter_id'];
-        $rs = mysqli_query($con, "SELECT company_logo, organization_name FROM jos_app_recruiter_profile WHERE id=".$rid." LIMIT 1");
-        if($rs && $r=mysqli_fetch_assoc($rs)){
-            if (!empty($r['company_logo'])) $company_logo = DOMAIN_URL.'webservices/'.$r['company_logo'];
+        $rs = mysqli_query($con, "SELECT company_logo, organization_name FROM jos_app_recruiter_profile WHERE id=" . $rid . " LIMIT 1");
+        if ($rs && $r = mysqli_fetch_assoc($rs)) {
+            if (!empty($r['company_logo'])) $company_logo = DOMAIN_URL . 'webservices/' . $r['company_logo'];
             if (empty($row['company_name']) && !empty($r['organization_name'])) $row['company_name'] = $r['organization_name'];
         }
     }
 
     $apps_count = 0;
-    $rs = mysqli_query($con, "SELECT COUNT(*) c FROM jos_app_applications WHERE job_listing_type=".(int)$lt." AND job_id=".(int)$id);
-    if($rs && $r=mysqli_fetch_assoc($rs)){ $apps_count=(int)$r['c']; }
+    $rs = mysqli_query($con, "SELECT COUNT(*) c FROM jos_app_applications WHERE job_listing_type=" . (int)$lt . " AND job_id=" . (int)$id);
+    if ($rs && $r = mysqli_fetch_assoc($rs)) {
+        $apps_count = (int)$r['c'];
+    }
 
-    $userid_for_back = get_int('userid',0);
-    $from = get_str('from','');
-    if ($from === 'candapps' && $userid_for_back>0) {
-        $back_url = $_SERVER['PHP_SELF'].'?'.http_build_query(['mode'=>'cand_apps','userid'=>$userid_for_back]);
-    } elseif ($userid_for_back>0) {
-        $back_url = $_SERVER['PHP_SELF'].'?'.http_build_query(['mode'=>'candidate','userid'=>$userid_for_back]);
+    $userid_for_back = get_int('userid', 0);
+    $from = get_str('from', '');
+    if ($from === 'candapps' && $userid_for_back > 0) {
+        $back_url = $_SERVER['PHP_SELF'] . '?' . http_build_query(['mode' => 'cand_apps', 'userid' => $userid_for_back]);
+    } elseif ($userid_for_back > 0) {
+        $back_url = $_SERVER['PHP_SELF'] . '?' . http_build_query(['mode' => 'candidate', 'userid' => $userid_for_back]);
     } else {
         $back_url = back_to_list_url();
     }
@@ -699,166 +868,212 @@ if ($mode === 'job') {
     ob_start(); ?>
     <!doctype html>
     <html lang="en">
+
     <head>
-      <meta charset="utf-8" />
-      <title>Job Details</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <link rel="stylesheet" href="/adminconsole/assets/ui.css">
-      <style>
-        body { background:#020617; }
-        .headbar { margin:0; padding:8px 0 6px; position:sticky; top:0; z-index:5; background:#020617; }
-        .muted{ color:#9aa0a6; }
-        .grid{ display:grid; grid-template-columns:repeat(2,minmax(260px,1fr)); gap:14px 24px; }
-        .row{ display:flex; gap:8px; }
-        .lbl{ min-width:140px; color:#94a3b8; }
-        .val{ color:#e5e7eb; }
-        .chip{ padding:3px 8px; border-radius:999px; border:1px solid #243045; background:#0b1220; color:#cbd5e1; font-size:12px; }
-        .chips{ display:flex; flex-wrap:wrap; gap:6px; }
-      </style>
+        <meta charset="utf-8" />
+        <title>Job Details</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="stylesheet" href="/adminconsole/assets/ui.css">
+        <style>
+            body {
+                background: #020617;
+            }
+
+            .headbar {
+                margin: 0;
+                padding: 8px 0 6px;
+                position: sticky;
+                top: 0;
+                z-index: 5;
+                background: #020617;
+            }
+
+            .muted {
+                color: #9aa0a6;
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(260px, 1fr));
+                gap: 14px 24px;
+            }
+
+            .row {
+                display: flex;
+                gap: 8px;
+            }
+
+            .lbl {
+                min-width: 140px;
+                color: #94a3b8;
+            }
+
+            .val {
+                color: #e5e7eb;
+            }
+
+            .chip {
+                padding: 3px 8px;
+                border-radius: 999px;
+                border: 1px solid #243045;
+                background: #0b1220;
+                color: #cbd5e1;
+                font-size: 12px;
+            }
+
+            .chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+        </style>
     </head>
+
     <body>
-    <div class="master-wrap">
-      <div class="headbar" style="display:flex;align-items:center;gap:12px">
-        <h2>Job Details (<?= $lt===1?'Premium / Walk-in':'Standard / Vacancy' ?>)</h2>
-        <div style="margin-left:auto;display:flex;gap:8px">
-          <a class="btn secondary" href="<?= h($back_url) ?>">← Back</a>
-          <button class="btn secondary" onclick="window.print()">Print</button>
+        <div class="master-wrap">
+            <div class="headbar" style="display:flex;align-items:center;gap:12px">
+                <h2>Job Details (<?= $lt === 1 ? 'Premium / Walk-in' : 'Standard / Vacancy' ?>)</h2>
+                <div style="margin-left:auto;display:flex;gap:8px">
+                    <a class="btn secondary" href="<?= h($back_url) ?>">← Back</a>
+                    <button class="btn secondary" onclick="window.print()">Print</button>
+                </div>
+            </div>
+
+            <div class="card" style="padding:20px">
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+                    <div style="height:64px;width:64px;flex:0 0 64px;border-radius:12px;background:#111827;display:flex;align-items:center;justify-content:center;overflow:hidden">
+                        <img src="<?= h($company_logo) ?>" alt="logo" style="max-height:100%;max-width:100%">
+                    </div>
+                    <div style="min-width:0">
+                        <div style="font-size:20px;font-weight:700;color:#fff;line-height:1.2"><?= h($row['job_position'] ?: '') ?></div>
+                        <div class="muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                            <?= h($row['company_name'] ?? '') ?>
+                        </div>
+                        <?php if (!empty($row['created_at'])) { ?>
+                            <div class="muted" style="font-size:12px;margin-top:2px">Posted on <?= h(fmt_date($row['created_at'])) ?></div>
+                        <?php } ?>
+                    </div>
+                    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+                        <span class="badge" style="background:#101a2e;border:1px solid #1f2e50;color:#cbd5e1">Applications: <?= (int)$apps_count ?></span>
+                    </div>
+                </div>
+
+                <div style="height:1px;background:#1f2937;margin:6px 0 16px"></div>
+
+                <div class="grid">
+                    <?php
+                    if ($lt === 1) {
+                        $specs = [
+                            'Openings'        => $row['number_of_openings'] ?? '',
+                            'Job Type'        => $row['job_type'] ?? '',
+                            'Work Model'      => $row['work_model'] ?? '',
+                            'Field Work'      => $row['field_work'] ?? '',
+                            'Work Shift'      => $row['work_shift'] ?? '',
+                            'Gender'          => $row['gender'] ?? '',
+                            'Qualification'   => $row['qualification'] ?? '',
+                            'Experience From' => $row['experience_from'] ?? '',
+                            'Experience To'   => $row['experience_to'] ?? '',
+                            'Salary From'     => $row['salary_from'] ?? '',
+                            'Salary To'       => $row['salary_to'] ?? '',
+                            'City'            => $row['city'] ?? '',
+                            'Locality'        => $row['locality'] ?? '',
+                            'Valid Apply'     => $row['validity_apply'] ?? '',
+                            'Valid Till'      => trim(($row['valid_till_date'] ?? '') . ' ' . ($row['valid_till_time'] ?? '')),
+                            'Job Status'      => $row['job_status'] ?? '',
+                        ];
+                    } else {
+                        $specs = [
+                            'Gender'          => $row['gender'] ?? '',
+                            'Qualification'   => $row['qualification'] ?? '',
+                            'Experience From' => $row['experience_from_name'] ?? '',
+                            'Experience To'   => $row['experience_to_name'] ?? '',
+                            'Salary From'     => $row['salary_from_value'] ?? '',
+                            'Salary To'       => $row['salary_to_value'] ?? '',
+                            'City'            => $row['city'] ?? '',
+                            'Locality'        => $row['locality'] ?? '',
+                            'Job Status'      => $row['job_status'] ?? '',
+                        ];
+                    }
+                    foreach ($specs as $label => $val) {
+                        $val = trim((string)$val);
+                        if ($val === '') continue;
+                        echo '<div class="row"><div class="lbl">' . h($label) . '</div><div class="val">' . h($val) . '</div></div>';
+                    }
+                    ?>
+                </div>
+
+                <?php if ($lt === 1 && (!empty($row['job_description']) || !empty($row['skills_required']) || !empty($row['languages_required']) || !empty($row['work_equipment']))) { ?>
+                    <div style="height:1px;background:#1f2937;margin:16px 0"></div>
+                    <?php if (!empty($row['job_description'])) { ?>
+                        <div style="margin-bottom:12px">
+                            <div style="font-weight:600;color:#cbd5e1;margin-bottom:6px">Job Description</div>
+                            <div style="white-space:pre-wrap;color:#e5e7eb"><?= h($row['job_description']) ?></div>
+                        </div>
+                    <?php } ?>
+                    <?php if (!empty($row['skills_required'])) { ?>
+                        <div style="margin-bottom:12px">
+                            <div style="font-weight:600;color:#cbd5e1;margin-bottom:6px">Skills</div>
+                            <div class="chips">
+                                <?php foreach (array_filter(array_map('trim', explode(',', (string)$row['skills_required']))) as $s): ?>
+                                    <span class="chip"><?= h($s) ?></span>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php } ?>
+                    <?php if (!empty($row['languages_required'])) { ?>
+                        <div style="margin-bottom:12px">
+                            <div style="font-weight:600;color:#cbd5e1;margin-bottom:6px">Languages</div>
+                            <div class="chips">
+                                <?php foreach (array_filter(array_map('trim', explode(',', (string)$row['languages_required']))) as $s): ?>
+                                    <span class="chip"><?= h($s) ?></span>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php } ?>
+                    <?php if (!empty($row['work_equipment'])) { ?>
+                        <div style="margin-bottom:12px">
+                            <div style="font-weight:600;color:#cbd5e1;margin-bottom:6px">Work Equipment</div>
+                            <div class="chips">
+                                <?php foreach (array_filter(array_map('trim', explode(',', (string)$row['work_equipment']))) as $s): ?>
+                                    <span class="chip"><?= h($s) ?></span>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php } ?>
+                <?php } ?>
+
+                <div style="height:1px;background:#1f2937;margin:16px 0"></div>
+
+                <div class="grid">
+                    <?php
+                    if ($lt === 1) {
+                        $contact = [
+                            'Contact Person'    => $row['contact_person_name'] ?? '',
+                            'Mobile'            => !empty($row['contact_no']) ? $row['contact_no'] : ($row['recruiter_mobile_no'] ?? ''),
+                            'Interview Address' => $row['interview_address'] ?? '',
+                        ];
+                    } else {
+                        $contact = [
+                            'Contact Person'    => $row['contact_person'] ?? '',
+                            'Mobile'            => $row['contact_no'] ?? '',
+                            'Interview Address' => $row['interview_address'] ?? '',
+                        ];
+                    }
+                    foreach ($contact as $label => $val) {
+                        $val = trim((string)$val);
+                        if ($val === '') continue;
+                        echo '<div class="row"><div class="lbl">' . h($label) . '</div><div class="val">' . h($val) . '</div></div>';
+                    }
+                    ?>
+                </div>
+            </div>
         </div>
-      </div>
-
-      <div class="card" style="padding:20px">
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
-          <div style="height:64px;width:64px;flex:0 0 64px;border-radius:12px;background:#111827;display:flex;align-items:center;justify-content:center;overflow:hidden">
-            <img src="<?= h($company_logo) ?>" alt="logo" style="max-height:100%;max-width:100%">
-          </div>
-          <div style="min-width:0">
-            <div style="font-size:20px;font-weight:700;color:#fff;line-height:1.2"><?= h($row['job_position'] ?: '') ?></div>
-            <div class="muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-              <?= h($row['company_name'] ?? '') ?>
-            </div>
-            <?php if(!empty($row['created_at'])){ ?>
-              <div class="muted" style="font-size:12px;margin-top:2px">Posted on <?= h(fmt_date($row['created_at'])) ?></div>
-            <?php } ?>
-          </div>
-          <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-            <span class="badge" style="background:#101a2e;border:1px solid #1f2e50;color:#cbd5e1">Applications: <?= (int)$apps_count ?></span>
-          </div>
-        </div>
-
-        <div style="height:1px;background:#1f2937;margin:6px 0 16px"></div>
-
-        <div class="grid">
-          <?php
-            if ($lt===1){
-              $specs = [
-                'Openings'        => $row['number_of_openings'] ?? '',
-                'Job Type'        => $row['job_type'] ?? '',
-                'Work Model'      => $row['work_model'] ?? '',
-                'Field Work'      => $row['field_work'] ?? '',
-                'Work Shift'      => $row['work_shift'] ?? '',
-                'Gender'          => $row['gender'] ?? '',
-                'Qualification'   => $row['qualification'] ?? '',
-                'Experience From' => $row['experience_from'] ?? '',
-                'Experience To'   => $row['experience_to'] ?? '',
-                'Salary From'     => $row['salary_from'] ?? '',
-                'Salary To'       => $row['salary_to'] ?? '',
-                'City'            => $row['city'] ?? '',
-                'Locality'        => $row['locality'] ?? '',
-                'Valid Apply'     => $row['validity_apply'] ?? '',
-                'Valid Till'      => trim(($row['valid_till_date']??'').' '.($row['valid_till_time']??'')),
-                'Job Status'      => $row['job_status'] ?? '',
-              ];
-            } else {
-              $specs = [
-                'Gender'          => $row['gender'] ?? '',
-                'Qualification'   => $row['qualification'] ?? '',
-                'Experience From' => $row['experience_from_name'] ?? '',
-                'Experience To'   => $row['experience_to_name'] ?? '',
-                'Salary From'     => $row['salary_from_value'] ?? '',
-                'Salary To'       => $row['salary_to_value'] ?? '',
-                'City'            => $row['city'] ?? '',
-                'Locality'        => $row['locality'] ?? '',
-                'Job Status'      => $row['job_status'] ?? '',
-              ];
-            }
-            foreach($specs as $label=>$val){
-              $val = trim((string)$val);
-              if($val==='') continue;
-              echo '<div class="row"><div class="lbl">'.h($label).'</div><div class="val">'.h($val).'</div></div>';
-            }
-          ?>
-        </div>
-
-        <?php if($lt===1 && (!empty($row['job_description']) || !empty($row['skills_required']) || !empty($row['languages_required']) || !empty($row['work_equipment']))){ ?>
-          <div style="height:1px;background:#1f2937;margin:16px 0"></div>
-          <?php if(!empty($row['job_description'])){ ?>
-            <div style="margin-bottom:12px">
-              <div style="font-weight:600;color:#cbd5e1;margin-bottom:6px">Job Description</div>
-              <div style="white-space:pre-wrap;color:#e5e7eb"><?= h($row['job_description']) ?></div>
-            </div>
-          <?php } ?>
-          <?php if(!empty($row['skills_required'])){ ?>
-            <div style="margin-bottom:12px">
-              <div style="font-weight:600;color:#cbd5e1;margin-bottom:6px">Skills</div>
-              <div class="chips">
-                <?php foreach(array_filter(array_map('trim', explode(',', (string)$row['skills_required']))) as $s): ?>
-                  <span class="chip"><?= h($s) ?></span>
-                <?php endforeach; ?>
-              </div>
-            </div>
-          <?php } ?>
-          <?php if(!empty($row['languages_required'])){ ?>
-            <div style="margin-bottom:12px">
-              <div style="font-weight:600;color:#cbd5e1;margin-bottom:6px">Languages</div>
-              <div class="chips">
-                <?php foreach(array_filter(array_map('trim', explode(',', (string)$row['languages_required']))) as $s): ?>
-                  <span class="chip"><?= h($s) ?></span>
-                <?php endforeach; ?>
-              </div>
-            </div>
-          <?php } ?>
-          <?php if(!empty($row['work_equipment'])){ ?>
-            <div style="margin-bottom:12px">
-              <div style="font-weight:600;color:#cbd5e1;margin-bottom:6px">Work Equipment</div>
-              <div class="chips">
-                <?php foreach(array_filter(array_map('trim', explode(',', (string)$row['work_equipment']))) as $s): ?>
-                  <span class="chip"><?= h($s) ?></span>
-                <?php endforeach; ?>
-              </div>
-            </div>
-          <?php } ?>
-        <?php } ?>
-
-        <div style="height:1px;background:#1f2937;margin:16px 0"></div>
-
-        <div class="grid">
-          <?php
-            if ($lt===1){
-              $contact = [
-                'Contact Person'    => $row['contact_person_name'] ?? '',
-                'Mobile'            => !empty($row['contact_no']) ? $row['contact_no'] : ($row['recruiter_mobile_no'] ?? ''),
-                'Interview Address' => $row['interview_address'] ?? '',
-              ];
-            } else {
-              $contact = [
-                'Contact Person'    => $row['contact_person'] ?? '',
-                'Mobile'            => $row['contact_no'] ?? '',
-                'Interview Address' => $row['interview_address'] ?? '',
-              ];
-            }
-            foreach($contact as $label=>$val){
-              $val = trim((string)$val);
-              if($val==='') continue;
-              echo '<div class="row"><div class="lbl">'.h($label).'</div><div class="val">'.h($val).'</div></div>';
-            }
-          ?>
-        </div>
-      </div>
-    </div>
     </body>
+
     </html>
-    <?php
-    echo ob_get_clean(); exit;
+<?php
+    echo ob_get_clean();
+    exit;
 }
 
 /* **********************************************************************
@@ -882,16 +1097,16 @@ $logged_admin_id = (int)($me['id'] ?? 0);
 
 /* ---- filters (GET) ---- */
 $profile_type_id     = 2;                           // ONLY candidates
-$q                   = get_str('q','');
-$referrer_q          = get_str('referrer_q','');
-$city_id             = get_str('city_id','');
+$q                   = get_str('q', '');
+$referrer_q          = get_str('referrer_q', '');
+$city_id             = get_str('city_id', '');
 $status_id           = isset($_GET['status_id']) ? (int)$_GET['status_id'] : -1; // Any by default
-$has_referrer        = (isset($_GET['has_referrer']) && $_GET['has_referrer']!=='') ? (int)$_GET['has_referrer'] : -1;
-$referral_code_in    = get_str('referral_code','');
-$plan_access_in      = get_int('plan_access',0);     // 1 free, 2 premium
-$subscription_status = strtolower(get_str('subscription_status','')); // active|expired|''
-$created_from_raw    = get_str('created_from','');
-$created_to_raw      = get_str('created_to','');
+$has_referrer        = (isset($_GET['has_referrer']) && $_GET['has_referrer'] !== '') ? (int)$_GET['has_referrer'] : -1;
+$referral_code_in    = get_str('referral_code', '');
+$plan_access_in      = get_int('plan_access', 0);     // 1 free, 2 premium
+$subscription_status = strtolower(get_str('subscription_status', '')); // active|expired|''
+$created_from_raw    = get_str('created_from', '');
+$created_to_raw      = get_str('created_to', '');
 $created_from_sql    = normalize_reg_date($created_from_raw);
 $created_to_sql      = normalize_reg_date($created_to_raw);
 
@@ -936,11 +1151,11 @@ if (isset($_GET['job_position_ids']) && is_array($_GET['job_position_ids'])) {
     $preferred_job_ids = array_values(array_unique(array_filter(array_map('intval', $_GET['job_position_ids']))));
 }
 
-$sort = get_str('sort','newest'); // newest, oldest, name_asc, name_desc, city_asc, city_desc
-$view = get_str('view','last50'); // last50|all
-$page = max(1, get_int('page',1));
-$per_page = ($view==='all') ? 1000 : 50;
-$offset = ($page-1)*$per_page;
+$sort = get_str('sort', 'newest'); // newest, oldest, name_asc, name_desc, city_asc, city_desc
+$view = get_str('view', 'last50'); // last50|all
+$page = max(1, get_int('page', 1));
+$per_page = ($view === 'all') ? 1000 : 50;
+$offset = ($page - 1) * $per_page;
 
 /* ---- subscription plans opts for cards (profile_type=2) ---- */
 $subscription_plan_opts = [];
@@ -950,15 +1165,17 @@ if ($rs = mysqli_query($con, "
     WHERE profile_type = 2
     ORDER BY plan_name
 ")) {
-  while ($r = mysqli_fetch_assoc($rs)) {
-    $subscription_plan_opts[] = $r;
-  }
+    while ($r = mysqli_fetch_assoc($rs)) {
+        $subscription_plan_opts[] = $r;
+    }
 }
 
 /* ---- get job position options for filter ---- */
 $job_positions_opts = [];
-if ($rs = mysqli_query($con,"SELECT id,name FROM jos_crm_jobpost ORDER BY name")) {
-    while($r=mysqli_fetch_assoc($rs)){ $job_positions_opts[] = $r; }
+if ($rs = mysqli_query($con, "SELECT id,name FROM jos_crm_jobpost ORDER BY name")) {
+    while ($r = mysqli_fetch_assoc($rs)) {
+        $job_positions_opts[] = $r;
+    }
 }
 
 /* ---- base joins (same logic used everywhere) ---- */
@@ -1006,58 +1223,90 @@ $types_common = '';
 $params_common = [];
 
 /* only candidates */
-$where_common[]="u.profile_type_id=2";
+$where_common[] = "u.profile_type_id=2";
 
 /* AC manager restriction */
 $where_common[] = "u.ac_manager_id = ?";
 $types_common  .= "i";
 $params_common[] = $logged_admin_id;
 
-if ($q!==''){
-  $where_common[]="(u.mobile_no LIKE CONCAT('%',?,'%')
+if ($q !== '') {
+    $where_common[] = "(u.mobile_no LIKE CONCAT('%',?,'%')
           OR u.referral_code LIKE CONCAT('%',?,'%')
           OR cp.candidate_name LIKE CONCAT('%',?,'%'))";
-  $types_common .= 'sss';
-  $params_common = array_merge($params_common, array_fill(0,3,$q));
+    $types_common .= 'sss';
+    $params_common = array_merge($params_common, array_fill(0, 3, $q));
 }
-if ($referrer_q!==''){
-  $where_common[]="(ur.mobile_no LIKE CONCAT('%',?,'%')
+if ($referrer_q !== '') {
+    $where_common[] = "(ur.mobile_no LIKE CONCAT('%',?,'%')
           OR rrp.organization_name LIKE CONCAT('%',?,'%')
           OR rrp.contact_person_name LIKE CONCAT('%',?,'%')
           OR rcp.candidate_name LIKE CONCAT('%',?,'%')
           OR rpp.name LIKE CONCAT('%',?,'%'))";
-  $types_common .= 'sssss';
-  $params_common = array_merge($params_common, array_fill(0,5,$referrer_q));
+    $types_common .= 'sssss';
+    $params_common = array_merge($params_common, array_fill(0, 5, $referrer_q));
 }
-if ($city_id!==''){ $where_common[]="u.city_id=?"; $types_common.='s'; $params_common[]=$city_id; }
+if ($city_id !== '') {
+    $where_common[] = "u.city_id=?";
+    $types_common .= 's';
+    $params_common[] = $city_id;
+}
 
-if ($status_id>=0){ $where_common[]="u.status_id=?"; $types_common.='i'; $params_common[]=$status_id; }
+if ($status_id >= 0) {
+    $where_common[] = "u.status_id=?";
+    $types_common .= 'i';
+    $params_common[] = $status_id;
+}
 
-if ($has_referrer===1){ $where_common[]="u.referred_by IS NOT NULL AND u.referred_by<>0"; }
-elseif ($has_referrer===0){ $where_common[]="(u.referred_by IS NULL OR u.referred_by=0)"; }
+if ($has_referrer === 1) {
+    $where_common[] = "u.referred_by IS NOT NULL AND u.referred_by<>0";
+} elseif ($has_referrer === 0) {
+    $where_common[] = "(u.referred_by IS NULL OR u.referred_by=0)";
+}
 
-if ($referral_code_in!==''){ $where_common[]="u.referral_code=?"; $types_common.='s'; $params_common[]=$referral_code_in; }
+if ($referral_code_in !== '') {
+    $where_common[] = "u.referral_code=?";
+    $types_common .= 's';
+    $params_common[] = $referral_code_in;
+}
 
-if ($plan_access_in>0){ $where_common[]="CAST(sp.plan_access AS UNSIGNED)=?"; $types_common.='i'; $params_common[]=$plan_access_in; }
+if ($plan_access_in > 0) {
+    $where_common[] = "CAST(sp.plan_access AS UNSIGNED)=?";
+    $types_common .= 'i';
+    $params_common[] = $plan_access_in;
+}
 
-if ($subscription_status==='active'){ $where_common[]="(ls.end_date IS NOT NULL AND ls.end_date>=NOW())"; }
-elseif ($subscription_status==='expired'){ $where_common[]="(ls.end_date IS NOT NULL AND ls.end_date<NOW())"; }
+if ($subscription_status === 'active') {
+    $where_common[] = "(ls.end_date IS NOT NULL AND ls.end_date>=NOW())";
+} elseif ($subscription_status === 'expired') {
+    $where_common[] = "(ls.end_date IS NOT NULL AND ls.end_date<NOW())";
+}
 
-if ($created_from_sql!==''){ $where_common[]="DATE(u.created_at)>=?"; $types_common.='s'; $params_common[]=$created_from_sql; }
-if ($created_to_sql  !==''){ $where_common[]="DATE(u.created_at)<=?"; $types_common.='s'; $params_common[]=$created_to_sql; }
+if ($created_from_sql !== '') {
+    $where_common[] = "DATE(u.created_at)>=?";
+    $types_common .= 's';
+    $params_common[] = $created_from_sql;
+}
+if ($created_to_sql  !== '') {
+    $where_common[] = "DATE(u.created_at)<=?";
+    $types_common .= 's';
+    $params_common[] = $created_to_sql;
+}
 
 /* preferred job positions filter */
 if (!empty($preferred_job_ids)) {
     $parts = [];
-    foreach($preferred_job_ids as $id){
+    foreach ($preferred_job_ids as $id) {
         $parts[] = "FIND_IN_SET(?, REPLACE(cp.job_position_ids,' ',''))";
         $types_common .= 's';
         $params_common[] = (string)$id;
     }
-    if ($parts){ $where_common[] = '('.implode(' OR ', $parts).')'; }
+    if ($parts) {
+        $where_common[] = '(' . implode(' OR ', $parts) . ')';
+    }
 }
 
-$sql_where_common = $where_common ? (' WHERE '.implode(' AND ',$where_common)) : '';
+$sql_where_common = $where_common ? (' WHERE ' . implode(' AND ', $where_common)) : '';
 
 /* ---- PLAN CARDS COUNTS (group by sp.id) ---- */
 $plan_counts = [];   // plan_id => count
@@ -1067,21 +1316,25 @@ $sql_cards = "
 SELECT
   sp.id AS plan_id,
   COUNT(DISTINCT u.id) AS cnt
-".$sql_base.$sql_where_common."
+" . $sql_base . $sql_where_common . "
 GROUP BY sp.id
 ";
 $stmt = $con->prepare($sql_cards);
-if(!$stmt){ die('Prepare failed: '.h($con->error)); }
-if($types_common!==''){ $stmt->bind_param($types_common, ...$params_common); }
+if (!$stmt) {
+    die('Prepare failed: ' . h($con->error));
+}
+if ($types_common !== '') {
+    $stmt->bind_param($types_common, ...$params_common);
+}
 $stmt->execute();
 $rows_cards = stmt_fetch_all_assoc($stmt);
 $stmt->close();
 
-foreach($rows_cards as $r){
-  $pid = (int)($r['plan_id'] ?? 0);
-  $cnt = (int)($r['cnt'] ?? 0);
-  if ($pid > 0) $plan_counts[$pid] = $cnt;
-  $cards_total += $cnt;
+foreach ($rows_cards as $r) {
+    $pid = (int)($r['plan_id'] ?? 0);
+    $cnt = (int)($r['cnt'] ?? 0);
+    if ($pid > 0) $plan_counts[$pid] = $cnt;
+    $cards_total += $cnt;
 }
 
 /* ---- Now build LIST where = common + optional plan filter ---- */
@@ -1090,36 +1343,61 @@ $types = $types_common;
 $params = $params_common;
 
 if ($plan_id_filter > 0) {
-  $where[] = "sp.id = ?";
-  $types  .= "i";
-  $params[] = $plan_id_filter;
+    $where[] = "sp.id = ?";
+    $types  .= "i";
+    $params[] = $plan_id_filter;
 }
 
-$sql_where = $where ? (' WHERE '.implode(' AND ',$where)) : '';
+$sql_where = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
 
 /* sort */
-switch($sort){
-  case 'oldest':    $order = ' ORDER BY u.id ASC'; break;
-  case 'name_asc':  $order = " ORDER BY COALESCE(NULLIF(cp.candidate_name,''), u.mobile_no) ASC"; break;
-  case 'name_desc': $order = " ORDER BY COALESCE(NULLIF(cp.candidate_name,''), u.mobile_no) DESC"; break;
-  case 'city_asc':  $order = ' ORDER BY u.city_id ASC, u.id DESC'; break;
-  case 'city_desc': $order = ' ORDER BY u.city_id DESC, u.id DESC'; break;
-  default:          $order = ' ORDER BY u.id DESC';
+switch ($sort) {
+    case 'oldest':
+        $order = ' ORDER BY u.id ASC';
+        break;
+    case 'name_asc':
+        $order = " ORDER BY COALESCE(NULLIF(cp.candidate_name,''), u.mobile_no) ASC";
+        break;
+    case 'name_desc':
+        $order = " ORDER BY COALESCE(NULLIF(cp.candidate_name,''), u.mobile_no) DESC";
+        break;
+    case 'city_asc':
+        $order = ' ORDER BY u.city_id ASC, u.id DESC';
+        break;
+    case 'city_desc':
+        $order = ' ORDER BY u.city_id DESC, u.id DESC';
+        break;
+    default:
+        $order = ' ORDER BY u.id DESC';
 }
 
 /* total count */
-$sql_count = "SELECT COUNT(DISTINCT u.id) AS c ".$sql_base.$sql_where;
+$sql_count = "SELECT COUNT(DISTINCT u.id) AS c " . $sql_base . $sql_where;
 $stmt = $con->prepare($sql_count);
-if(!$stmt){ die('Prepare failed: '.h($con->error)); }
-if($types!==''){ $stmt->bind_param($types, ...$params); }
+if (!$stmt) {
+    die('Prepare failed: ' . h($con->error));
+}
+if ($types !== '') {
+    $stmt->bind_param($types, ...$params);
+}
 $stmt->execute();
-$total = 0; $stmt->bind_result($total); $stmt->fetch(); $stmt->close();
+$total = 0;
+$stmt->bind_result($total);
+$stmt->fetch();
+$stmt->close();
 
 /* page clamp */
-if ($view!=='all'){
-  $pages = max(1, (int)ceil($total / $per_page));
-  if ($page>$pages){ $page=$pages; $offset=($page-1)*$per_page; }
-} else { $pages = 1; $page = 1; $offset = 0; }
+if ($view !== 'all') {
+    $pages = max(1, (int)ceil($total / $per_page));
+    if ($page > $pages) {
+        $page = $pages;
+        $offset = ($page - 1) * $per_page;
+    }
+} else {
+    $pages = 1;
+    $page = 1;
+    $offset = 0;
+}
 
 /* main list query */
 $sql = "
@@ -1144,11 +1422,15 @@ SELECT
     NULLIF(rpp.name,''),
     ur.mobile_no
   ) AS ref_name
-".$sql_base.$sql_where.$order.($view==='all' ? "" : " LIMIT $per_page OFFSET $offset");
+" . $sql_base . $sql_where . $order . ($view === 'all' ? "" : " LIMIT $per_page OFFSET $offset");
 
 $stmt = $con->prepare($sql);
-if(!$stmt){ die('Prepare failed: '.h($con->error)); }
-if($types!==''){ $stmt->bind_param($types, ...$params); }
+if (!$stmt) {
+    die('Prepare failed: ' . h($con->error));
+}
+if ($types !== '') {
+    $stmt->bind_param($types, ...$params);
+}
 $stmt->execute();
 $rows = stmt_fetch_all_assoc($stmt);
 $stmt->close();
@@ -1158,326 +1440,406 @@ ob_start();
 ?>
 <!doctype html>
 <html lang="en">
+
 <head>
-  <meta charset="utf-8" />
-  <title><?= h($page_title) ?></title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="/adminconsole/assets/ui.css">
-  <style>
-    body { background:#020617; }
-    .table a.ref-link { text-decoration:none; color:#3b82f6; }
-    .table a.ref-link:hover { text-decoration:underline; }
-    .table-wrap { width: 100%; overflow-x: auto; }
-    .table-wrap .table { min-width: 1100px; }
-    .table th, .table td { padding: 6px 8px; vertical-align: top; }
+    <meta charset="utf-8" />
+    <title><?= h($page_title) ?></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/adminconsole/assets/ui.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
-    /* Cards */
-    .cards-row{ display:flex; gap:12px; overflow:auto; padding:6px 2px 10px; }
-    .stat-card{
-      display:block; min-width:190px; padding:14px 14px;
-      border:1px solid #233045; border-radius:14px;
-      background:#0b1220; color:#e5e7eb;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
-      text-decoration:none;
-    }
-    .stat-card:hover{ border-color:#3b82f6; }
-    .stat-card.active{ border-color:#22c55e; box-shadow: 0 0 0 1px rgba(34,197,94,0.25); }
-    .stat-title{ color:#9ca3af; font-size:12px; margin-bottom:6px; }
-    .stat-num{ font-size:28px; font-weight:800; color:#fff; line-height:1; }
+    <style>
+        body {
+            background: #020617;
+        }
 
-    /* Hide filters */
-    .filters-wrap{ margin-top:8px; }
-    .filters-hidden{ display:none; }
-  </style>
+        .table a.ref-link {
+            text-decoration: none;
+            color: #3b82f6;
+        }
+
+        .table a.ref-link:hover {
+            text-decoration: underline;
+        }
+
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .table-wrap .table {
+            min-width: 1100px;
+        }
+
+        .table th,
+        .table td {
+            padding: 6px 8px;
+            vertical-align: top;
+        }
+
+        /* Cards */
+        .cards-row {
+            display: flex;
+            gap: 12px;
+            overflow: auto;
+            padding: 6px 2px 10px;
+        }
+
+        .stat-card {
+            display: block;
+            min-width: 190px;
+            padding: 14px 14px;
+            border: 1px solid #233045;
+            border-radius: 14px;
+            background: #0b1220;
+            color: #e5e7eb;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+            text-decoration: none;
+        }
+
+        .stat-card:hover {
+            border-color: #3b82f6;
+        }
+
+        .stat-card.active {
+            border-color: #22c55e;
+            box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25);
+        }
+
+        .stat-title {
+            color: #9ca3af;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+
+        .stat-num {
+            font-size: 28px;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1;
+        }
+
+        /* Hide filters */
+        .filters-wrap {
+            margin-top: 8px;
+        }
+
+        .filters-hidden {
+            display: none;
+        }
+    </style>
 </head>
+
 <body>
-<div class="master-wrap">
-  <div class="headbar" style="display:flex;align-items:center;gap:12px">
-    <h2 style="margin:0"><?= h($page_title) ?></h2>
-    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-      <button class="btn secondary" type="button" id="toggleFiltersBtn">Hide Filters</button>
-    </div>
-  </div>
-
-  <div class="card" style="padding:14px">
-
-    <!-- PLAN CARDS -->
-    <div class="cards-row">
-      <a class="stat-card <?= ($plan_id_filter==0 ? 'active' : '') ?>"
-         href="<?= h(keep_params(['plan_id'=>null,'page'=>1])) ?>">
-        <div class="stat-title">Total Records</div>
-        <div class="stat-num"><?= (int)$cards_total ?></div>
-      </a>
-
-      <?php foreach($subscription_plan_opts as $p):
-        $pid = (int)$p['id'];
-        $cnt = (int)($plan_counts[$pid] ?? 0);
-        // If you want to hide zero-count plans, uncomment:
-        // if ($cnt === 0) continue;
-        $isActive = ($plan_id_filter === $pid);
-      ?>
-        <a class="stat-card <?= $isActive?'active':'' ?>"
-           href="<?= h(keep_params(['plan_id'=>$pid,'page'=>1])) ?>">
-          <div class="stat-title"><?= h($p['plan_name']) ?></div>
-          <div class="stat-num"><?= $cnt ?></div>
-        </a>
-      <?php endforeach; ?>
-    </div>
-
-    <!-- Filters -->
-    <div class="filters-wrap" id="filtersWrap">
-      <form method="get" class="toolbar" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
-        <!-- preserve plan filter -->
-        <input type="hidden" name="plan_id" value="<?= (int)$plan_id_filter ?>">
-
-        <input class="inp" type="text" name="q" value="<?=h($q)?>" placeholder="Search name/mobile/referral..." style="min-width:240px">
-        <input class="inp" type="text" name="city_id" value="<?=h($city_id)?>" placeholder="City ID">
-
-        <div style="display:flex;flex-direction:column;min-width:180px">
-          <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Registration Date From</span>
-<input class="inp datepicker" type="text"
-       name="created_from"
-       value="<?= h($created_from_raw) ?>"
-       placeholder="DD-MM-YYYY">        </div>
-
-        <div style="display:flex;flex-direction:column;min-width:180px">
-          <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Registration Date To</span>
-<input class="inp datepicker" type="text"
-       name="created_to"
-       value="<?= h($created_to_raw) ?>"
-       placeholder="DD-MM-YYYY">        </div>
-
-        <select class="inp" name="status_id" title="Status">
-          <option value="-1" <?= $status_id===-1?'selected':''?>>Status: Any</option>
-          <option value="1"  <?= $status_id===1?'selected':''?>>Active</option>
-          <option value="0"  <?= $status_id===0?'selected':''?>>Inactive</option>
-        </select>
-
-        <select class="inp" name="has_referrer">
-          <option value=""   <?= $has_referrer===-1?'selected':''?>>Referrer: Any</option>
-          <option value="1"  <?= $has_referrer===1?'selected':''?>>Has Referrer</option>
-          <option value="0"  <?= $has_referrer===0?'selected':''?>>No Referrer</option>
-        </select>
-
-        <input class="inp" type="text" name="referral_code" value="<?=h($referral_code_in)?>" placeholder="Referral Code">
-
-        <select class="inp" name="plan_access" title="Plan Access">
-          <option value="0" <?= $plan_access_in===0?'selected':''?>>Plan Access: Any</option>
-          <option value="1" <?= $plan_access_in===1?'selected':''?>>Free</option>
-          <option value="2" <?= $plan_access_in===2?'selected':''?>>Premium</option>
-        </select>
-
-        <select class="inp" name="subscription_status">
-          <option value="" <?= $subscription_status===''?'selected':''?>>Subscription: Any</option>
-          <option value="active" <?= $subscription_status==='active'?'selected':''?>>Active</option>
-          <option value="expired" <?= $subscription_status==='expired'?'selected':''?>>Expired</option>
-        </select>
-
-        <select class="inp" name="job_position_ids[]" multiple size="3" title="Preferred Job Positions" style="min-width:220px;">
-          <?php foreach($job_positions_opts as $jp):
-            $id = (int)$jp['id'];
-            $sel = in_array($id,$preferred_job_ids,true) ? 'selected' : '';
-          ?>
-            <option value="<?= $id ?>" <?= $sel ?>><?= h($jp['name']) ?></option>
-          <?php endforeach; ?>
-        </select>
-
-        <input class="inp" type="text" name="referrer_q" value="<?=h($referrer_q)?>" placeholder="Search Referrer: name/mobile" style="min-width:220px">
-
-        <select class="inp" name="sort">
-          <option value="newest"   <?=$sort==='newest'?'selected':''?>>Newest first</option>
-          <option value="oldest"   <?=$sort==='oldest'?'selected':''?>>Oldest first</option>
-          <option value="name_asc" <?=$sort==='name_asc'?'selected':''?>>Name A–Z</option>
-          <option value="name_desc"<?=$sort==='name_desc'?'selected':''?>>Name Z–A</option>
-          <option value="city_asc" <?=$sort==='city_asc'?'selected':''?>>City ↑</option>
-          <option value="city_desc"<?=$sort==='city_desc'?'selected':''?>>City ↓</option>
-        </select>
-
-        <button class="btn primary" type="submit">Apply</button>
-
-        <div style="flex:1"></div>
-        <a class="btn secondary" href="<?=h(keep_params(['view'=>'last50','page'=>1]))?>">Last 50</a>
-        <a class="btn secondary" href="<?=h(keep_params(['view'=>'all','page'=>1]))?>">View All</a>
-      </form>
-    </div>
-
-    <div style="display:flex;align-items:center;gap:12px;margin:10px 0 12px">
-      <span class="badge">Total: <?= (int)$total ?></span>
-      <span class="badge">Showing: <?= ($view==='all') ? 'All' : (int)count($rows) ?></span>
-      <?php if($plan_id_filter>0){ ?>
-        <span class="badge">Plan Filter: #<?= (int)$plan_id_filter ?></span>
-      <?php } ?>
-      <?php if($view!=='all'){ ?>
-        <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
-          <?php if($page>1){ ?>
-            <a class="btn secondary" href="<?=h(keep_params(['page'=>$page-1]))?>">‹ Prev</a>
-          <?php } ?>
-          <span class="badge">Page <?= (int)$page ?> / <?= (int)$pages ?></span>
-          <?php if($page<$pages){ ?>
-            <a class="btn secondary" href="<?=h(keep_params(['page'=>$page+1]))?>">Next ›</a>
-          <?php } ?>
+    <div class="master-wrap">
+        <div class="headbar" style="display:flex;align-items:center;gap:12px">
+            <h2 style="margin:0"><?= h($page_title) ?></h2>
+            <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+                <button class="btn secondary" type="button" id="toggleFiltersBtn">Hide Filters</button>
+            </div>
         </div>
-      <?php } ?>
+
+        <div class="card" style="padding:14px">
+
+            <!-- PLAN CARDS -->
+            <div class="cards-row">
+                <a class="stat-card <?= ($plan_id_filter == 0 ? 'active' : '') ?>"
+                    href="<?= h(keep_params(['plan_id' => null, 'page' => 1])) ?>">
+                    <div class="stat-title">Total Records</div>
+                    <div class="stat-num"><?= (int)$cards_total ?></div>
+                </a>
+
+                <?php foreach ($subscription_plan_opts as $p):
+                    $pid = (int)$p['id'];
+                    $cnt = (int)($plan_counts[$pid] ?? 0);
+                    // If you want to hide zero-count plans, uncomment:
+                    // if ($cnt === 0) continue;
+                    $isActive = ($plan_id_filter === $pid);
+                ?>
+                    <a class="stat-card <?= $isActive ? 'active' : '' ?>"
+                        href="<?= h(keep_params(['plan_id' => $pid, 'page' => 1])) ?>">
+                        <div class="stat-title"><?= h($p['plan_name']) ?></div>
+                        <div class="stat-num"><?= $cnt ?></div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters-wrap" id="filtersWrap">
+                <form method="get" class="toolbar" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+                    <!-- preserve plan filter -->
+                    <input type="hidden" name="plan_id" value="<?= (int)$plan_id_filter ?>">
+
+                    <input class="inp" type="text" name="q" value="<?= h($q) ?>" placeholder="Search name/mobile/referral..." style="min-width:240px">
+                    <input class="inp" type="text" name="city_id" value="<?= h($city_id) ?>" placeholder="City ID">
+
+                    <div style="display:flex;flex-direction:column;min-width:180px">
+                        <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Registration Date From</span>
+                        <input class="inp datepicker" type="text"
+                            name="created_from"
+                            value="<?= h($created_from_raw) ?>"
+                            placeholder="DD-MM-YYYY">
+                    </div>
+
+                    <div style="display:flex;flex-direction:column;min-width:180px">
+                        <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Registration Date To</span>
+                        <input class="inp datepicker" type="text"
+                            name="created_to"
+                            value="<?= h($created_to_raw) ?>"
+                            placeholder="DD-MM-YYYY">
+                    </div>
+
+                    <select class="inp" name="status_id" title="Status">
+                        <option value="-1" <?= $status_id === -1 ? 'selected' : '' ?>>Status: Any</option>
+                        <option value="1" <?= $status_id === 1 ? 'selected' : '' ?>>Active</option>
+                        <option value="0" <?= $status_id === 0 ? 'selected' : '' ?>>Inactive</option>
+                    </select>
+
+                    <select class="inp" name="has_referrer">
+                        <option value="" <?= $has_referrer === -1 ? 'selected' : '' ?>>Referrer: Any</option>
+                        <option value="1" <?= $has_referrer === 1 ? 'selected' : '' ?>>Has Referrer</option>
+                        <option value="0" <?= $has_referrer === 0 ? 'selected' : '' ?>>No Referrer</option>
+                    </select>
+
+                    <input class="inp" type="text" name="referral_code" value="<?= h($referral_code_in) ?>" placeholder="Referral Code">
+
+                    <select class="inp" name="plan_access" title="Plan Access">
+                        <option value="0" <?= $plan_access_in === 0 ? 'selected' : '' ?>>Plan Access: Any</option>
+                        <option value="1" <?= $plan_access_in === 1 ? 'selected' : '' ?>>Free</option>
+                        <option value="2" <?= $plan_access_in === 2 ? 'selected' : '' ?>>Premium</option>
+                    </select>
+
+                    <select class="inp" name="subscription_status">
+                        <option value="" <?= $subscription_status === '' ? 'selected' : '' ?>>Subscription: Any</option>
+                        <option value="active" <?= $subscription_status === 'active' ? 'selected' : '' ?>>Active</option>
+                        <option value="expired" <?= $subscription_status === 'expired' ? 'selected' : '' ?>>Expired</option>
+                    </select>
+
+                    <select class="inp" name="job_position_ids[]" multiple size="3" title="Preferred Job Positions" style="min-width:220px;">
+                        <?php foreach ($job_positions_opts as $jp):
+                            $id = (int)$jp['id'];
+                            $sel = in_array($id, $preferred_job_ids, true) ? 'selected' : '';
+                        ?>
+                            <option value="<?= $id ?>" <?= $sel ?>><?= h($jp['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <input class="inp" type="text" name="referrer_q" value="<?= h($referrer_q) ?>" placeholder="Search Referrer: name/mobile" style="min-width:220px">
+
+                    <select class="inp" name="sort">
+                        <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest first</option>
+                        <option value="oldest" <?= $sort === 'oldest' ? 'selected' : '' ?>>Oldest first</option>
+                        <option value="name_asc" <?= $sort === 'name_asc' ? 'selected' : '' ?>>Name A–Z</option>
+                        <option value="name_desc" <?= $sort === 'name_desc' ? 'selected' : '' ?>>Name Z–A</option>
+                        <option value="city_asc" <?= $sort === 'city_asc' ? 'selected' : '' ?>>City ↑</option>
+                        <option value="city_desc" <?= $sort === 'city_desc' ? 'selected' : '' ?>>City ↓</option>
+                    </select>
+
+                    <button class="btn primary" type="submit">Apply</button>
+
+                    <div style="flex:1"></div>
+                    <a class="btn secondary" href="<?= h(keep_params(['view' => 'last50', 'page' => 1])) ?>">Last 50</a>
+                    <a class="btn secondary" href="<?= h(keep_params(['view' => 'all', 'page' => 1])) ?>">View All</a>
+                </form>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:12px;margin:10px 0 12px">
+                <span class="badge">Total: <?= (int)$total ?></span>
+                <span class="badge">Showing: <?= ($view === 'all') ? 'All' : (int)count($rows) ?></span>
+                <?php if ($plan_id_filter > 0) { ?>
+                    <span class="badge">Plan Filter: #<?= (int)$plan_id_filter ?></span>
+                <?php } ?>
+                <?php if ($view !== 'all') { ?>
+                    <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+                        <?php if ($page > 1) { ?>
+                            <a class="btn secondary" href="<?= h(keep_params(['page' => $page - 1])) ?>">‹ Prev</a>
+                        <?php } ?>
+                        <span class="badge">Page <?= (int)$page ?> / <?= (int)$pages ?></span>
+                        <?php if ($page < $pages) { ?>
+                            <a class="btn secondary" href="<?= h(keep_params(['page' => $page + 1])) ?>">Next ›</a>
+                        <?php } ?>
+                    </div>
+                <?php } ?>
+            </div>
+
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width:60px">SR No</th>
+                            <th>Reg Date</th>
+                            <th>Name / Profile</th>
+                            <th>Mobile</th>
+                            <th>City</th>
+                            <th>Referral Code</th>
+                            <th>Referred By</th>
+                            <th>Plan</th>
+                            <th>Subscr.</th>
+                            <th>Referral Count</th>
+                            <th>Applications</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        if (empty($rows)) {
+                            echo '<tr><td colspan="12" style="text-align:center;color:#9ca3af;padding:12px">No records found.</td></tr>';
+                        } else {
+                            $sr = ($view === 'all') ? 1 : ($offset + 1);
+                            foreach ($rows as $row) {
+                                $display = $row['candidate_name'] ?: $row['mobile_no'];
+                                $profile_summary = 'Gender: ' . h($row['gender_name'] ?? '');
+                                $apps_count = (int)($row['apps_count'] ?? 0);
+
+                                if (!empty($row['plan_name'])) {
+                                    $plan_label = $row['plan_name'] . ' ' . (((int)$row['plan_access_num'] == 2) ? '(Premium)' : '(Free)');
+                                } elseif (!empty($row['plan_id'])) {
+                                    $plan_label = 'Plan #' . (int)$row['plan_id'] . ' ' . (((int)$row['plan_access_num'] == 2) ? '(Premium)' : '(Free)');
+                                } elseif (!empty($row['active_plan_id'])) {
+                                    $plan_label = 'Plan #' . (int)$row['active_plan_id'];
+                                } else {
+                                    $plan_label = '—';
+                                }
+
+                                $sub_status = (!empty($row['last_end_date']))
+                                    ? ((strtotime($row['last_end_date']) >= time()) ? '<span class="badge success">Active</span>' : '<span class="badge warn">Expired</span>')
+                                    : '<span class="badge">—</span>';
+
+                                $refByDisplay = '—';
+                                $refLinkHref = null;
+                                if (!empty($row['referred_by'])) {
+                                    $refName = trim((string)($row['ref_name'] ?? ''));
+                                    $refMobile = trim((string)($row['ref_mobile'] ?? ''));
+                                    if ($refName === '' && $refMobile === '') {
+                                        $refByDisplay = '#' . (int)$row['referred_by'];
+                                    } elseif ($refName !== '' && $refMobile !== '') {
+                                        $refByDisplay = h($refName) . ' (' . h($refMobile) . ')';
+                                    } else {
+                                        $refByDisplay = h($refName ?: $refMobile);
+                                    }
+                                    $refLinkHref = keep_params(['referrer_q' => $refMobile ?: $refName, 'page' => 1]);
+                                }
+
+                                $status_badge = ((int)$row['status_id'] === 1) ? '<span class="badge success">Active</span>' : '<span class="badge danger">Inactive</span>';
+
+                                $viewHref  = keep_params(['mode' => 'candidate', 'userid' => (int)$row['id']]);
+                                $appsHref  = keep_params(['mode' => 'cand_apps', 'userid' => (int)$row['id']]);
+                                $reg_date  = fmt_reg_short($row['created_at']);
+                        ?>
+                                <tr>
+                                    <td><?= (int)$sr++; ?></td>
+                                    <td><?= h($reg_date) ?></td>
+                                    <td>
+                                        <div style="font-weight:600"><?= h($display) ?></div>
+                                        <div style="font-size:12px;color:#9ca3af"><?= $profile_summary ?></div>
+                                        <div style="margin-top:2px"><?= $status_badge ?></div>
+                                    </td>
+                                    <td><?= h($row['mobile_no']) ?></td>
+                                    <td><?= h($row['city_id']) ?></td>
+                                    <td><?= h($row['referral_code'] ?: '—') ?></td>
+                                    <td>
+                                        <?php if ($refLinkHref) { ?>
+                                            <a class="ref-link" href="<?= h($refLinkHref) ?>"><?= $refByDisplay ?></a>
+                                        <?php } else {
+                                            echo $refByDisplay;
+                                        } ?>
+                                    </td>
+                                    <td><?= h($plan_label) ?></td>
+                                    <td>
+                                        <?= $sub_status ?>
+                                        <?php if (!empty($row['last_start_date']) || !empty($row['last_end_date'])) { ?>
+                                            <div style="font-size:11px;color:#9ca3af">
+                                                <?= h($row['last_start_date'] ? date('d M Y', strtotime($row['last_start_date'])) : '—') ?> →
+                                                <?= h($row['last_end_date']   ? date('d M Y', strtotime($row['last_end_date']))   : '—') ?>
+                                            </div>
+                                        <?php } ?>
+                                    </td>
+                                    <td><?= (int)($row['total_referrals'] ?? 0) ?></td>
+                                    <td>
+                                        <?php if ($apps_count > 0) { ?>
+                                            <span class="badge success"><?= (int)$apps_count ?></span>
+                                        <?php } else { ?>
+                                            <span class="badge">0</span>
+                                        <?php } ?>
+                                    </td>
+                                    <td>
+                                        <div style="display:flex;flex-direction:column;gap:4px">
+                                            <a class="btn secondary" href="<?= h($viewHref) ?>">View Details</a>
+                                            <?php if ($apps_count > 0) { ?>
+                                                <a class="btn secondary" href="<?= h($appsHref) ?>">View Applications</a>
+                                            <?php } else { ?>
+                                                <span style="font-size:11px;color:#9ca3af;">No apps</span>
+                                            <?php } ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                        <?php
+                            } // foreach
+                        } // else
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <?php if ($view !== 'all') { ?>
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+                    <?php if ($page > 1) { ?><a class="btn secondary" href="<?= h(keep_params(['page' => $page - 1])) ?>">‹ Prev</a><?php } ?>
+                    <span class="badge">Page <?= (int)$page ?> / <?= (int)$pages ?></span>
+                    <?php if ($page < $pages) { ?><a class="btn secondary" href="<?= h(keep_params(['page' => $page + 1])) ?>">Next ›</a><?php } ?>
+                </div>
+            <?php } ?>
+
+        </div>
     </div>
 
-    <div class="table-wrap">
-      <table class="table">
-        <thead>
-          <tr>
-            <th style="width:60px">SR No</th>
-            <th>Reg Date</th>
-            <th>Name / Profile</th>
-            <th>Mobile</th>
-            <th>City</th>
-            <th>Referral Code</th>
-            <th>Referred By</th>
-            <th>Plan</th>
-            <th>Subscr.</th>
-            <th>Referral Count</th>
-            <th>Applications</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-        <?php
-        if (empty($rows)){
-          echo '<tr><td colspan="12" style="text-align:center;color:#9ca3af;padding:12px">No records found.</td></tr>';
-        } else {
-          $sr = ($view==='all') ? 1 : ($offset+1);
-          foreach($rows as $row){
-            $display = $row['candidate_name'] ?: $row['mobile_no'];
-            $profile_summary = 'Gender: '.h($row['gender_name'] ?? '');
-            $apps_count = (int)($row['apps_count'] ?? 0);
+    <script>
+        (function() {
+            const btn = document.getElementById('toggleFiltersBtn');
+            const wrap = document.getElementById('filtersWrap');
+            let hidden = false;
 
-            if (!empty($row['plan_name'])) {
-              $plan_label = $row['plan_name'].' '.(((int)$row['plan_access_num']==2)?'(Premium)':'(Free)');
-            } elseif (!empty($row['plan_id'])) {
-              $plan_label = 'Plan #'.(int)$row['plan_id'].' '.(((int)$row['plan_access_num']==2)?'(Premium)':'(Free)');
-            } elseif (!empty($row['active_plan_id'])) {
-              $plan_label = 'Plan #'.(int)$row['active_plan_id'];
-            } else { $plan_label = '—'; }
+            // restore state (optional)
+            try {
+                hidden = (localStorage.getItem('cand_filters_hidden') === '1');
+            } catch (e) {}
 
-            $sub_status = (!empty($row['last_end_date']))
-              ? ((strtotime($row['last_end_date'])>=time()) ? '<span class="badge success">Active</span>' : '<span class="badge warn">Expired</span>')
-              : '<span class="badge">—</span>';
-
-            $refByDisplay = '—';
-            $refLinkHref = null;
-            if (!empty($row['referred_by'])) {
-              $refName = trim((string)($row['ref_name'] ?? ''));
-              $refMobile = trim((string)($row['ref_mobile'] ?? ''));
-              if ($refName === '' && $refMobile === '') {
-                $refByDisplay = '#'.(int)$row['referred_by'];
-              } elseif ($refName !== '' && $refMobile !== '') {
-                $refByDisplay = h($refName).' ('.h($refMobile).')';
-              } else {
-                $refByDisplay = h($refName ?: $refMobile);
-              }
-              $refLinkHref = keep_params(['referrer_q'=>$refMobile ?: $refName,'page'=>1]);
+            function apply() {
+                if (hidden) {
+                    wrap.classList.add('filters-hidden');
+                    btn.textContent = 'Show Filters';
+                } else {
+                    wrap.classList.remove('filters-hidden');
+                    btn.textContent = 'Hide Filters';
+                }
+                try {
+                    localStorage.setItem('cand_filters_hidden', hidden ? '1' : '0');
+                } catch (e) {}
             }
 
-            $status_badge = ((int)$row['status_id']===1) ? '<span class="badge success">Active</span>' : '<span class="badge danger">Inactive</span>';
+            btn.addEventListener('click', function() {
+                hidden = !hidden;
+                apply();
+            });
 
-            $viewHref  = keep_params(['mode'=>'candidate','userid'=>(int)$row['id']]);
-            $appsHref  = keep_params(['mode'=>'cand_apps','userid'=>(int)$row['id']]);
-            $reg_date  = fmt_reg_short($row['created_at']);
-        ?>
-          <tr>
-            <td><?= (int)$sr++; ?></td>
-            <td><?= h($reg_date) ?></td>
-            <td>
-              <div style="font-weight:600"><?= h($display) ?></div>
-              <div style="font-size:12px;color:#9ca3af"><?= $profile_summary ?></div>
-              <div style="margin-top:2px"><?= $status_badge ?></div>
-            </td>
-            <td><?= h($row['mobile_no']) ?></td>
-            <td><?= h($row['city_id']) ?></td>
-            <td><?= h($row['referral_code'] ?: '—') ?></td>
-            <td>
-              <?php if($refLinkHref){ ?>
-                <a class="ref-link" href="<?= h($refLinkHref) ?>"><?= $refByDisplay ?></a>
-              <?php } else { echo $refByDisplay; } ?>
-            </td>
-            <td><?= h($plan_label) ?></td>
-            <td>
-              <?= $sub_status ?>
-              <?php if(!empty($row['last_start_date']) || !empty($row['last_end_date'])){ ?>
-                <div style="font-size:11px;color:#9ca3af">
-                  <?= h($row['last_start_date'] ? date('d M Y', strtotime($row['last_start_date'])) : '—') ?> →
-                  <?= h($row['last_end_date']   ? date('d M Y', strtotime($row['last_end_date']))   : '—') ?>
-                </div>
-              <?php } ?>
-            </td>
-            <td><?= (int)($row['total_referrals'] ?? 0) ?></td>
-            <td>
-              <?php if($apps_count>0){ ?>
-                <span class="badge success"><?= (int)$apps_count ?></span>
-              <?php } else { ?>
-                <span class="badge">0</span>
-              <?php } ?>
-            </td>
-            <td>
-              <div style="display:flex;flex-direction:column;gap:4px">
-                <a class="btn secondary" href="<?= h($viewHref) ?>">View Details</a>
-                <?php if($apps_count>0){ ?>
-                  <a class="btn secondary" href="<?= h($appsHref) ?>">View Applications</a>
-                <?php } else { ?>
-                  <span style="font-size:11px;color:#9ca3af;">No apps</span>
-                <?php } ?>
-              </div>
-            </td>
-          </tr>
-        <?php
-          } // foreach
-        } // else
-        ?>
-        </tbody>
-      </table>
-    </div>
+            apply();
+        })();
 
-    <?php if($view!=='all'){ ?>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-        <?php if($page>1){ ?><a class="btn secondary" href="<?=h(keep_params(['page'=>$page-1]))?>">‹ Prev</a><?php } ?>
-        <span class="badge">Page <?= (int)$page ?> / <?= (int)$pages ?></span>
-        <?php if($page<$pages){ ?><a class="btn secondary" href="<?=h(keep_params(['page'=>$page+1]))?>">Next ›</a><?php } ?>
-      </div>
-    <?php } ?>
 
-  </div>
-</div>
+        document.addEventListener("DOMContentLoaded", function() {
+            flatpickr(".datepicker", {
+                altInput: true, // user sees formatted date
+                altFormat: "d-m-Y", // display format (DD-MM-YYYY)
+                dateFormat: "Y-m-d", // value sent in GET
+                allowInput: false
+            });
+        });
+    </script>
 
-<script>
-(function(){
-  const btn = document.getElementById('toggleFiltersBtn');
-  const wrap = document.getElementById('filtersWrap');
-  let hidden = false;
-
-  // restore state (optional)
-  try{
-    hidden = (localStorage.getItem('cand_filters_hidden') === '1');
-  }catch(e){}
-
-  function apply(){
-    if(hidden){
-      wrap.classList.add('filters-hidden');
-      btn.textContent = 'Show Filters';
-    }else{
-      wrap.classList.remove('filters-hidden');
-      btn.textContent = 'Hide Filters';
-    }
-    try{ localStorage.setItem('cand_filters_hidden', hidden ? '1' : '0'); }catch(e){}
-  }
-
-  btn.addEventListener('click', function(){
-    hidden = !hidden;
-    apply();
-  });
-
-  apply();
-})();
-</script>
 
 </body>
+
+
 </html>
 <?php
 echo ob_get_clean();

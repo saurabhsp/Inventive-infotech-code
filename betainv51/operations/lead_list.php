@@ -85,6 +85,10 @@ $ptype     = (int)($_GET['ptype'] ?? 0);
 $stFilter  = (int)($_GET['status'] ?? 0);
 $srcFilter = (int)($_GET['source'] ?? 0);
 $assFilter = (int)($_GET['assignee'] ?? 0);
+$created_from = $_GET['created_from'] ?? '';
+$created_to   = $_GET['created_to'] ?? '';
+
+
 
 $all = isset($_GET['all']);
 $lim = $all ? 0 : 50;
@@ -102,11 +106,30 @@ $typesBase = '';
 
 /* ---------------- Dashboard Mode Filters ---------------- */
 
-$mode        = $_POST['mode'] ?? '';
-$admin_id    = isset($_POST['admin_id']) ? (int)$_POST['admin_id'] : 0;
-$profileType = isset($_POST['profile_type_id']) ? (int)$_POST['profile_type_id'] : 0;
-$dateFrom    = $_POST['from'] ?? '';
-$dateTo      = $_POST['to'] ?? '';
+$mode        = $_POST['mode'] ?? $_GET['mode'] ?? '';
+$admin_id    = isset($_POST['admin_id']) ? (int)$_POST['admin_id'] : (int)($_GET['admin_id'] ?? 0);
+$profileType = isset($_POST['profile_type_id']) ? (int)$_POST['profile_type_id'] : (int)($_GET['profile_type_id'] ?? 0);
+
+/* Dashboard date handling */
+/* Dashboard date handling (NO REDIRECT) */
+/* ---------------- Dashboard POST Handling (NO REDIRECT) ---------------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    // Receive everything from dashboard
+    $mode        = $_POST['mode'] ?? '';
+    $admin_id    = isset($_POST['admin_id']) ? (int)$_POST['admin_id'] : 0;
+    $profileType = isset($_POST['profile_type_id']) ? (int)$_POST['profile_type_id'] : 0;
+
+    $dateFrom = $_POST['from'] ?? '';
+    $dateTo   = $_POST['to'] ?? '';
+
+    if (!empty($dateFrom) && !empty($dateTo)) {
+        $created_from = date('Y-m-d H:i:s', strtotime($dateFrom));
+        $created_to   = date('Y-m-d H:i:s', strtotime($dateTo));
+    }
+}
+
+
 
 /* Show debug info (REMOVE after testing) */
 // if ($mode) {
@@ -181,6 +204,22 @@ if ($q !== '') {
   $typesBase .= 'sssss';
 }
 
+if (!empty($created_from)) {
+    $fromDateTime = $created_from . ' 00:00:00';
+    $whereBase .= " AND l.created_at >= ?";
+    $bindBase[] = $fromDateTime;
+    $typesBase .= 's';
+}
+
+if (!empty($created_to)) {
+    $toDateTime = $created_to . ' 23:59:59';
+    $whereBase .= " AND l.created_at <= ?";
+    $bindBase[] = $toDateTime;
+    $typesBase .= 's';
+}
+
+
+
 $whereFull = $whereBase;
 $bindFull  = $bindBase;
 $typesFull = $typesBase;
@@ -242,7 +281,8 @@ $st->close();
 /* ---------------- VIEW ---------------- */
 ob_start(); ?>
 <link rel="stylesheet" href="/adminconsole/assets/ui.css">
-
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
   .pac-panel{
     background:#0b1220;border:1px solid rgba(148,163,184,.18);
@@ -306,6 +346,27 @@ ob_start(); ?>
     <form method="get" class="filtersbar" id="filterForm">
       <input type="text" name="q" class="inp" placeholder="Search company/candidate/phone/email" value="<?= h($q) ?>" style="min-width:240px">
 
+
+<div style="display:flex;flex-direction:column;min-width:160px">
+  <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">From Date</span>
+<input type="text"
+       name="created_from"
+       class="inp datepicker"
+       value="<?= h($created_from ?? '') ?>"
+       placeholder="DD-MM-YYYY" >
+</div>
+
+<div style="display:flex;flex-direction:column;min-width:160px">
+  <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">To Date</span>
+  <input type="text"
+       name="created_to"
+       class="inp datepicker"
+       value="<?= h($created_to ?? '') ?>"
+       placeholder="DD-MM-YYYY" >
+</div>
+
+
+
       <select name="ptype" class="inp">
         <option value="0">All Types</option>
         <option value="1" <?= $ptype===1?'selected':'' ?>>Employer</option>
@@ -326,12 +387,16 @@ ob_start(); ?>
         <?php endforeach; ?>
       </select>
 
+      <?php if ($loggedRoleId === 1): ?>  <!-- Super Admin Only -->
+
       <select name="assignee" class="inp">
         <option value="0">All Assignees</option>
         <?php foreach ($adminUsers as $uid => $nm): ?>
           <option value="<?= (int)$uid ?>" <?= ($assFilter===$uid?'selected':'') ?>><?= h($nm) ?></option>
         <?php endforeach; ?>
       </select>
+      <?php endif; ?>
+
 
       <button class="btn secondary" type="submit">Apply</button>
 
@@ -353,6 +418,7 @@ ob_start(); ?>
       <thead>
         <tr>
           <th>SR</th>
+          <th>Lead Date</th>
           <th>Type</th>
           <th>Company / Candidate</th>
           <th>Phone</th>
@@ -378,6 +444,7 @@ ob_start(); ?>
         ?>
           <tr>
             <td><?= (int)$sr ?></td>
+            <td><?= h(date('d-m-Y', strtotime($r['created_at']))) ?></td>
             <td><?= h($typeLabel) ?></td>
             <td><?= h($name) ?></td>
             <td><?= h($r['phone1'] ?: '—') ?></td>
@@ -436,6 +503,15 @@ ob_start(); ?>
       });
     });
   })();
+
+  document.addEventListener("DOMContentLoaded", function() {
+  flatpickr(".datepicker", {
+    altInput: true,          // user sees formatted date
+    altFormat: "d-m-Y",      // display format
+    dateFormat: "Y-m-d",     // value sent to backend
+    allowInput: false
+  });
+});
 </script>
 
 <?php

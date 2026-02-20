@@ -9,6 +9,21 @@ $me = function_exists('current_user') ? current_user() : [];
 $logged_admin_id   = (int)($me['id'] ?? 0);
 $logged_admin_name = htmlspecialchars($me['name'] ?? '', ENT_QUOTES, 'UTF-8');
 
+$logged_role_id = (int)($me['role_id'] ?? 0);
+$logged_role_name = '';
+
+if ($logged_role_id > 0) {
+    $stmt = $con->prepare("SELECT name FROM jos_admin_roles WHERE id = ?");
+    $stmt->bind_param("i", $logged_role_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($row = $res->fetch_assoc()) {
+        $logged_role_name = $row['name'];
+    }
+    $stmt->close();
+}
+
+
 if ($logged_admin_id <= 0) {
     die("Invalid user session.");
 }
@@ -160,7 +175,14 @@ if ($range === 'lifetime') {
 
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard</title>
+    <title>
+        <?php if (!empty($logged_role_name)) : ?>
+            <?= htmlspecialchars($logged_role_name) ?>
+        <?php else: ?>
+            Dashboard
+        <?php endif; ?>
+    </title>
+
 
     <style>
         :root {
@@ -319,7 +341,11 @@ if ($range === 'lifetime') {
 
         <div class="topbar">
             <div>
-                <h1>Dashboard</h1>
+                <h1> <?php if (!empty($logged_role_name)) : ?>
+                        <?= htmlspecialchars($logged_role_name) ?>
+                    <?php else: ?>
+                        Dashboard
+                    <?php endif; ?></h1>
                 <div class="muted">Stats for <?= $logged_admin_name ?></div>
                 <div id="todayDate" class="todayline"></div>
             </div>
