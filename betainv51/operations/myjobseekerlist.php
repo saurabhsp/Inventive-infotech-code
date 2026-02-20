@@ -324,6 +324,48 @@ if ($mode === 'candidate') {
         }
     }
 
+    /* -------------------------
+   FETCH APPLICATIONS LIST
+--------------------------*/
+
+$app_rows = [];
+$status_name_by_id = [];
+
+// status list
+if ($rs = mysqli_query($con, "SELECT id,name FROM jos_app_applicationstatus WHERE status=1")) {
+    while ($r = mysqli_fetch_assoc($rs)) {
+        $status_name_by_id[(int)$r['id']] = $r['name'];
+    }
+}
+
+$sql_apps = "
+SELECT
+  A.id                  AS app_id,
+  A.job_id              AS job_id,
+  A.job_listing_type    AS job_lt,
+  A.application_date,
+  A.status_id,
+  COALESCE(S.name,'')   AS status_name,
+  COALESCE(JP1.name, JP2.name, '') AS job_position,
+  COALESCE(JW.company_name, JV.company_name, RP1.organization_name, RP2.organization_name, '') AS company_name
+FROM jos_app_applications A
+LEFT JOIN jos_app_applicationstatus S ON S.id = A.status_id
+LEFT JOIN jos_app_walkininterviews JW ON (A.job_listing_type=1 AND JW.id=A.job_id)
+LEFT JOIN jos_crm_jobpost JP1 ON JP1.id = JW.job_position_id
+LEFT JOIN jos_app_recruiter_profile RP1 ON RP1.id = JW.recruiter_id
+LEFT JOIN jos_app_jobvacancies JV ON (A.job_listing_type=2 AND JV.id=A.job_id)
+LEFT JOIN jos_crm_jobpost JP2 ON JP2.id = JV.job_position_id
+LEFT JOIN jos_app_recruiter_profile RP2 ON RP2.id = JV.recruiter_id
+WHERE A.userid = ?
+ORDER BY A.application_date DESC, A.id DESC
+";
+
+$st = $con->prepare($sql_apps);
+$st->bind_param('i', $userid);
+$st->execute();
+$app_rows = stmt_fetch_all_assoc($st);
+$st->close();
+
     $apps_url = keep_params(['mode' => 'cand_apps', 'userid' => $userid]);
     $back_url = back_to_list_url();
 
@@ -499,7 +541,95 @@ if ($mode === 'candidate') {
                         </div>
                     <?php } ?>
                 </div>
-            </div>
+            
+             </div>
+            
+            
+            
+            
+            
+            <?php if (!empty($app_rows)) { ?>
+    <div class="card" style="margin-top:16px">
+        <div style="font-weight:600;margin-bottom:12px;font-size:16px">
+            Applications (<?= count($app_rows) ?>)
+        </div>
+
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width:60px;">SR</th>
+                        <th>Applied On</th>
+                        <th>Job</th>
+                        <th>Company</th>
+                        <th>Listing</th>
+                        <th>Status</th>
+                        <th style="width:180px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                    $sr = 1;
+                    foreach ($app_rows as $r):
+                        $lt_text = ((int)$r['job_lt'] === 1) ? 'Premium' : 'Standard';
+                        $pill_cls = ((int)$r['job_lt'] === 1) ? 'pill-premium' : 'pill-standard';
+                        $status = $r['status_name'] ?: ($status_name_by_id[(int)$r['status_id']] ?? '—');
+
+                        $jobHref = keep_params([
+                            'mode'   => 'job',
+                            'lt'     => (int)$r['job_lt'],
+                            'id'     => (int)$r['job_id'],
+                            'userid' => $userid,
+                            'from'   => 'candapps'
+                        ]);
+
+                        $appliedTs = $r['application_date'] ? strtotime($r['application_date']) : false;
+                    ?>
+                        <tr>
+                            <td><?= $sr++ ?></td>
+                            <td>
+                                <div><?= h(fmt_date($r['application_date'])) ?></div>
+                                <div class="muted"><?= h($appliedTs ? date('h:i A', $appliedTs) : '') ?></div>
+                            </td>
+                            <td><?= h($r['job_position'] ?: '—') ?></td>
+                            <td><?= h($r['company_name'] ?: '—') ?></td>
+                            <td>
+                                <span class="pill <?= $pill_cls ?>">
+                                    <?= h($lt_text) ?>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge">
+                                    <?= h($status) ?>
+                                </span>
+                            </td>
+                            <td>
+                                <a class="btn secondary" 
+                                   href="<?= h($jobHref) ?>" 
+                                   target="_blank">
+                                   View Job
+                                </a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+<?php } else { ?>
+    <div class="card" style="margin-top:16px;text-align:center;color:#9aa0a6;">
+        No applications found for this candidate.
+    </div>
+<?php } ?>
+            
+            
+            
+            
+            
+            
+            
+            
+           
         </div>
     </body>
 
