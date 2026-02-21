@@ -75,6 +75,7 @@ function col_exists(mysqli $con, string $table, string $col): bool
     $st->close();
     return $ok;
 }
+
 function fmt_dmy($ymd)
 {
     $ymd = trim((string)$ymd);
@@ -82,6 +83,7 @@ function fmt_dmy($ymd)
     $dt = DateTime::createFromFormat('Y-m-d', substr($ymd, 0, 10));
     return $dt ? $dt->format('d-m-Y') : '';
 }
+
 function num($v)
 {
     $v = (float)($v ?? 0);
@@ -616,16 +618,19 @@ foreach ($grid as $r) {
             $discText = '0';
         } else {
 
-            $discText = money2($discDb);
+            $discText = '';
 
             if ($discPer > 0) {
-                $discText .= '<br><span class="perc">@ ' . rtrim(rtrim($discPer, '0'), '.') . '%</span>';
+                $discText .= '<span class="b">@ '
+                    . rtrim(rtrim($discPer, '0'), '.')
+                    . '%</span><br>';
             }
+
+            $discText .= money2($discDb);
         }
+
         $rowsHtml .= '<td class="r nowrap">' . $discText . '</td>';
     }
-
-
 
 
 
@@ -633,23 +638,22 @@ foreach ($grid as $r) {
 
         if ($loyalPer == 0 && $loyalCalc == 0) {
 
-            // If both percent and rs are 0
             $loyalText = '0';
         } else {
 
-            // Always show amount
-            $loyalText = money2($loyalDb);
+            $loyalText = '';
 
-            // Only show % if greater than 0
             if ($loyalPer > 0) {
-                $loyalText .= '<br><span class="perc">@ ' . rtrim(rtrim($loyalPer, '0'), '.') . '%</span>';
+                $loyalText .= '<span class="b">@ '
+                    . rtrim(rtrim($loyalPer, '0'), '.')
+                    . '%</span><br>';
             }
+
+            $loyalText .= money2($loyalDb);
         }
+
         $rowsHtml .= '<td class="r nowrap">' . $loyalText . '</td>';
     }
-
-
-
 
 
 
@@ -660,14 +664,20 @@ foreach ($grid as $r) {
             $addText = '0';
         } else {
 
-            $addText = money2($addDb);
+            $addText = '';
 
             if ($addPer > 0) {
-                $addText .= '<br><span class="perc">@ ' . rtrim(rtrim($addPer, '0'), '.') . '%</span>';
+                $addText .= '<span class="b">@ '
+                    . rtrim(rtrim($addPer, '0'), '.')
+                    . '%</span><br>';
             }
+
+            $addText .= money2($addDb);
         }
+
         $rowsHtml .= '<td class="r nowrap">' . $addText . '</td>';
     }
+
 
 
     if ($showGstCol) {
@@ -680,13 +690,15 @@ foreach ($grid as $r) {
             $gstText = '0';
         } else {
 
-            $gstText = money2($gstAmt);
+            $gstText = '';
 
             if ($gstPer > 0) {
-                $gstText .= '<br><span class="perc">@ '
+                $gstText .= '<span class="b">@ '
                     . rtrim(rtrim($gstPer, '0'), '.')
-                    . '%</span>';
+                    . '%</span><br>';
             }
+
+            $gstText .= money2($gstAmt);
         }
 
         $rowsHtml .= '<td class="r nowrap">' . $gstText . '</td>';
@@ -774,7 +786,8 @@ if (!empty($terms)) {
             $termsHtml .= '
             <div style="margin-top:15px; margin-bottom:15px;">
               
-          <img src="' . $qrBase64 . '" style="height:160px; width:160px; margin-top:8px;">
+        <img src="' . $qrBase64 . '" style="width:220px; height:220px; margin-top:8px;">
+
             </div>';
         }
     }
@@ -976,16 +989,6 @@ $totalsHtml .= '
     <td class="r b">' . h(money2($subTotal)) . '</td>
 </tr>';
 
-
-
-
-// Total GST
-$totalsHtml .= '
-<tr class="totline">
-    <td colspan="' . $labelColspan . '" class="r b">Total GST</td>
-    <td class="r b nowrap">' . h(money2($totalGst)) . '</td>
-</tr>';
-
 // Discount
 // HEADER DISCOUNT
 if ($headerDiscount > 0) {
@@ -995,6 +998,16 @@ if ($headerDiscount > 0) {
     <td class="r b nowrap">' . h(money2($headerDiscount)) . '</td>
 </tr>';
 }
+
+
+// Total GST
+$totalsHtml .= '
+<tr class="totline">
+    <td colspan="' . $labelColspan . '" class="r b">Total GST</td>
+    <td class="r b nowrap">' . h(money2($totalGst)) . '</td>
+</tr>';
+
+
 
 
 // BASIC COST WITH GST
@@ -1064,7 +1077,7 @@ $pdfHtml = '
 
 @page {
     size: A4;
-    margin: 20mm 15mm 20mm 15mm;
+    margin: 10mm 15mm 20mm 15mm;
 }
 
 body {
