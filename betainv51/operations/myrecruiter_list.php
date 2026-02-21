@@ -74,7 +74,7 @@ if ((int)$can_view !== 1) {
 }
 
 /* -------- page config -------- */
-$page_title = 'Users (Recruiter-wise List)';
+$page_title = 'Employer List';
 if (session_status() !== PHP_SESSION_ACTIVE) {
   session_start();
 }
@@ -808,7 +808,7 @@ SELECT
             <th>Mobile</th>
             <th>Referred By</th>
             <th>Plan / Subscr.</th>
-            <th>Referral Count</th>
+            <th>KYC Status</th>
             <th>Premium Jobs</th>
             <th>Standard Jobs</th>
             <th>Actions</th>
@@ -905,7 +905,7 @@ SELECT
                   <span class="<?= h($sub_status_class) ?>" title="<?= h($tooltip) ?>"><?= h($sub_status) ?></span>
                 </div>
               </td>
-              <td><?= (int)$row['total_referrals'] ?></td>
+              <td>KYC STATUS</td>
               <td>
                 <?php if ($premiumJobsCount > 0) { ?>
                   <form method="post" action="/adminconsole/operations/premium_jobs_report.php" style="margin:0">
