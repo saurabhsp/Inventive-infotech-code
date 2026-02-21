@@ -7,6 +7,7 @@ date_default_timezone_set('Asia/Kolkata');
 $me = function_exists('current_user') ? current_user() : [];
 
 $logged_admin_id   = (int)($me['id'] ?? 0);
+// $logged_admin_id   = 1;
 $logged_admin_name = htmlspecialchars($me['name'] ?? '', ENT_QUOTES, 'UTF-8');
 
 $logged_role_id = (int)($me['role_id'] ?? 0);
@@ -63,6 +64,7 @@ if (!function_exists('fetch_one')) {
 /* ---------------- TABLE ---------------- */
 $usersTbl = 'jos_app_users';
 $crmLeads_tbl = 'jos_app_crm_leads';
+$subscriptionTbl = 'jos_app_usersubscriptionlog';
 
 /* ============================================================
    EMPLOYER DASHBOARD COUNTS
@@ -165,10 +167,54 @@ if ($range === 'lifetime') {
 }
 
 
+/* 5️⃣ Revenue + Purchase Count */
 
+
+if ($range === 'lifetime') {
+
+    $stmt = $con->prepare("
+        SELECT 
+            COUNT(usl.id) AS purchases,
+            COALESCE(SUM(usl.amount_paid),0) AS subscriptionrev
+        FROM `$usersTbl` u
+        JOIN `$subscriptionTbl` usl ON usl.userid = u.id
+        WHERE u.profile_type_id = 1
+        AND u.ac_manager_id = ?
+        AND usl.payment_status = 'success'
+    ");
+
+    $stmt->bind_param("i", $logged_admin_id);
+} else {
+
+    $stmt = $con->prepare("
+        SELECT 
+            COUNT(usl.id) AS purchases,
+            COALESCE(SUM(usl.amount_paid),0) AS subscriptionrev
+        FROM `$usersTbl` u
+        JOIN `$subscriptionTbl` usl ON usl.userid = u.id
+        WHERE u.profile_type_id = 1
+        AND u.ac_manager_id = ?
+        AND usl.payment_status = 'success'
+        AND usl.created_at BETWEEN ? AND ?
+    ");
+
+    $stmt->bind_param(
+        "iss",
+        $logged_admin_id,
+        $from,
+        $to
+    );
+}
+
+$stmt->execute();
+$result = $stmt->get_result();
+$row = $result->fetch_assoc();
+$stmt->close();
+
+$revenue_subscription   = (float)($row['subscriptionrev'] ?? 0);
+$purchases = (int)($row['purchases'] ?? 0);
+$net_revenue = $revenue_subscription * 0.75; // minus 25%
 ?>
-
-
 <!DOCTYPE html>
 <html>
 
@@ -407,29 +453,36 @@ if ($range === 'lifetime') {
             <div class="card kpi-card">
                 <div>
                     <div class="card-title">Revenue</div>
-                    <div class="card-value" id="revenue">₹0</div>
+
+                    <div class="card-value" id="subscriptionrev">
+                        ₹<?= number_format($net_revenue, 2) ?>
+                    </div>
+
+                    <div style="font-size:16px; ">
+                        Subscription: ₹<?= number_format($revenue_subscription, 2) ?>
+                    </div>
                 </div>
                 <div class="card-actions">
-                    <a class="btn-link" href="#" onclick="openBreakdown('revenue'); return false;">View Details →</a>
+                    <a class="btn-link" href="#" onclick="openBreakdown('subscriptionrev'); return false;">View Details →</a>
                 </div>
             </div>
 
-            <div class="card kpi-card">
-                <div>
-                    <div class="card-title">Conversion %</div>
-                    <div class="card-value" id="conversion">0%</div>
-                </div>
-                <div class="card-actions">
-                    <span class="muted" style="font-size:12px;">Self Converted / Self Leads</span>
-                </div>
-            </div>
+            <!--<div class="card kpi-card">-->
+            <!--    <div>-->
+            <!--        <div class="card-title">Conversion %</div>-->
+            <!--        <div class="card-value" id="conversion">0%</div>-->
+            <!--    </div>-->
+            <!--    <div class="card-actions">-->
+            <!--        <span class="muted" style="font-size:12px;">Self Converted / Self Leads</span>-->
+            <!--    </div>-->
+            <!--</div>-->
 
         </div>
 
         <div class="actions">
             <a href="#" onclick="openBreakdown('leads_self'); return false;">View My Leads</a>
             <a href="#" onclick="openBreakdown('employers_assigned'); return false;">View Employers</a>
-            <a href="#" onclick="openBreakdown('revenue'); return false;">Revenue Details</a>
+            <a href="#" onclick="openBreakdown('subscriptionrev'); return false;">Revenue Details</a>
         </div>
 
     </div>
@@ -453,6 +506,8 @@ if ($range === 'lifetime') {
             // 🔹 Assigned Jobseekers → POST to my_recruiter_list.php
             if (mode === 'employers_assigned') {
                 form.action = "/adminconsole/operations/my_recruiter_list.php";
+            } else if (mode === 'subscriptionrev') {
+                form.action = "/adminconsole/operations/subscription_invoicelist.php";
             } else {
                 // 🔹 Default → lead list
                 form.action = "/adminconsole/operations/lead_list.php";

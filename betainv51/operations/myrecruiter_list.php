@@ -738,8 +738,13 @@ SELECT
 
     <form method="get" class="toolbar" style="gap:10px;flex-wrap:wrap">
       <input type="hidden" name="plan_id" value="<?= (int)$plan_id_filter ?>">
+
+      <input class="inp js-date-ddmmyyyy" type="text" name="created_from" value="<?= h($created_from_raw) ?>" placeholder="Reg Date From (dd-mm-yyyy)" autocomplete="off">
+      <input class="inp js-date-ddmmyyyy" type="text" name="created_to" value="<?= h($created_to_raw) ?>" placeholder="Reg Date To (dd-mm-yyyy)" autocomplete="off">
+
       <input class="inp" type="text" name="q" value="<?= h($q) ?>" placeholder="Search name/mobile/referral/org..." style="min-width:240px">
       <input class="inp" type="text" name="city_id" value="<?= h($city_id) ?>" placeholder="City Name">
+
 
       <select class="inp" name="status_id" title="Status">
         <option value="1" <?= $status_id === 1 ? 'selected' : '' ?>>Active</option>
@@ -749,11 +754,12 @@ SELECT
 
       <input class="inp" type="text" name="referral_code" value="<?= h($referral_code_in) ?>" placeholder="Referral Code (input)">
 
-      <select class="inp" name="plan_access" title="Plan Access">
+
+      <!-- <select class="inp" name="plan_access" title="Plan Access">
         <option value="0" <?= $plan_access_in === 0 ? 'selected' : '' ?>>Plan Access: Any</option>
         <option value="1" <?= $plan_access_in === 1 ? 'selected' : '' ?>>Free</option>
         <option value="2" <?= $plan_access_in === 2 ? 'selected' : '' ?>>Premium</option>
-      </select>
+      </select> -->
 
       <select class="inp" name="subscription_status">
         <option value="" <?= $subscription_status === '' ? 'selected' : '' ?>>Subscription: Any</option>
@@ -761,8 +767,6 @@ SELECT
         <option value="expired" <?= $subscription_status === 'expired' ? 'selected' : '' ?>>Expired</option>
       </select>
 
-      <input class="inp js-date-ddmmyyyy" type="text" name="created_from" value="<?= h($created_from_raw) ?>" placeholder="Reg Date From (dd-mm-yyyy)" autocomplete="off">
-      <input class="inp js-date-ddmmyyyy" type="text" name="created_to" value="<?= h($created_to_raw) ?>" placeholder="Reg Date To (dd-mm-yyyy)" autocomplete="off">
 
       <select class="inp" name="sort">
         <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest first</option>
@@ -874,8 +878,8 @@ SELECT
             $premiumJobsCount   = (int)($row['premium_jobs_count'] ?? 0);
             $standardJobsCount  = (int)($row['standard_jobs_count'] ?? 0);
 
-            $premiumJobsUrl  = '/adminconsole/operations/premium_jobs_report.php?recruiter_id=' . $recruiterProfileId;
-            $standardJobsUrl = '/adminconsole/operations/standard_jobs_report.php?recruiter_id=' . $recruiterProfileId;
+            // $premiumJobsUrl  = '/adminconsole/operations/premium_jobs_report.php?recruiter_id=' . $recruiterProfileId;
+            // $standardJobsUrl = '/adminconsole/operations/standard_jobs_report.php?recruiter_id=' . $recruiterProfileId;
 
             $profileUrl = keep_params(['mode' => 'profile', 'rid' => $recruiterProfileId, 'page' => null]);
           ?>
@@ -904,13 +908,27 @@ SELECT
               <td><?= (int)$row['total_referrals'] ?></td>
               <td>
                 <?php if ($premiumJobsCount > 0) { ?>
-                  <a href="<?= h($premiumJobsUrl) ?>" class="ref-link" title="View Premium Jobs"><?= $premiumJobsCount ?></a>
-                  <?php } else { ?><?= $premiumJobsCount ?><?php } ?>
+                  <form method="post" action="/adminconsole/operations/premium_jobs_report.php" style="margin:0">
+                    <input type="hidden" name="recruiter_id" value="<?= (int)$recruiterProfileId ?>">
+                    <button type="submit" class="ref-link" style="background:none;border:none;padding:0;color:#3b82f6;cursor:pointer">
+                      <?= $premiumJobsCount ?>
+                    </button>
+                  </form>
+                <?php } else { ?>
+                  <?= $premiumJobsCount ?>
+                <?php } ?>
               </td>
               <td>
                 <?php if ($standardJobsCount > 0) { ?>
-                  <a href="<?= h($standardJobsUrl) ?>" class="ref-link" title="View Standard Jobs"><?= $standardJobsCount ?></a>
-                  <?php } else { ?><?= $standardJobsCount ?><?php } ?>
+                  <form method="post" action="/adminconsole/operations/standard_jobs_report.php" style="margin:0">
+                    <input type="hidden" name="recruiter_id" value="<?= (int)$recruiterProfileId ?>">
+                    <button type="submit" class="ref-link" style="background:none;border:none;padding:0;color:#3b82f6;cursor:pointer">
+                      <?= $standardJobsCount ?>
+                    </button>
+                  </form>
+                <?php } else { ?>
+                  <?= $standardJobsCount ?>
+                <?php } ?>
               </td>
               <td><a class="btn secondary" href="<?= h($profileUrl) ?>">View</a></td>
             </tr>

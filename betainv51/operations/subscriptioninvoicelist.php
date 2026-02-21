@@ -5,6 +5,22 @@
 require_once __DIR__ . '/../includes/initialize.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_login();
+
+/* -------------------------------------------------
+   If coming from Dashboard via POST
+   ------------------------------------------------- */
+$is_from_dashboard = false;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_id'])) {
+
+    $is_from_dashboard = true;
+
+    $dashboard_admin_id   = (int)$_POST['admin_id'];
+    $dashboard_profile_id = (int)($_POST['profile_type_id'] ?? 0);
+    $dashboard_from       = $_POST['from'] ?? '';
+    $dashboard_to         = $_POST['to'] ?? '';
+}
+
 /* ---------------- LOGGED IN USER ---------------- */
 $me = function_exists('current_user') ? current_user() : [];
 $logged_admin_id   = (int)($me['id'] ?? 0);
@@ -234,13 +250,20 @@ function keep_params(array $changes = [])
 }
 
 /* ---------------- Inputs / Filters (same pattern) ---------------- */
-$df_in  = get_str('from', '');
-$dt_in  = get_str('to', '');
+if ($is_from_dashboard) {
 
-$from_date = dfmt_in($df_in);
-$to_date   = dfmt_in($dt_in);
+    $from_date = dfmt_in($dashboard_from);
+    $to_date   = dfmt_in($dashboard_to);
+    $profile_type_id = $dashboard_profile_id;
 
-$profile_type_id = get_int('profile_type_id', 0); // 0=All, 1=Recruiter, 2=Job Seeker, 3=Promoter
+} else {
+
+    $df_in = get_str('from', '');
+    $dt_in = get_str('to', '');
+    $from_date = dfmt_in($df_in);
+    $to_date   = dfmt_in($dt_in);
+    $profile_type_id = get_int('profile_type_id', 0); //0=All, 1=Recruiter, 2=Job Seeker, 3=Promoter
+} 
 $payment_status  = get_str('payment_status', '');  // '', success, failed, pending, free...
 $invoice_type    = get_str('invoice_type', 'all'); // all | paid | free
 $q               = get_str('q', '');               // invoice/payment/user
