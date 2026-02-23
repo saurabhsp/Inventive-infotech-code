@@ -189,7 +189,6 @@ if ($range === 'lifetime') {
     ");
 
     $stmt->bind_param("i", $logged_admin_id);
-
 } else {
 
     $stmt = $con->prepare("
@@ -219,7 +218,7 @@ $stmt->close();
 
 $revenue_subscription   = (float)($row['subscriptionrev'] ?? 0);
 $purchases = (int)($row['purchases'] ?? 0);
-$net_revenue = $revenue_subscription * 0.75; 
+$net_revenue = $revenue_subscription * 0.75;
 
 ?>
 
@@ -458,17 +457,17 @@ $net_revenue = $revenue_subscription * 0.75;
                 </div>
             </div>
 
-             <div class="card kpi-card">
+            <div class="card kpi-card">
                 <div>
                     <div class="card-title">Revenue</div>
 
-                        <div class="card-value" id="subscriptionrev">
-                            ₹<?= number_format($net_revenue, 2) ?>
-                        </div>
+                    <div class="card-value" id="subscriptionrev">
+                        ₹<?= number_format($net_revenue, 2) ?>
+                    </div>
 
-                        <div style="font-size:16px; ">
-                            Subscription: ₹<?= number_format($revenue_subscription, 2) ?>
-                        </div>
+                    <div style="font-size:16px; ">
+                        Subscription: ₹<?= number_format($revenue_subscription, 2) ?>
+                    </div>
                 </div>
                 <div class="card-actions">
                     <a class="btn-link" href="#" onclick="openBreakdown('subscriptionrev'); return false;">View Details →</a>
@@ -514,6 +513,8 @@ $net_revenue = $revenue_subscription * 0.75;
             // 🔹 Assigned Jobseekers → POST to my_jobseeker_list.php
             if (mode === 'employers_assigned') {
                 form.action = "/adminconsole/operations/my_jobseeker_list.php";
+            } else if (mode === 'subscriptionrev') {
+                form.action = "/adminconsole/operations/subscription_invoicelist.php";
             } else {
                 // 🔹 Default → lead list
                 form.action = "/adminconsole/operations/lead_list.php";

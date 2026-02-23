@@ -622,7 +622,7 @@ foreach ($grid as $r) {
 
             if ($discPer > 0) {
                 $discText .= '<span class="b">@ '
-                    . rtrim(rtrim($discPer, '0'), '.')
+                    . rtrim(rtrim(number_format($discPer, 2, '.', ''), '0'), '.')
                     . '%</span><br>';
             }
 
@@ -645,7 +645,7 @@ foreach ($grid as $r) {
 
             if ($loyalPer > 0) {
                 $loyalText .= '<span class="b">@ '
-                    . rtrim(rtrim($loyalPer, '0'), '.')
+                    . rtrim(rtrim(number_format($loyalPer, 2, '.', ''), '0'), '.')
                     . '%</span><br>';
             }
 
@@ -668,7 +668,7 @@ foreach ($grid as $r) {
 
             if ($addPer > 0) {
                 $addText .= '<span class="b">@ '
-                    . rtrim(rtrim($addPer, '0'), '.')
+                    . rtrim(rtrim(number_format($addPer, 2, '.', ''), '0'), '.')
                     . '%</span><br>';
             }
 
@@ -694,7 +694,7 @@ foreach ($grid as $r) {
 
             if ($gstPer > 0) {
                 $gstText .= '<span class="b">@ '
-                    . rtrim(rtrim($gstPer, '0'), '.')
+                    . rtrim(rtrim(number_format($gstPer, 2, '.', ''), '0'), '.')
                     . '%</span><br>';
             }
 

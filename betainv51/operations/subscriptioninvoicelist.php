@@ -255,7 +255,6 @@ if ($is_from_dashboard) {
     $from_date = dfmt_in($dashboard_from);
     $to_date   = dfmt_in($dashboard_to);
     $profile_type_id = $dashboard_profile_id;
-
 } else {
 
     $df_in = get_str('from', '');
@@ -263,7 +262,7 @@ if ($is_from_dashboard) {
     $from_date = dfmt_in($df_in);
     $to_date   = dfmt_in($dt_in);
     $profile_type_id = get_int('profile_type_id', 0); //0=All, 1=Recruiter, 2=Job Seeker, 3=Promoter
-} 
+}
 $payment_status  = get_str('payment_status', '');  // '', success, failed, pending, free...
 $invoice_type    = get_str('invoice_type', 'all'); // all | paid | free
 $q               = get_str('q', '');               // invoice/payment/user
@@ -494,15 +493,15 @@ ob_start();
                         <label class="lbl">To (start date)</label>
                         <input class="inp" type="date" name="to" value="<?= h($to_date) ?>">
                     </div>
-                     <?php if ($logged_admin_roleid == 1): ?>
-                    <div>
-                        <label class="lbl">Profile Type</label>
-                        <select class="inp" name="profile_type_id">
-                            <?php foreach ($ptype_opts as $k => $v): ?>
-                                <option value="<?= $k ?>" <?= ($k === $profile_type_id) ? 'selected' : '' ?>><?= h($v) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                    <?php if ($logged_admin_roleid == 1): ?>
+                        <div>
+                            <label class="lbl">Profile Type</label>
+                            <select class="inp" name="profile_type_id">
+                                <?php foreach ($ptype_opts as $k => $v): ?>
+                                    <option value="<?= $k ?>" <?= ($k === $profile_type_id) ? 'selected' : '' ?>><?= h($v) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     <?php endif; ?>
                     <?php if ($logged_admin_roleid == 1): ?>
                         <div>

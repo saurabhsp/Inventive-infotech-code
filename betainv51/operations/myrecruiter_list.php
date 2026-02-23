@@ -203,6 +203,59 @@ ob_start();
     color: #fff;
     line-height: 1;
   }
+
+  .btn.status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: .45rem .75rem;
+    border-radius: .6rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn.status.inreview {
+    background: #f59e0b;
+    color: #000;
+  }
+  .filter-box {
+  margin-top: 18px;
+  background: #0f172a;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid #1e293b;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.filter-row .inp {
+  width: 100%;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+@media (max-width: 1200px) {
+  .filter-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .filter-row {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
 </style>
 
 <script>
@@ -468,9 +521,11 @@ ob_start();
     $q                   = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
     $city_id             = isset($_GET['city_id']) ? trim((string)$_GET['city_id']) : '';
     $status_id           = isset($_GET['status_id']) ? (int)$_GET['status_id'] : 1;
+    $kyc_status_id = isset($_GET['kyc_status_id']) ? $_GET['kyc_status_id'] : '';
     $referral_code_in    = isset($_GET['referral_code']) ? trim((string)$_GET['referral_code']) : '';
     $plan_access_in      = isset($_GET['plan_access']) ? (int)$_GET['plan_access'] : 0;
     $subscription_status = isset($_GET['subscription_status']) ? strtolower(trim((string)$_GET['subscription_status'])) : '';
+    $image_filter = isset($_GET['image_filter']) ? trim($_GET['image_filter']) : '';
 
     $created_from_raw    = isset($_GET['created_from']) ? trim((string)$_GET['created_from']) : '';
     $created_to_raw      = isset($_GET['created_to']) ? trim((string)$_GET['created_to']) : '';
@@ -543,6 +598,21 @@ ob_start();
   ) rc ON rc.uid = u.id
 ";
 
+    /* ===== KYC Latest Status Join ===== */
+    $sql_base .= "
+LEFT JOIN (
+    SELECT l1.*
+    FROM jos_app_recruiterkyclog l1
+    INNER JOIN (
+        SELECT recruiter_id, MAX(id) AS max_id
+        FROM jos_app_recruiterkyclog
+        GROUP BY recruiter_id
+    ) l2 ON l1.id = l2.max_id
+) kyc ON kyc.recruiter_id = rp.id
+
+LEFT JOIN jos_app_kycstatus ks ON ks.id = kyc.status
+";
+
     $where_common = [];
     $types_common = '';
     $params_common = [];
@@ -572,6 +642,17 @@ ob_start();
       $types_common .= 'i';
       $params_common[] = $status_id;
     }
+    /* ===== KYC Filter ===== */
+    if ($kyc_status_id !== '') {
+
+      if ($kyc_status_id === 'NOT_SUBMITTED') {
+        $where_common[] = "kyc.id IS NULL";
+      } else {
+        $where_common[] = "kyc.status = ?";
+        $types_common .= 'i';
+        $params_common[] = (int)$kyc_status_id;
+      }
+    }
     if ($referral_code_in !== '') {
       $where_common[] = "u.referral_code=?";
       $types_common .= 's';
@@ -598,6 +679,12 @@ ob_start();
       $where_common[] = "DATE(u.created_at)<=?";
       $types_common .= 's';
       $params_common[] = $created_to;
+    }
+    /* ===== Image Filter ===== */
+    if ($image_filter === 'available') {
+      $where_common[] = "rp.company_logo IS NOT NULL AND rp.company_logo <> ''";
+    } elseif ($image_filter === 'not_available') {
+      $where_common[] = "(rp.company_logo IS NULL OR rp.company_logo = '')";
     }
 
     $sql_where_common = ' WHERE ' . implode(' AND ', $where_common);
@@ -688,15 +775,17 @@ SELECT
   u.id, u.mobile_no, u.profile_id, u.city_id, u.referral_code, u.myreferral_code,
   u.referred_by, u.active_plan_id, u.status_id, u.created_at,
 
-  rp.organization_name, rp.contact_person_name, rp.designation,
+  rp.organization_name, rp.contact_person_name, rp.designation,rp.company_logo,
 
   ls.plan_id AS last_plan_id, ls.start_date AS last_start_date, ls.end_date AS last_end_date,
   sp.id AS plan_id, sp.plan_name AS plan_name, CAST(sp.plan_access AS UNSIGNED) AS plan_access_num,
 
   IFNULL(rc.total_referrals,0) AS total_referrals,
   (SELECT COUNT(*) FROM jos_app_walkininterviews w WHERE w.recruiter_id = rp.id) AS premium_jobs_count,
-  (SELECT COUNT(*) FROM jos_app_jobvacancies jv WHERE jv.recruiter_id = rp.id)    AS standard_jobs_count,
-
+  (SELECT COUNT(*) FROM jos_app_jobvacancies jv WHERE jv.recruiter_id = rp.id)    AS standard_jobs_count, 
+  ks.name AS kyc_status_name,
+  ks.colorcode AS kyc_color,
+  kyc.status AS kyc_status_id,
   ur.mobile_no AS ref_mobile,
   COALESCE(
     NULLIF(rrp.organization_name,''),
@@ -736,53 +825,88 @@ SELECT
       <?php endforeach; ?>
     </div>
 
-    <form method="get" class="toolbar" style="gap:10px;flex-wrap:wrap">
-      <input type="hidden" name="plan_id" value="<?= (int)$plan_id_filter ?>">
+ <form method="get" class="filter-box">
 
-      <input class="inp js-date-ddmmyyyy" type="text" name="created_from" value="<?= h($created_from_raw) ?>" placeholder="Reg Date From (dd-mm-yyyy)" autocomplete="off">
-      <input class="inp js-date-ddmmyyyy" type="text" name="created_to" value="<?= h($created_to_raw) ?>" placeholder="Reg Date To (dd-mm-yyyy)" autocomplete="off">
+  <input type="hidden" name="plan_id" value="<?= (int)$plan_id_filter ?>">
 
-      <input class="inp" type="text" name="q" value="<?= h($q) ?>" placeholder="Search name/mobile/referral/org..." style="min-width:240px">
-      <input class="inp" type="text" name="city_id" value="<?= h($city_id) ?>" placeholder="City Name">
+  <!-- ROW 1 -->
+  <div class="filter-row">
+    <input class="inp" type="text" name="q"
+      value="<?= h($q) ?>"
+      placeholder="Search name/mobile/referral/org...">
 
+    <input class="inp" type="text" name="city_id"
+      value="<?= h($city_id) ?>"
+      placeholder="City Name">
 
-      <select class="inp" name="status_id" title="Status">
-        <option value="1" <?= $status_id === 1 ? 'selected' : '' ?>>Active</option>
-        <option value="0" <?= $status_id === 0 ? 'selected' : '' ?>>Inactive</option>
-        <option value="-1" <?= $status_id === -1 ? 'selected' : '' ?>>Any</option>
-      </select>
+    <select class="inp" name="status_id">
+      <option value="1" <?= $status_id === 1 ? 'selected' : '' ?>>Active</option>
+      <option value="0" <?= $status_id === 0 ? 'selected' : '' ?>>Inactive</option>
+      <option value="-1" <?= $status_id === -1 ? 'selected' : '' ?>>Any Status</option>
+    </select>
 
-      <input class="inp" type="text" name="referral_code" value="<?= h($referral_code_in) ?>" placeholder="Referral Code (input)">
+    <select class="inp" name="kyc_status_id">
+      <option value="">All KYC Status</option>
+      <?php foreach ($kycStatuses as $st): ?>
+        <option value="<?= (int)$st['id'] ?>"
+          <?= ($kyc_status_id !== '' && (int)$kyc_status_id === (int)$st['id']) ? 'selected' : '' ?>>
+          <?= h($st['name']) ?>
+        </option>
+      <?php endforeach; ?>
+      <option value="NOT_SUBMITTED"
+        <?= ($kyc_status_id === 'NOT_SUBMITTED') ? 'selected' : '' ?>>
+        Not Submitted
+      </option>
+    </select>
 
+    <select class="inp" name="subscription_status">
+      <option value="">Subscription: Any</option>
+      <option value="active" <?= $subscription_status === 'active' ? 'selected' : '' ?>>Active</option>
+      <option value="expired" <?= $subscription_status === 'expired' ? 'selected' : '' ?>>Expired</option>
+    </select>
+  </div>
 
-      <!-- <select class="inp" name="plan_access" title="Plan Access">
-        <option value="0" <?= $plan_access_in === 0 ? 'selected' : '' ?>>Plan Access: Any</option>
-        <option value="1" <?= $plan_access_in === 1 ? 'selected' : '' ?>>Free</option>
-        <option value="2" <?= $plan_access_in === 2 ? 'selected' : '' ?>>Premium</option>
-      </select> -->
+  <!-- ROW 2 -->
+  <div class="filter-row">
+    <input class="inp js-date-ddmmyyyy" type="text"
+      name="created_from"
+      value="<?= h($created_from_raw) ?>"
+      placeholder="Reg Date From">
 
-      <select class="inp" name="subscription_status">
-        <option value="" <?= $subscription_status === '' ? 'selected' : '' ?>>Subscription: Any</option>
-        <option value="active" <?= $subscription_status === 'active' ? 'selected' : '' ?>>Active</option>
-        <option value="expired" <?= $subscription_status === 'expired' ? 'selected' : '' ?>>Expired</option>
-      </select>
+    <input class="inp js-date-ddmmyyyy" type="text"
+      name="created_to"
+      value="<?= h($created_to_raw) ?>"
+      placeholder="Reg Date To">
 
+    <input class="inp" type="text"
+      name="referral_code"
+      value="<?= h($referral_code_in) ?>"
+      placeholder="Referral Code">
 
-      <select class="inp" name="sort">
-        <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest first</option>
-        <option value="oldest" <?= $sort === 'oldest' ? 'selected' : '' ?>>Oldest first</option>
-        <option value="name_asc" <?= $sort === 'name_asc' ? 'selected' : '' ?>>Name A–Z</option>
-        <option value="name_desc" <?= $sort === 'name_desc' ? 'selected' : '' ?>>Name Z–A</option>
-        <option value="city_asc" <?= $sort === 'city_asc' ? 'selected' : '' ?>>City ↑</option>
-        <option value="city_desc" <?= $sort === 'city_desc' ? 'selected' : '' ?>>City ↓</option>
-      </select>
+    <select class="inp" name="image_filter">
+      <option value="">Image: All</option>
+      <option value="available" <?= $image_filter === 'available' ? 'selected' : '' ?>>Available</option>
+      <option value="not_available" <?= $image_filter === 'not_available' ? 'selected' : '' ?>>Not Available</option>
+    </select>
 
-      <button class="btn primary" type="submit">Apply</button>
+    <select class="inp" name="sort">
+      <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest first</option>
+      <option value="oldest" <?= $sort === 'oldest' ? 'selected' : '' ?>>Oldest first</option>
+      <option value="name_asc" <?= $sort === 'name_asc' ? 'selected' : '' ?>>Name A–Z</option>
+      <option value="name_desc" <?= $sort === 'name_desc' ? 'selected' : '' ?>>Name Z–A</option>
+    </select>
+  </div>
 
-      <div style="flex:1"></div>
-      <a class="btn secondary" href="<?= h(keep_params(['view' => 'last50', 'page' => 1])) ?>">Last 50</a>
-      <a class="btn secondary" href="<?= h(keep_params(['view' => 'all', 'page' => 1])) ?>">View All</a>
-    </form>
+  <!-- ROW 3 BUTTONS -->
+  <div class="filter-actions">
+    <button class="btn primary" type="submit">Apply Filters</button>
+    <a class="btn secondary" href="<?= h(keep_params(['view' => 'last50', 'page' => 1])) ?>">Last 50</a>
+    <a class="btn secondary" href="<?= h(keep_params(['view' => 'all', 'page' => 1])) ?>">View All</a>
+  </div>
+
+</form>
+
+    
 
     <div style="display:flex;align-items:center;gap:12px;margin:8px 0 12px">
       <span class="badge">Total: <?= (int)$total ?></span>
@@ -804,6 +928,7 @@ SELECT
             <th style="width:60px">SR No</th>
             <th>Reg Date</th>
             <th>Name / Profile</th>
+            <th>Image</th>
             <th>Contact Info</th>
             <th>Mobile</th>
             <th>Referred By</th>
@@ -890,6 +1015,19 @@ SELECT
                 <div style="font-weight:600"><?= h($display) ?></div>
                 <div style="margin-top:4px"><?= $status_badge ?></div>
               </td>
+              <td>
+                <?php
+                $image = trim((string)($row['company_logo'] ?? ''));
+
+                if ($image !== '') {
+                  $imageUrl = rtrim(DOMAIN_URL, "/") . "/webservices/" . ltrim($image, "/");
+                  echo '<img src="' . h($imageUrl) . '" 
+              style="width:50px;height:50px;object-fit:contain;border-radius:8px;background:#f3f4f6;">';
+                } else {
+                  echo '-';
+                }
+                ?>
+              </td>
               <td><?= h($contact_info) ?></td>
               <td><?= h($row['mobile_no']) ?></td>
               <td>
@@ -905,7 +1043,95 @@ SELECT
                   <span class="<?= h($sub_status_class) ?>" title="<?= h($tooltip) ?>"><?= h($sub_status) ?></span>
                 </div>
               </td>
-              <td>KYC STATUS</td>
+
+              <!-- KYC -->
+              <!-- <td>
+                <?php
+                $kycName  = $row['kyc_status_name'] ?? '';
+                $kycId    = (int)($row['kyc_status_id'] ?? 0);
+                $recruiterProfileId = (int)$row['profile_id'];
+
+                if (!empty($kycName)) { ?>
+
+                  <form method="post"
+                    action="/adminconsole/operations/recruiter_kyc_report.php"
+                    style="margin:0;">
+
+                    <input type="hidden" name="recruiter_id" value="<?= $recruiterProfileId ?>">
+                    <input type="hidden" name="status" value="<?= $kycId ?>">
+
+                    <button type="submit"
+                      class="ref-link"
+                      style="background:none;border:none;padding:0;color:#3b82f6;cursor:pointer;">
+                      <?= h($kycName) ?>
+                    </button>
+                  </form>
+
+                <?php } else { ?>
+
+                  <form method="post"
+                    action="/adminconsole/operations/recruiter_kyc_report.php"
+                    style="margin:0;">
+
+                    <input type="hidden" name="recruiter_id" value="<?= $recruiterProfileId ?>">
+                    <input type="hidden" name="status" value="NOT_SUBMITTED">
+
+                    <button type="submit"
+                      class="badge danger"
+                      style="border:none;cursor:pointer;">
+                      Not Submitted
+                    </button>
+                  </form>
+
+                <?php } ?>
+              </td> -->
+
+              <td>
+                <?php
+                $kycName  = $row['kyc_status_name'] ?? '';
+                $kycId    = (int)($row['kyc_status_id'] ?? 0);
+                $kycColor = $row['kyc_color'] ?? '#555';
+                $recruiterProfileId = (int)$row['profile_id'];
+
+                if (!empty($kycName)) {
+
+                  $isInReview = (strcasecmp($kycName, 'In Review') === 0);
+                ?>
+
+                  <form method="post"
+                    action="/adminconsole/operations/recruiter_kyc_report.php"
+                    style="margin:0;">
+
+                    <input type="hidden" name="recruiter_id" value="<?= $recruiterProfileId ?>">
+                    <input type="hidden" name="status" value="<?= $kycId ?>">
+
+                    <button type="submit"
+                      class="btn status <?= $isInReview ? 'inreview' : '' ?>"
+                      style="<?= $isInReview ? '' : 'background:' . h($kycColor) . ';color:#fff;' ?>">
+                      <?= h($kycName) ?>
+                    </button>
+                  </form>
+
+                <?php } else { ?>
+
+                  <form method="post"
+                    action="/adminconsole/operations/recruiter_kyc_report.php"
+                    style="margin:0;">
+
+                    <input type="hidden" name="recruiter_id" value="<?= $recruiterProfileId ?>">
+                    <input type="hidden" name="status" value="NOT_SUBMITTED">
+
+                    <button type="submit"
+                      class="btn"
+                      style="background:#DC3545;color:#fff;">
+                      Not Submitted
+                    </button>
+                  </form>
+
+                <?php } ?>
+              </td>
+
+
               <td>
                 <?php if ($premiumJobsCount > 0) { ?>
                   <form method="post" action="/adminconsole/operations/premium_jobs_report.php" style="margin:0">
@@ -936,7 +1162,7 @@ SELECT
           $stmt->close(); ?>
           <?php if ($sr === (($view === 'all') ? 1 : ($offset + 1))) { ?>
             <tr>
-              <td colspan="11" style="text-align:center;color:#9ca3af">No records found.</td>
+              <td colspan="12" style="text-align:center;color:#9ca3af">No records found.</td>
             </tr>
           <?php } ?>
         </tbody>
