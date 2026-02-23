@@ -129,6 +129,9 @@ ob_start();
 <link rel="stylesheet" href="/adminconsole/assets/ui.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<link rel="stylesheet" href="https://unpkg.com/cropperjs@1.6.1/dist/cropper.css">
+<script src="https://unpkg.com/cropperjs@1.6.1/dist/cropper.js"></script>
+
 
 <style>
   .table a.ref-link {
@@ -219,43 +222,44 @@ ob_start();
     background: #f59e0b;
     color: #000;
   }
+
   .filter-box {
-  margin-top: 18px;
-  background: #0f172a;
-  padding: 18px;
-  border-radius: 14px;
-  border: 1px solid #1e293b;
-}
-
-.filter-row {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 14px;
-  margin-bottom: 14px;
-}
-
-.filter-row .inp {
-  width: 100%;
-}
-
-.filter-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  margin-top: 8px;
-}
-
-@media (max-width: 1200px) {
-  .filter-row {
-    grid-template-columns: repeat(3, 1fr);
+    margin-top: 18px;
+    background: #0f172a;
+    padding: 18px;
+    border-radius: 14px;
+    border: 1px solid #1e293b;
   }
-}
 
-@media (max-width: 768px) {
   .filter-row {
-    grid-template-columns: repeat(1, 1fr);
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin-bottom: 14px;
   }
-}
+
+  .filter-row .inp {
+    width: 100%;
+  }
+
+  .filter-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+
+  @media (max-width: 1200px) {
+    .filter-row {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .filter-row {
+      grid-template-columns: repeat(1, 1fr);
+    }
+  }
 </style>
 
 <script>
@@ -266,6 +270,74 @@ ob_start();
         allowInput: true
       });
     }
+
+
+
+
+    let cropper;
+    const logoInput = document.getElementById('logoInput');
+    const cropModal = document.getElementById('cropModal');
+    const cropImage = document.getElementById('cropImage');
+    const cropSave = document.getElementById('cropSave');
+    const cropCancel = document.getElementById('cropCancel');
+    const croppedImageInput = document.getElementById('croppedImage');
+    const logoForm = document.getElementById('logoForm');
+
+    if (!logoInput) return;
+
+    logoInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+
+        cropImage.src = event.target.result;
+        cropModal.style.display = "flex";
+
+        if (cropper) {
+          cropper.destroy();
+        }
+
+        cropper = new Cropper(cropImage, {
+          aspectRatio: 1,
+          viewMode: 1,
+          autoCropArea: 1
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    cropSave.addEventListener('click', function() {
+
+      if (!cropper) return;
+
+      const canvas = cropper.getCroppedCanvas({
+        width: 150,
+        height: 150
+      });
+
+      croppedImageInput.value = canvas.toDataURL('image/png');
+
+      cropper.destroy();
+      cropper = null;
+
+      cropModal.style.display = "none";
+
+      logoForm.submit();
+    });
+
+    cropCancel.addEventListener('click', function() {
+
+      if (cropper) {
+        cropper.destroy();
+        cropper = null;
+      }
+
+      cropModal.style.display = "none";
+      logoInput.value = ""; // clear file selection
+    });
+
   });
 </script>
 
@@ -338,9 +410,50 @@ ob_start();
     $mode = isset($_GET['mode']) ? trim((string)$_GET['mode']) : 'list';
 
     if ($mode === 'profile') {
+
+
       $rid = get_int('rid', 0);
       $back_url = $_SERVER['PHP_SELF'];
+      /* ================= LOGO UPLOAD ================= */
+      if (
+        $_SERVER['REQUEST_METHOD'] === 'POST'
+        && isset($_POST['upload_logo'])
+        && !empty($_POST['cropped_image'])
+        && $rid > 0
+      ) {
 
+        $imageData = $_POST['cropped_image'];
+
+        // Remove base64 prefix
+        $imageData = str_replace('data:image/png;base64,', '', $imageData);
+        $imageData = str_replace(' ', '+', $imageData);
+        $decoded = base64_decode($imageData);
+
+        if ($decoded === false) {
+          die("Invalid cropped image data.");
+        }
+
+        $newName = 'recruiter_' . $rid . '_' . time() . '.png';
+
+        $uploadDir = __DIR__ . '/../../webservices/uploads/company_logos/';
+        if (!is_dir($uploadDir)) {
+          mkdir($uploadDir, 0755, true);
+        }
+
+        $targetPath = $uploadDir . $newName;
+
+        file_put_contents($targetPath, $decoded);
+
+        $dbPath = 'uploads/company_logos/' . $newName;
+
+        $up = $con->prepare("UPDATE jos_app_recruiter_profile SET company_logo=? WHERE id=?");
+        $up->bind_param("si", $dbPath, $rid);
+        $up->execute();
+        $up->close();
+
+        header("Location: " . $_SERVER['REQUEST_URI']);
+        exit;
+      }
       if ($rid <= 0) {
         echo '<div class="alert danger">Invalid recruiter ID.</div>';
         echo '<div style="margin-top:10px"><a class="btn secondary" href="' . h($back_url) . '">Back to list</a></div>';
@@ -452,12 +565,62 @@ ob_start();
 
         echo '<div style="display:flex; gap:18px; align-items:flex-start;">';
 
-        echo '<div style="width:140px; height:140px; background:#f3f4f6; border-radius:12px; display:flex;align-items:center;justify-content:center;overflow:hidden;">';
+        // echo '<div style="width:140px; height:140px; background:#f3f4f6; border-radius:12px; display:flex;align-items:center;justify-content:center;overflow:hidden;">';                // if (!empty($data['company_logo'])) {
+        //   echo '<img src="' . h($data['company_logo']) . '" style="width:100%;height:100%;object-fit:contain;" alt="Logo">';
+        // } else {
+        //   echo '<span style="color:#9ca3af;font-size:12px;">No Logo</span>';
+        // }
+
+        echo '<div style="width:160px;">';
+
         if (!empty($data['company_logo'])) {
+
+          echo '<div style="width:140px;height:140px;background:#f3f4f6;border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;">';
           echo '<img src="' . h($data['company_logo']) . '" style="width:100%;height:100%;object-fit:contain;" alt="Logo">';
+          echo '</div>';
+
+          // Optional: Replace image button
+          echo '
+<form id="logoForm" method="post" style="margin-top:8px;">
+    <input type="file" id="logoInput" accept="image/*" required>
+    <input type="hidden" name="cropped_image" id="croppedImage">
+    <input type="hidden" name="upload_logo" value="1">
+</form>';
         } else {
-          echo '<span style="color:#9ca3af;font-size:12px;">No Logo</span>';
+
+          echo '<div style="width:140px;height:140px;background:#111827;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9ca3af;">
+            No Logo
+          </div>';
+
+          echo '
+<form id="logoForm" method="post" style="margin-top:8px;">
+    <input type="file" id="logoInput" accept="image/*" required>
+    <input type="hidden" name="cropped_image" id="croppedImage">
+    <input type="hidden" name="upload_logo" value="1">
+</form>';
         }
+
+
+
+        echo '<div id="cropModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;padding:20px;border-radius:12px;max-width:500px;width:90%;">
+      <h3>Crop Logo (150 x 150)</h3>
+      <div>
+          <img id="cropImage" style="max-width:100%;">
+      </div>
+      <div style="margin-top:15px;text-align:right;">
+          <button id="cropCancel" class="btn secondary">Cancel</button>
+          <button id="cropSave" class="btn primary">Crop & Upload</button>
+      </div>
+  </div>
+</div>';
+        echo '<hr style="margin:16px 0;">';
+
+        echo '</div>';
+
+
+
+
         echo '</div>';
 
         echo '<div style="flex:1;">';
@@ -825,88 +988,88 @@ SELECT
       <?php endforeach; ?>
     </div>
 
- <form method="get" class="filter-box">
+    <form method="get" class="filter-box">
 
-  <input type="hidden" name="plan_id" value="<?= (int)$plan_id_filter ?>">
+      <input type="hidden" name="plan_id" value="<?= (int)$plan_id_filter ?>">
 
-  <!-- ROW 1 -->
-  <div class="filter-row">
-    <input class="inp" type="text" name="q"
-      value="<?= h($q) ?>"
-      placeholder="Search name/mobile/referral/org...">
+      <!-- ROW 1 -->
+      <div class="filter-row">
+        <input class="inp" type="text" name="q"
+          value="<?= h($q) ?>"
+          placeholder="Search name/mobile/referral/org...">
 
-    <input class="inp" type="text" name="city_id"
-      value="<?= h($city_id) ?>"
-      placeholder="City Name">
+        <input class="inp" type="text" name="city_id"
+          value="<?= h($city_id) ?>"
+          placeholder="City Name">
 
-    <select class="inp" name="status_id">
-      <option value="1" <?= $status_id === 1 ? 'selected' : '' ?>>Active</option>
-      <option value="0" <?= $status_id === 0 ? 'selected' : '' ?>>Inactive</option>
-      <option value="-1" <?= $status_id === -1 ? 'selected' : '' ?>>Any Status</option>
-    </select>
+        <select class="inp" name="status_id">
+          <option value="1" <?= $status_id === 1 ? 'selected' : '' ?>>Active</option>
+          <option value="0" <?= $status_id === 0 ? 'selected' : '' ?>>Inactive</option>
+          <option value="-1" <?= $status_id === -1 ? 'selected' : '' ?>>Any Status</option>
+        </select>
 
-    <select class="inp" name="kyc_status_id">
-      <option value="">All KYC Status</option>
-      <?php foreach ($kycStatuses as $st): ?>
-        <option value="<?= (int)$st['id'] ?>"
-          <?= ($kyc_status_id !== '' && (int)$kyc_status_id === (int)$st['id']) ? 'selected' : '' ?>>
-          <?= h($st['name']) ?>
-        </option>
-      <?php endforeach; ?>
-      <option value="NOT_SUBMITTED"
-        <?= ($kyc_status_id === 'NOT_SUBMITTED') ? 'selected' : '' ?>>
-        Not Submitted
-      </option>
-    </select>
+        <select class="inp" name="kyc_status_id">
+          <option value="">All KYC Status</option>
+          <?php foreach ($kycStatuses as $st): ?>
+            <option value="<?= (int)$st['id'] ?>"
+              <?= ($kyc_status_id !== '' && (int)$kyc_status_id === (int)$st['id']) ? 'selected' : '' ?>>
+              <?= h($st['name']) ?>
+            </option>
+          <?php endforeach; ?>
+          <option value="NOT_SUBMITTED"
+            <?= ($kyc_status_id === 'NOT_SUBMITTED') ? 'selected' : '' ?>>
+            Not Submitted
+          </option>
+        </select>
 
-    <select class="inp" name="subscription_status">
-      <option value="">Subscription: Any</option>
-      <option value="active" <?= $subscription_status === 'active' ? 'selected' : '' ?>>Active</option>
-      <option value="expired" <?= $subscription_status === 'expired' ? 'selected' : '' ?>>Expired</option>
-    </select>
-  </div>
+        <select class="inp" name="subscription_status">
+          <option value="">Subscription: Any</option>
+          <option value="active" <?= $subscription_status === 'active' ? 'selected' : '' ?>>Active</option>
+          <option value="expired" <?= $subscription_status === 'expired' ? 'selected' : '' ?>>Expired</option>
+        </select>
+      </div>
 
-  <!-- ROW 2 -->
-  <div class="filter-row">
-    <input class="inp js-date-ddmmyyyy" type="text"
-      name="created_from"
-      value="<?= h($created_from_raw) ?>"
-      placeholder="Reg Date From">
+      <!-- ROW 2 -->
+      <div class="filter-row">
+        <input class="inp js-date-ddmmyyyy" type="text"
+          name="created_from"
+          value="<?= h($created_from_raw) ?>"
+          placeholder="Reg Date From">
 
-    <input class="inp js-date-ddmmyyyy" type="text"
-      name="created_to"
-      value="<?= h($created_to_raw) ?>"
-      placeholder="Reg Date To">
+        <input class="inp js-date-ddmmyyyy" type="text"
+          name="created_to"
+          value="<?= h($created_to_raw) ?>"
+          placeholder="Reg Date To">
 
-    <input class="inp" type="text"
-      name="referral_code"
-      value="<?= h($referral_code_in) ?>"
-      placeholder="Referral Code">
+        <input class="inp" type="text"
+          name="referral_code"
+          value="<?= h($referral_code_in) ?>"
+          placeholder="Referral Code">
 
-    <select class="inp" name="image_filter">
-      <option value="">Image: All</option>
-      <option value="available" <?= $image_filter === 'available' ? 'selected' : '' ?>>Available</option>
-      <option value="not_available" <?= $image_filter === 'not_available' ? 'selected' : '' ?>>Not Available</option>
-    </select>
+        <select class="inp" name="image_filter">
+          <option value="">Image: All</option>
+          <option value="available" <?= $image_filter === 'available' ? 'selected' : '' ?>>Available</option>
+          <option value="not_available" <?= $image_filter === 'not_available' ? 'selected' : '' ?>>Not Available</option>
+        </select>
 
-    <select class="inp" name="sort">
-      <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest first</option>
-      <option value="oldest" <?= $sort === 'oldest' ? 'selected' : '' ?>>Oldest first</option>
-      <option value="name_asc" <?= $sort === 'name_asc' ? 'selected' : '' ?>>Name A–Z</option>
-      <option value="name_desc" <?= $sort === 'name_desc' ? 'selected' : '' ?>>Name Z–A</option>
-    </select>
-  </div>
+        <select class="inp" name="sort">
+          <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest first</option>
+          <option value="oldest" <?= $sort === 'oldest' ? 'selected' : '' ?>>Oldest first</option>
+          <option value="name_asc" <?= $sort === 'name_asc' ? 'selected' : '' ?>>Name A–Z</option>
+          <option value="name_desc" <?= $sort === 'name_desc' ? 'selected' : '' ?>>Name Z–A</option>
+        </select>
+      </div>
 
-  <!-- ROW 3 BUTTONS -->
-  <div class="filter-actions">
-    <button class="btn primary" type="submit">Apply Filters</button>
-    <a class="btn secondary" href="<?= h(keep_params(['view' => 'last50', 'page' => 1])) ?>">Last 50</a>
-    <a class="btn secondary" href="<?= h(keep_params(['view' => 'all', 'page' => 1])) ?>">View All</a>
-  </div>
+      <!-- ROW 3 BUTTONS -->
+      <div class="filter-actions">
+        <button class="btn primary" type="submit">Apply Filters</button>
+        <a class="btn secondary" href="<?= h(keep_params(['view' => 'last50', 'page' => 1])) ?>">Last 50</a>
+        <a class="btn secondary" href="<?= h(keep_params(['view' => 'all', 'page' => 1])) ?>">View All</a>
+      </div>
 
-</form>
+    </form>
 
-    
+
 
     <div style="display:flex;align-items:center;gap:12px;margin:8px 0 12px">
       <span class="badge">Total: <?= (int)$total ?></span>
