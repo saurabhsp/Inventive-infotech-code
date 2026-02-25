@@ -427,6 +427,7 @@ ob_start();
     <title>Subscription Invoice List</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/adminconsole/assets/ui.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
         /* Keep inline CSS minimal & in line with cashback_report */
         .table thead th {
@@ -487,12 +488,19 @@ ob_start();
                 <div class="row">
                     <div>
                         <label class="lbl">From (start date)</label>
-                        <input class="inp" type="date" name="from" value="<?= h($from_date) ?>">
+<input class="inp flatpickr" 
+       type="text" 
+       name="from" 
+       placeholder="DD-MM-YYYY"
+       value="<?= $from_date ? h(date('d-m-Y', strtotime($from_date))) : '' ?>">
                     </div>
                     <div>
                         <label class="lbl">To (start date)</label>
-                        <input class="inp" type="date" name="to" value="<?= h($to_date) ?>">
-                    </div>
+<input class="inp flatpickr" 
+       type="text" 
+       name="to" 
+       placeholder="DD-MM-YYYY"
+       value="<?= $to_date ? h(date('d-m-Y', strtotime($to_date))) : '' ?>">                    </div>
                     <?php if ($logged_admin_roleid == 1): ?>
                         <div>
                             <label class="lbl">Profile Type</label>
@@ -621,6 +629,18 @@ ob_start();
         </div>
 
     </div><!-- /master-wrap -->
+    <!-- Flatpickr JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+     document.addEventListener("DOMContentLoaded", function() {
+    flatpickr(".flatpickr", {
+        altInput: true, // user sees formatted date
+        altFormat: "d-m-Y", // display format
+        dateFormat: "Y-m-d", // value sent to backend
+        allowInput: false
+      });
+    });
+</script>
 </body>
 
 </html>
