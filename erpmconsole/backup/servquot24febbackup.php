@@ -2445,12 +2445,6 @@ ob_start();
     renderGrid();
   }
 
-
-function decodeHtml(html) {
-  const txt = document.createElement("textarea");
-  txt.innerHTML = html;
-  return txt.value;
-}
   /* ---------- TERMS RENDER ---------- */
   function renderTerms() {
     const wrap = document.getElementById('terms-wrap');
@@ -2469,7 +2463,8 @@ function decodeHtml(html) {
       <div style="display:flex; justify-content:space-between; gap:10px;">
         <div style="flex:1;">
           <div><strong>${escapeHtml(t.title||'')}</strong> <span class="muted">[Type: ${escapeHtml(t.type||'')}]</span></div>
-<div class="muted" style="font-size:12px; margin-top:6px;">${decodeHtml(t.description || '')}</div>        
+          <div class="muted" style="font-size:12px; margin-top:6px;">${t.description||''}</div>
+        </div>
         <div>
           <button type="button" class="btn danger" onclick="deleteTerm(${idx})">Delete</button>
         </div>

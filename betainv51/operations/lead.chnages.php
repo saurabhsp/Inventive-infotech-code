@@ -333,11 +333,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(['ok' => false, 'msg' => 'Invalid status.']);
         exit;
       }
-      if ($remark === '') {
-        header('Content-Type: application/json');
-        echo json_encode(['ok' => false, 'msg' => 'Remark is required.']);
-        exit;
-      }
+      // if ($remark === '') {
+      //   header('Content-Type: application/json');
+      //   echo json_encode(['ok' => false, 'msg' => 'Remark is required.']);
+      //   exit;
+      // }
 
       $st = $con->prepare("SELECT id,profile_type,status_id FROM `$TABLE` WHERE id=? LIMIT 1");
       $st->bind_param('i', $lead_id);
@@ -738,16 +738,16 @@ if ($mode === 'form') {
 }
 
 
-// $edit = null;
-// if ($mode === 'form' && isset($_GET['edit'])) {
-//   $eid = (int)$_GET['edit'];
-//   $st = $con->prepare("SELECT * FROM `$TABLE` WHERE id=?");
-//   $st->bind_param('i', $eid);
-//   $st->execute();
-//   $edit = $st->get_result()->fetch_assoc();
-//   $st->close();
-//   if (!$edit) $mode = 'list';
-// }
+$edit = null;
+if ($mode === 'form' && isset($_GET['edit'])) {
+  $eid = (int)$_GET['edit'];
+  $st = $con->prepare("SELECT * FROM `$TABLE` WHERE id=?");
+  $st->bind_param('i', $eid);
+  $st->execute();
+  $edit = $st->get_result()->fetch_assoc();
+  $st->close();
+  if (!$edit) $mode = 'list';
+}
 
 /* ---------------- Filters + list ---------------- */
 $q = trim($_GET['q'] ?? '');
@@ -840,11 +840,13 @@ $rows = [];
 $sql = "SELECT l.*,
             s.status_name, s.status_code,
             src.source_name,
-            p.plan_name AS onboarded_plan_name
+            p.plan_name AS onboarded_plan_name,
+            ab.name AS assigned_by_name
       FROM `$TABLE` l
       LEFT JOIN `$STATUSTBL` s ON s.id=l.status_id
       LEFT JOIN `$SOURCETBL` src ON src.id=l.source_id
       LEFT JOIN `$PLANTBL` p ON p.id=l.onboarded_plan_id
+      LEFT JOIN `$ADMINUSERS` ab ON ab.id = l.assigned_by
       $where
       ORDER BY l.id DESC";
 
@@ -1157,7 +1159,8 @@ ob_start(); ?>
             <th>Source</th>
             <th>Status</th>
             <th>On-boarded Plan</th>
-            <th>Assigned</th>
+            <th>Assigned By / Date</th>
+            <th>Assigned To</th>
             <th>Updated</th>
             <th style="min-width:260px">Actions</th>
           </tr>
@@ -1178,6 +1181,10 @@ ob_start(); ?>
 
             $ass = (int)($r['assigned_to'] ?? 0);
             $assName = $ass > 0 ? ($adminUsers[$ass] ?? ('#' . $ass)) : '—';
+
+
+            $assignedByName = $r['assigned_by_name'] ?? '—';
+            $assignedAt = fmt_dt($r['assigned_at'] ?? null);
 
             $payload = [
               'id' => (int)$r['id'],
@@ -1208,9 +1215,12 @@ ob_start(); ?>
               <td><?= h($r['source_name'] ?? '—') ?></td>
               <td><span class="badge on"><?= h($r['status_name'] ?? '—') ?></span></td>
               <td><?= h($r['onboarded_plan_name'] ?? '—') ?></td>
+              <td>
+                <?= h($assignedByName) ?><br>
+                <small style="color:#9ca3af"><?= h($assignedAt) ?></small>
+              </td>
               <td><?= h($assName) ?></td>
               <td><?= h(fmt_dt($r['updated_at'] ?? null)) ?></td>
-
               <td>
                 <button class="btn gray" type="button"
                   onclick='openStatusModal(<?= (int)$r["id"] ?>, <?= json_encode($payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>

@@ -206,6 +206,36 @@ if ($range === 'lifetime') {
     );
 }
 
+/* 6️⃣ Total Applications */
+
+$applicationsTbl = 'jos_app_applications';
+
+if ($range === 'lifetime') {
+
+    $totalApplications = fetch_one(
+        $con,
+        "SELECT COUNT(*) AS total
+         FROM `$applicationsTbl` A
+         INNER JOIN `$usersTbl` U ON U.id = A.userid
+         WHERE U.ac_manager_id = ?",
+        "i",
+        [$logged_admin_id]
+    );
+
+} else {
+
+    $totalApplications = fetch_one(
+        $con,
+        "SELECT COUNT(*) AS total
+         FROM `$applicationsTbl` A
+         INNER JOIN `$usersTbl` U ON U.id = A.userid
+         WHERE U.ac_manager_id = ?
+         AND A.application_date BETWEEN ? AND ?",
+        "iss",
+        [$logged_admin_id, $from, $to]
+    );
+}
+
 $stmt->execute();
 $result = $stmt->get_result();
 $row = $result->fetch_assoc();
@@ -466,6 +496,17 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
                     <a class="btn-link" href="#" onclick="openBreakdown('subscriptionrev'); return false;">View Details →</a>
                 </div>
             </div>
+            
+            <!-- Total Applications -->
+               <div class="card kpi-card">
+                <div>
+                    <div class="card-title">Total Applications</div>
+                    <div class="card-value" id="total_applications"><?= $totalApplications ?></div>
+                </div>
+                <div class="card-actions">
+                    <a class="btn-link" href="#" onclick="openBreakdown('total_applications'); return false;">View Details →</a>
+                </div>
+            </div>
 
             <!--<div class="card kpi-card">-->
             <!--    <div>-->
@@ -508,9 +549,13 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
                 form.action = "/adminconsole/operations/my_recruiter_list.php";
             } else if (mode === 'subscriptionrev') {
                 form.action = "/adminconsole/operations/subscription_invoicelist.php";
-            } else {
-                // 🔹 Default → lead list
+            } else if (mode === 'total_applications') {
+                form.action = "/adminconsole/operations/applications_report.php";
+            }  else if (mode === 'leads_assigned' || mode === 'leads_self' ) {
                 form.action = "/adminconsole/operations/lead_list.php";
+            } else {
+                // 🔹 Default 
+                form.action = "#";
             }
 
             form.submit();

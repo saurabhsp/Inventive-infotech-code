@@ -262,11 +262,13 @@ $rows = [];
 $sql = "SELECT l.*,
             s.status_name, s.status_code,
             src.source_name,
-            p.plan_name AS onboarded_plan_name
+            p.plan_name AS onboarded_plan_name,
+            au.name AS assigned_by_name
         FROM `$TABLE` l
         LEFT JOIN `$STATUSTBL` s ON s.id=l.status_id
         LEFT JOIN `$SOURCETBL` src ON src.id=l.source_id
         LEFT JOIN `$PLANTBL` p ON p.id=l.onboarded_plan_id
+        LEFT JOIN `$ADMINUSERS` au ON au.id = l.assigned_by
         $whereFull
         ORDER BY l.id DESC";
 if (!$all) $sql .= " LIMIT $lim";
@@ -426,7 +428,8 @@ ob_start(); ?>
           <th>Source</th>
           <th>Status</th>
           <th>On-boarded Plan</th>
-          <th>Assigned</th>
+          <th>Assigned By</th>
+          <th>Assigned To</th>
           <th>Updated</th>
         </tr>
       </thead>
@@ -441,6 +444,8 @@ ob_start(); ?>
           $name = ($pt===1) ? ($r['company_name'] ?: '—') : ($r['candidate_name'] ?: '—');
           $ass = (int)($r['assigned_to'] ?? 0);
           $assName = $ass>0 ? ($adminUsers[$ass] ?? ('#'.$ass)) : '—';
+          $assignedByName = $r['assigned_by_name'] ?? '—';
+          $assignedAt     = fmt_dt($r['assigned_at'] ?? null);
         ?>
           <tr>
             <td><?= (int)$sr ?></td>
@@ -452,6 +457,10 @@ ob_start(); ?>
             <td><?= h($r['source_name'] ?? '—') ?></td>
             <td><span class="badge on"><?= h($r['status_name'] ?? '—') ?></span></td>
             <td><?= h($r['onboarded_plan_name'] ?? '—') ?></td>
+            <td>
+                <?= h($assignedByName) ?><br>
+                <small style="color:#9ca3af"><?= h($assignedAt) ?></small>
+              </td>
             <td><?= h($assName) ?></td>
             <td><?= h(fmt_dt($r['updated_at'] ?? null)) ?></td>
           </tr>

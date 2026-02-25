@@ -193,7 +193,7 @@ if (!table_exists($con, $TABLE_Q_HEADER) || !table_exists($con, $TABLE_Q_GRID) |
       </div>
     </div>
   </div>
-<?php
+  <?php
   $CONTENT = ob_get_clean();
   require_once __DIR__ . '/../includes/ui_autoshell.php';
   exit;
@@ -1110,12 +1110,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['quotation_form']) && 
       $instT->execute();
     }
     $instT->close();
-
     $con->commit();
-    set_flash('q_ok', 'Quotation saved successfully.');
 
-    // must clear form after save
-    header('Location: service_quotation.php');
+
+    // set_flash('q_ok', 'Quotation saved successfully.');
+
+
+
+    //NEW CODE ON REDIRETION
+  ?>
+
+    <!DOCTYPE html>
+    <html>
+
+    <head>
+      <title>Opening Print...</title>
+    </head>
+
+    <body>
+
+      <form id="printForm" method="POST" action="../reports/service_quotation_print.php">
+        <input type="hidden" name="_csrf" value="<?php echo h(csrf_token()); ?>">
+        <input type="hidden" name="quotation_id" value="<?php echo (int)$qutid; ?>">
+      </form>
+
+      <script>
+        document.getElementById('printForm').submit();
+      </script>
+
+    </body>
+
+    </html>
+
+<?php
     exit;
   } catch (Throwable $e) {
     $con->rollback();
@@ -2339,62 +2366,62 @@ ob_start();
 
   function calcRow(r) {
 
-  const rate = num(r.rate);
-  const qty  = num(r.qty);
-  const gst  = num(r.gst);
+    const rate = num(r.rate);
+    const qty = num(r.qty);
+    const gst = num(r.gst);
 
-  /* =========================
-   * 1️⃣ BASE (PER UNIT)
-   * ========================= */
-  let base = rate;
+    /* =========================
+     * 1️⃣ BASE (PER UNIT)
+     * ========================= */
+    let base = rate;
 
-  /* =========================
-   * 2️⃣ NORMAL DISCOUNT
-   * ========================= */
-  const discPer = num(r.discount);        // %
-  const discRs  = num(r.instantdisc);     // Rs
+    /* =========================
+     * 2️⃣ NORMAL DISCOUNT
+     * ========================= */
+    const discPer = num(r.discount); // %
+    const discRs = num(r.instantdisc); // Rs
 
-  const normalDiscAmt = (base * discPer / 100) + discRs;
-  let afterNormal = base - normalDiscAmt;
-  if (afterNormal < 0) afterNormal = 0;
+    const normalDiscAmt = (base * discPer / 100) + discRs;
+    let afterNormal = base - normalDiscAmt;
+    if (afterNormal < 0) afterNormal = 0;
 
-  /* =========================
-   * 3️⃣ LOYALTY DISCOUNT
-   * ========================= */
-  const loyPer = num(r.addiloyality_per);   // %
-  const loyRs  = num(r.addiloyalilty_rs);   // Rs
+    /* =========================
+     * 3️⃣ LOYALTY DISCOUNT
+     * ========================= */
+    const loyPer = num(r.addiloyality_per); // %
+    const loyRs = num(r.addiloyalilty_rs); // Rs
 
-  const loyaltyAmt = (afterNormal * loyPer / 100) + loyRs;
-  let afterLoyalty = afterNormal - loyaltyAmt;
-  if (afterLoyalty < 0) afterLoyalty = 0;
+    const loyaltyAmt = (afterNormal * loyPer / 100) + loyRs;
+    let afterLoyalty = afterNormal - loyaltyAmt;
+    if (afterLoyalty < 0) afterLoyalty = 0;
 
-  /* =========================
-   * 4️⃣ ADDITIONAL DISCOUNT
-   * ========================= */
-  const addPer = num(r.addidiscount_per);   // %
-  const addRs  = num(r.addidiscount_rs);    // Rs
+    /* =========================
+     * 4️⃣ ADDITIONAL DISCOUNT
+     * ========================= */
+    const addPer = num(r.addidiscount_per); // %
+    const addRs = num(r.addidiscount_rs); // Rs
 
-  const additionalAmt = (afterLoyalty * addPer / 100) + addRs;
-  let finalRate = afterLoyalty - additionalAmt;
-  if (finalRate < 0) finalRate = 0;
+    const additionalAmt = (afterLoyalty * addPer / 100) + addRs;
+    let finalRate = afterLoyalty - additionalAmt;
+    if (finalRate < 0) finalRate = 0;
 
-  /* =========================
-   * 5️⃣ FINAL AMOUNTS
-   * ========================= */
-  finalRate = Math.round(finalRate); // per-unit final rate (same as modal)
+    /* =========================
+     * 5️⃣ FINAL AMOUNTS
+     * ========================= */
+    finalRate = Math.round(finalRate); // per-unit final rate (same as modal)
 
-  const net = finalRate * qty;        // discounted amount (before GST)
-  const gstamt = gst > 0 ? (net * gst / 100) : 0;
-  const amt = net + gstamt;
+    const net = finalRate * qty; // discounted amount (before GST)
+    const gstamt = gst > 0 ? (net * gst / 100) : 0;
+    const amt = net + gstamt;
 
-  /* =========================
-   * 6️⃣ STORE RESULTS
-   * ========================= */
-  r.finalrate = finalRate; // keep grid & modal aligned
-  r._net      = net;
-  r._gstamt   = gstamt;
-  r._amt      = amt;
-}
+    /* =========================
+     * 6️⃣ STORE RESULTS
+     * ========================= */
+    r.finalrate = finalRate; // keep grid & modal aligned
+    r._net = net;
+    r._gstamt = gstamt;
+    r._amt = amt;
+  }
 
 
 
@@ -2445,12 +2472,6 @@ ob_start();
     renderGrid();
   }
 
-
-function decodeHtml(html) {
-  const txt = document.createElement("textarea");
-  txt.innerHTML = html;
-  return txt.value;
-}
   /* ---------- TERMS RENDER ---------- */
   function renderTerms() {
     const wrap = document.getElementById('terms-wrap');
@@ -2469,7 +2490,8 @@ function decodeHtml(html) {
       <div style="display:flex; justify-content:space-between; gap:10px;">
         <div style="flex:1;">
           <div><strong>${escapeHtml(t.title||'')}</strong> <span class="muted">[Type: ${escapeHtml(t.type||'')}]</span></div>
-<div class="muted" style="font-size:12px; margin-top:6px;">${decodeHtml(t.description || '')}</div>        
+          <div class="muted" style="font-size:12px; margin-top:6px;">${t.description||''}</div>
+        </div>
         <div>
           <button type="button" class="btn danger" onclick="deleteTerm(${idx})">Delete</button>
         </div>
@@ -2624,7 +2646,7 @@ function decodeHtml(html) {
     let afterDisc = rate - discAmt;
     if (afterDisc < 0) afterDisc = 0;
 
-   document.getElementById('rm_inst_final').value = Math.round(afterDisc);
+    document.getElementById('rm_inst_final').value = Math.round(afterDisc);
 
 
     /* -------------------------
@@ -3295,7 +3317,7 @@ function decodeHtml(html) {
 
     setv('total2', total2);
 
-/* -----------------------------
+    /* -----------------------------
      * 10. TCS (ONLY on Basic + Packing)
      * ----------------------------- */
     const tcsPer = val('tcs');
@@ -3383,7 +3405,7 @@ function decodeHtml(html) {
     const total5 = total5Raw;
     setv('total5', total5);
 
-    
+
     /* -----------------------------
      * 11. GRAND TOTAL
      * ----------------------------- */
@@ -3642,6 +3664,8 @@ function decodeHtml(html) {
 
   window.openRowModal = openRowModal;
 </script>
+
+
 
 <?php
 $CONTENT = ob_get_clean();

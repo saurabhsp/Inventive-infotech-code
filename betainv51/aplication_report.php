@@ -883,6 +883,7 @@ if ($date_to) {
 $listing_type = get_int('lt', 0);         // 0=All, 1=Premium (walk-in), 2=Standard (vacancy)
 $status_id    = get_int('status_id', 0);  // jos_app_applicationstatus.id
 $candidate_name = get_str('candidate_name', '');
+$company_name = get_str('company_name', '');
 $view_all     = get_int('all', 0);        // 1=View All
 $limit        = $view_all ? 1000 : 50;
 
@@ -895,6 +896,20 @@ if ($rs = mysqli_query($con, "SELECT id,name FROM jos_app_applicationstatus WHER
     $status_opts[] = $r;
     $status_name_by_id[(int)$r['id']] = $r['name'];
   }
+}
+
+/* ----------------- company options ----------------- */
+$company_opts = [];
+$rs = mysqli_query($con, "
+    SELECT DISTINCT organization_name 
+    FROM jos_app_recruiter_profile 
+    WHERE organization_name IS NOT NULL 
+    AND organization_name != ''
+    ORDER BY organization_name ASC
+");
+
+while ($r = mysqli_fetch_assoc($rs)) {
+  $company_opts[] = $r['organization_name'];
 }
 
 /* ----------------- build query ----------------- */
@@ -925,6 +940,8 @@ $sql[] = "LEFT JOIN jos_app_recruiter_profile RP2 ON RP2.id = JV.recruiter_id";
 $sql[] = "LEFT JOIN jos_app_candidate_profile CP ON CP.userid = A.userid";
 $sql[] = "WHERE 1=1";
 
+
+
 $types = '';
 $binds = [];
 if ($date_from !== '') {
@@ -951,6 +968,20 @@ if ($candidate_name !== '') {
   $sql[] = "AND CP.candidate_name LIKE ?";
   $types .= 's';
   $binds[] = "%" . $candidate_name . "%";
+}
+
+if ($company_name !== '') {
+  $sql[] = "AND (
+      JW.company_name LIKE ?
+      OR JV.company_name LIKE ?
+      OR RP1.organization_name LIKE ?
+      OR RP2.organization_name LIKE ?
+  )";
+  $types .= 'ssss';
+  $binds[] = "%" . $company_name . "%";
+  $binds[] = "%" . $company_name . "%";
+  $binds[] = "%" . $company_name . "%";
+  $binds[] = "%" . $company_name . "%";
 }
 
 
@@ -1064,7 +1095,7 @@ ob_start(); ?>
           <div class="muted">Last <?= $view_all ? 'All' : '50'; ?> records • Filter by date, listing type, and status.</div>
         </div>
         <div style="margin-left:auto">
-          <a class="btn secondary" href="<?= h(keep_params(['from' => null, 'to' => null, 'lt' => null, 'status_id' => null, 'candidate_name' => null, 'all' => null])) ?>">
+          <a class="btn secondary" href="<?= h(keep_params(['from' => null, 'to' => null, 'lt' => null, 'status_id' => null, 'candidate_name' => null, 'all' => null, 'company_name' => null])) ?>">
             Reset</a>
         </div>
       </div>
@@ -1115,6 +1146,16 @@ ob_start(); ?>
               value="<?= h($candidate_name) ?>"
               placeholder="Enter candidate name" />
           </div>
+
+          <div class="group">
+            <label>Company</label>
+            <input class="inp"
+              type="text"
+              name="company_name"
+              value="<?= h($company_name) ?>"
+              placeholder="Enter company name" />
+          </div>
+
 
           <div class="group">
             <label>&nbsp;</label>
@@ -1184,15 +1225,15 @@ ob_start(); ?>
     </div>
   </div>
   <script>
-document.addEventListener("DOMContentLoaded", function() {
-  flatpickr(".datepicker", {
-    altInput: true,          // user sees formatted date
-    altFormat: "d-m-Y",      // display format
-    dateFormat: "Y-m-d",     // value sent to backend
-    allowInput: false
-  });
-});
-</script>
+    document.addEventListener("DOMContentLoaded", function() {
+      flatpickr(".datepicker", {
+        altInput: true, // user sees formatted date
+        altFormat: "d-m-Y", // display format
+        dateFormat: "Y-m-d", // value sent to backend
+        allowInput: false
+      });
+    });
+  </script>
 
 </body>
 

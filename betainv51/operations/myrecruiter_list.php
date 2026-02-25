@@ -581,11 +581,11 @@ ob_start();
 
           // Optional: Replace image button
           echo '
-<form id="logoForm" method="post" style="margin-top:8px;">
-    <input type="file" id="logoInput" accept="image/*" required>
-    <input type="hidden" name="cropped_image" id="croppedImage">
-    <input type="hidden" name="upload_logo" value="1">
-</form>';
+            <form id="logoForm" method="post" style="margin-top:8px;">
+                <input type="file" id="logoInput" accept="image/*" required>
+                <input type="hidden" name="cropped_image" id="croppedImage">
+                <input type="hidden" name="upload_logo" value="1">
+            </form>';
         } else {
 
           echo '<div style="width:140px;height:140px;background:#111827;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9ca3af;">
@@ -593,27 +593,27 @@ ob_start();
           </div>';
 
           echo '
-<form id="logoForm" method="post" style="margin-top:8px;">
-    <input type="file" id="logoInput" accept="image/*" required>
-    <input type="hidden" name="cropped_image" id="croppedImage">
-    <input type="hidden" name="upload_logo" value="1">
-</form>';
+            <form id="logoForm" method="post" style="margin-top:8px;">
+                <input type="file" id="logoInput" accept="image/*" required>
+                <input type="hidden" name="cropped_image" id="croppedImage">
+                <input type="hidden" name="upload_logo" value="1">
+            </form>';
         }
 
 
 
         echo '<div id="cropModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:#fff;padding:20px;border-radius:12px;max-width:500px;width:90%;">
-      <h3>Crop Logo (150 x 150)</h3>
-      <div>
-          <img id="cropImage" style="max-width:100%;">
-      </div>
-      <div style="margin-top:15px;text-align:right;">
-          <button id="cropCancel" class="btn secondary">Cancel</button>
-          <button id="cropSave" class="btn primary">Crop & Upload</button>
-      </div>
-  </div>
-</div>';
+            <div style="background:#fff;padding:20px;border-radius:12px;max-width:500px;width:90%;">
+                <h3>Crop Logo (150 x 150)</h3>
+                <div>
+                    <img id="cropImage" style="max-width:100%;">
+                </div>
+                <div style="margin-top:15px;text-align:right;">
+                    <button id="cropCancel" class="btn secondary">Cancel</button>
+                    <button id="cropSave" class="btn primary">Crop & Upload</button>
+                </div>
+            </div>
+          </div>';
         echo '<hr style="margin:16px 0;">';
 
         echo '</div>';

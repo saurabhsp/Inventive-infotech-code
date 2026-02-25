@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 require_login();
+$userloggedin = current_user();
+$uid = isset($u['id']) ? (int)$userloggedin['id'] : 0;
+$userroleid = isset($u['role_id']) ? (int)$userloggedin['role_id'] : 0;
 
 /* ------------------ View-only ACL guard (inserted) ------------------
    Same behaviour as applications_report.php:
@@ -496,7 +499,7 @@ if ($mode === 'candidate') {
             'Experience Period' => $C['experience_period_name'] ?? '',
             'Address'           => $C['address'] ?? '',
             'City'              => $C['city_id'] ?? '',
-            'Locality ID'       => $C['locality_id'] ?? '',
+            'Locality'          => $C['locality_id'] ?? '',
             'Latitude'          => isset($C['latitude']) ? trim((string)$C['latitude']) : '',
             'Longitude'         => isset($C['longitude']) ? trim((string)$C['longitude']) : '',
             'Created'           => fmt_date($C['created_at'] ?? ''),
@@ -1259,6 +1262,7 @@ $page_title = 'Users – Candidate-wise List';
 ob_start();
 ?>
 <link rel="stylesheet" href="/adminconsole/assets/ui.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
   .table a.ref-link {
     text-decoration: none;
@@ -1311,6 +1315,73 @@ ob_start();
     background: #2563eb;
     border-color: #2563eb;
     color: #f9fafb;
+  }
+
+
+
+  /* Tag Cloud */
+  .job-filter-wrapper {
+    position: relative;
+    min-width: 260px;
+    max-width: 320px;
+  }
+
+  .job-dropdown-toggle {
+    padding: 8px 12px;
+    background: #0b1220;
+    border: 1px solid #1f2937;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  .job-dropdown {
+    position: absolute;
+    top: 42px;
+    left: 0;
+    width: 100%;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #0b1220;
+    border: 1px solid #1f2937;
+    border-radius: 8px;
+    display: none;
+    z-index: 50;
+    padding: 6px;
+  }
+
+  .job-option {
+    display: block;
+    padding: 4px 6px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .job-option input {
+    margin-right: 6px;
+  }
+
+  .selected-jobs {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .selected-chip {
+    padding: 4px 10px;
+    background: #2563eb;
+    color: #fff;
+    border-radius: 999px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .selected-chip span {
+    cursor: pointer;
+    font-weight: bold;
   }
 </style>
 
@@ -1445,7 +1516,7 @@ LEFT JOIN (
       $params[] = $referral_code_in;
     }
 
-    if ($plan_access_in > 0) {
+    if ($userroleid == 1 && $plan_access_in > 0) {
       $where[] = "CAST(sp.plan_access AS UNSIGNED)=?";
       $types .= 'i';
       $params[] = $plan_access_in;
@@ -1468,10 +1539,10 @@ LEFT JOIN (
       $params[] = $created_to_sql;
     }
     if ($subscription_plan_id > 0) {
-  $where[] = "COALESCE(ls.plan_id, u.active_plan_id) = ?";
-  $types .= 'i';
-  $params[] = $subscription_plan_id;
-}
+      $where[] = "COALESCE(ls.plan_id, u.active_plan_id) = ?";
+      $types .= 'i';
+      $params[] = $subscription_plan_id;
+    }
 
 
     /* preferred job positions filter */
@@ -1569,34 +1640,42 @@ SELECT
 
 
     /* ---- subscription plans for filter (profile_type=2 only) ---- */
-$subscription_plan_opts = [];
-if ($rs = mysqli_query($con, "
+    $subscription_plan_opts = [];
+    if ($rs = mysqli_query($con, "
     SELECT id, plan_name 
     FROM jos_app_subscription_plans 
     WHERE profile_type = 2 
     ORDER BY plan_name
 ")) {
-  while ($r = mysqli_fetch_assoc($rs)) {
-    $subscription_plan_opts[] = $r;
-  }
-}
+      while ($r = mysqli_fetch_assoc($rs)) {
+        $subscription_plan_opts[] = $r;
+      }
+    }
 
     /* ---- filters UI ---- */
     ?>
     <form method="get" class="toolbar" style="gap:10px;flex-wrap:wrap">
       <input class="inp" type="text" name="q" value="<?= h($q) ?>" placeholder="Search name/mobile/referral..." style="min-width:240px">
 
-      <input class="inp" type="text" name="city_id" value="<?= h($city_id) ?>" placeholder="City ID">
+      <input class="inp" type="text" name="city_id" value="<?= h($city_id) ?>" placeholder="City Name">
 
       <!-- Registration date filters with datepicker -->
       <div style="display:flex;flex-direction:column;min-width:180px">
         <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Registration Date From</span>
-        <input class="inp" type="date" name="created_from" value="<?= h($created_from_sql ?: $created_from_raw) ?>">
+        <input class="inp flatpickr-date"
+          type="text"
+          name="created_from"
+          placeholder="DD-MM-YYYY"
+          value="<?= h($created_from_raw) ?>">
       </div>
 
       <div style="display:flex;flex-direction:column;min-width:180px">
         <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Registration Date To</span>
-        <input class="inp" type="date" name="created_to" value="<?= h($created_to_sql ?: $created_to_raw) ?>">
+        <input class="inp flatpickr-date"
+          type="text"
+          name="created_to"
+          placeholder="DD-MM-YYYY"
+          value="<?= h($created_to_raw) ?>">
       </div>
 
       <select class="inp" name="status_id" title="Status">
@@ -1613,23 +1692,26 @@ if ($rs = mysqli_query($con, "
 
       <input class="inp" type="text" name="referral_code" value="<?= h($referral_code_in) ?>" placeholder="Referral Code">
 
-      <select class="inp" name="plan_access" title="Plan Access">
-        <option value="0" <?= $plan_access_in === 0 ? 'selected' : '' ?>>Plan Access: Any</option>
-        <option value="1" <?= $plan_access_in === 1 ? 'selected' : '' ?>>Free</option>
-        <option value="2" <?= $plan_access_in === 2 ? 'selected' : '' ?>>Premium</option>
-      </select>
+
+      <?php if ($userroleid == 1): ?>
+        <select class="inp" name="plan_access" title="Plan Access">
+          <option value="0" <?= $plan_access_in === 0 ? 'selected' : '' ?>>Plan Access: Any</option>
+          <option value="1" <?= $plan_access_in === 1 ? 'selected' : '' ?>>Free</option>
+          <option value="2" <?= $plan_access_in === 2 ? 'selected' : '' ?>>Premium</option>
+        </select>
+      <?php endif; ?>
 
       <select class="inp" name="subscription_plan_id" title="Subscription Plan">
-      <option value="0" <?= $subscription_plan_id === 0 ? 'selected' : '' ?>>
-        Subscription Plan: Any
-      </option>
-      <?php foreach ($subscription_plan_opts as $sp): 
-            $pid = (int)$sp['id'];
-      ?>
-        <option value="<?= $pid ?>" <?= $subscription_plan_id === $pid ? 'selected' : '' ?>>
-          <?= h($sp['plan_name']) ?>
+        <option value="0" <?= $subscription_plan_id === 0 ? 'selected' : '' ?>>
+          Subscription Plan: Any
         </option>
-      <?php endforeach; ?>
+        <?php foreach ($subscription_plan_opts as $sp):
+          $pid = (int)$sp['id'];
+        ?>
+          <option value="<?= $pid ?>" <?= $subscription_plan_id === $pid ? 'selected' : '' ?>>
+            <?= h($sp['plan_name']) ?>
+          </option>
+        <?php endforeach; ?>
       </select>
 
 
@@ -1640,8 +1722,9 @@ if ($rs = mysqli_query($con, "
       </select>
 
       <!-- Preferred job positions (multi-select) -->
-      <select class="inp" name="job_position_ids[]" multiple size="3"
-        title="Preferred Job Positions" style="min-width:220px;">
+      <!-- Hidden original select (used for form submission) -->
+      <!-- Hidden select for form submission -->
+      <select id="job_position_select" name="job_position_ids[]" multiple style="display:none;">
         <?php foreach ($job_positions_opts as $jp):
           $id = (int)$jp['id'];
           $sel = in_array($id, $preferred_job_ids, true) ? 'selected' : '';
@@ -1649,6 +1732,33 @@ if ($rs = mysqli_query($con, "
           <option value="<?= $id ?>" <?= $sel ?>><?= h($jp['name']) ?></option>
         <?php endforeach; ?>
       </select>
+
+      <div class="job-filter-wrapper">
+
+        <!-- Dropdown Toggle -->
+        <div class="job-dropdown-toggle" id="jobDropdownToggle">
+          Select Job Positions ▼
+        </div>
+
+        <!-- Dropdown List -->
+        <div class="job-dropdown" id="jobDropdown">
+          <?php foreach ($job_positions_opts as $jp):
+            $id = (int)$jp['id'];
+            $checked = in_array($id, $preferred_job_ids, true);
+          ?>
+            <label class="job-option">
+              <input type="checkbox"
+                value="<?= $id ?>"
+                <?= $checked ? 'checked' : '' ?>>
+              <?= h($jp['name']) ?>
+            </label>
+          <?php endforeach; ?>
+        </div>
+
+        <!-- Selected Chips Box -->
+        <div class="selected-jobs" id="selectedJobs"></div>
+
+      </div>
 
       <!-- referrer filters -->
       <input class="inp" type="text" name="referrer_q" value="<?= h($referrer_q) ?>" placeholder="Search Referrer: name/mobile" style="min-width:220px">
@@ -1809,5 +1919,81 @@ if ($rs = mysqli_query($con, "
 
   </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+
+    const toggle = document.getElementById('jobDropdownToggle');
+    const dropdown = document.getElementById('jobDropdown');
+    const hiddenSelect = document.getElementById('job_position_select');
+    const selectedBox = document.getElementById('selectedJobs');
+
+    toggle.addEventListener('click', function() {
+      dropdown.style.display =
+        dropdown.style.display === 'block' ? 'none' : 'block';
+    });
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.job-filter-wrapper')) {
+        dropdown.style.display = 'none';
+      }
+    });
+
+    function updateSelected() {
+      selectedBox.innerHTML = '';
+
+      const checkedBoxes = dropdown.querySelectorAll('input:checked');
+
+      // FIRST: clear all selections
+      Array.from(hiddenSelect.options).forEach(option => {
+        option.selected = false;
+      });
+
+      checkedBoxes.forEach(box => {
+        const value = box.value;
+        const labelText = box.parentElement.textContent.trim();
+
+        // Mark matching option as selected
+        Array.from(hiddenSelect.options).forEach(option => {
+          if (option.value === value) {
+            option.selected = true;
+          }
+        });
+
+        // Create chip
+        const chip = document.createElement('div');
+        chip.className = 'selected-chip';
+        chip.innerHTML = labelText + ' <span data-value="' + value + '">×</span>';
+        selectedBox.appendChild(chip);
+      });
+    }
+
+    dropdown.querySelectorAll('input').forEach(box => {
+      box.addEventListener('change', updateSelected);
+    });
+
+    selectedBox.addEventListener('click', function(e) {
+      if (e.target.tagName === 'SPAN') {
+        const value = e.target.getAttribute('data-value');
+
+        dropdown.querySelectorAll('input').forEach(box => {
+          if (box.value === value) box.checked = false;
+        });
+
+        updateSelected();
+      }
+    });
+
+    updateSelected();
+
+    flatpickr(".flatpickr-date", {
+      altInput: true, // user sees formatted date
+      altFormat: "d-m-Y", // display format
+      dateFormat: "Y-m-d", // value sent to backend
+      allowInput: false,
+      maxDate: "today"
+    });
+  });
+</script>
 <?php
 echo ob_get_clean();
