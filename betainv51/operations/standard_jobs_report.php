@@ -11,6 +11,12 @@ if (!$con) {
 require_once __DIR__ . '/../includes/auth.php';
 require_login();
 
+// ACCEPT RECRUITER ID FROM LIST
+$recruiter_id = 0;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $recruiter_id = isset($_POST['recruiter_id']) ? (int)$_POST['recruiter_id'] : 0;
+}
 /* ----------------------------
    ACL: view-only guard (same as premium_jobs_report.php)
    ---------------------------- */
@@ -859,6 +865,14 @@ $locality  = get_str('locality', '');
 $where = [];
 $types = '';
 $params = [];
+
+// Apply recruiter filter only if recruiter_id exists
+if ($recruiter_id > 0) {
+  $where[] = "jv.recruiter_id = ?";
+  $types  .= 'i';
+  $params[] = $recruiter_id;
+}
+
 if ($q !== '') {
   $where[] = "(COALESCE(jv.company_name, rp.organization_name) LIKE CONCAT('%',?,'%') OR jp.name LIKE CONCAT('%',?,'%'))";
   $types .= 'ss';
@@ -1026,12 +1040,16 @@ ob_start(); ?>
   </div>
 
   <div class="card">
-   <form method="get" style="display:flex;flex-direction:column;gap:16px">
+    <form method="get" style="display:flex;flex-direction:column;gap:16px">
       <?php if ($position_id > 0): ?>
         <input type="hidden" name="position_id" value="<?= (int)$position_id ?>">
       <?php endif; ?>
       <?php if ($returnUrl): ?>
         <input type="hidden" name="return" value="<?= h($returnUrl) ?>">
+      <?php endif; ?>
+
+      <?php if ($recruiter_id > 0): ?>
+        <input type="hidden" name="recruiter_id" value="<?= (int)$recruiter_id ?>">
       <?php endif; ?>
 
 
@@ -1040,7 +1058,7 @@ ob_start(); ?>
       display:grid;
       grid-template-columns:repeat(4, 1fr);
       gap:16px;">
-  
+
         <input class="inp" type="text" name="q" value="<?= h($q) ?>" placeholder="Search job/company..." style="min-width:240px">
 
 
@@ -1086,21 +1104,21 @@ ob_start(); ?>
 
 
       <!-- BUTTON ROW -->
-  <div style="display:flex;gap:12px;">
-    <button class="btn primary" type="submit">Apply</button>
+      <div style="display:flex;gap:12px;">
+        <button class="btn primary" type="submit">Apply</button>
 
-    <a class="btn secondary"
-       href="<?= h(keep_params(['view'=>'last50','page'=>1])) ?>">
-       Last <?= $DEFAULT_PAGE_SIZE ?>
-    </a>
+        <a class="btn secondary"
+          href="<?= h(keep_params(['view' => 'last50', 'page' => 1])) ?>">
+          Last <?= $DEFAULT_PAGE_SIZE ?>
+        </a>
 
-    <a class="btn secondary"
-       href="<?= h(keep_params(['view'=>'all','page'=>1])) ?>">
-       View All
-    </a>
-  </div>
+        <a class="btn secondary"
+          href="<?= h(keep_params(['view' => 'all', 'page' => 1])) ?>">
+          View All
+        </a>
+      </div>
 
-</form>
+    </form>
 
     <div style="display:flex;align-items:center;gap:12px;margin:8px 0 12px">
       <span class="badge">Total: <?= (int)$total ?></span>
