@@ -256,10 +256,11 @@ if (isset($_GET['candidate'])) {
             <div class="headbar">
                 <h2 style="margin:0">Premium Jobs List</h2>
                 <div style="margin-left:auto;display:flex;gap:8px">
+
                     <?php if ($returnUrl): ?>
-                        <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back to Position Summary</a>
+                        <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back</a>
                     <?php endif; ?>
-                    <a class="btn secondary" href="<?= h(keep_params(['candidate' => null])) ?>">← Back</a>
+                    <a class="btn secondary" href="premium_jobs_report.php">← Back</a>
                 </div>
             </div>
             <div class="card" style="padding:20px">
@@ -394,12 +395,14 @@ if (isset($_GET['apps'])) {
                  a.userid,
                  a.application_date,
                  a.status_id,
+                 s.name AS status_name,
                  a.interview_date_time,
                  cp.candidate_name,
                  cp.mobile_no,
                  cp.email
           FROM jos_app_applications a
           LEFT JOIN jos_app_candidate_profile cp ON cp.userid = a.userid
+          LEFT JOIN jos_app_applicationstatus s ON s.id = a.status_id
           WHERE a.job_listing_type = 1 AND a.job_id = ?
           ORDER BY a.application_date DESC";
     $stmt = $con->prepare($sql);
@@ -416,13 +419,15 @@ if (isset($_GET['apps'])) {
     <link rel="stylesheet" href="/adminconsole/assets/ui.css">
     <div class="master-wrap">
         <div class="headbar">
-            <h2 style="margin:0">Applications — <?= h($job['job_position'] ?? ('Job #' . $jobId)) ?></h2>
+            <h2 style="margin:0">Applications — <?= h($job['job_position'] ?? ('Job #' . $jobId)) ?> (<?= (int)count($rows) ?>)</h2>
             <div style="margin-left:auto;display:flex;gap:8px">
+
                 <?php if ($returnUrl): ?>
-                    <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back to Position Summary</a>
+                    <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back</a>
+                <?php else: ?>
+                    <a class="btn secondary" href="premium_jobs_report.php">← Back</a>
                 <?php endif; ?>
-                <a class="btn secondary" href="<?= h(keep_params(['apps' => null])) ?>">← Back</a>
-                <span class="badge">Total: <?= (int)count($rows) ?></span>
+                <!-- <span class="badge">Total: <?= (int)count($rows) ?></span> -->
             </div>
         </div>
 
@@ -462,7 +467,7 @@ if (isset($_GET['apps'])) {
                                 echo implode('<br>', $contact);
                                 echo '</td>';
                                 echo '<td>' . h(fmt_date($r['application_date'])) . '</td>';
-                                echo '<td>' . h((string)$r['status_id']) . '</td>';
+                                echo '<td>' . h((string)$r['status_name']) . '</td>';
                                 echo '<td>' . h(safe_date_label($r['interview_date_time'])) . '</td>';
                                 echo '<td><a class="btn secondary" href="' . $viewCandUrl . '" target="_blank" rel="noopener">View Details</a></td>';
                                 echo '</tr>';
@@ -570,15 +575,28 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
         <div class="headbar">
             <h2 style="margin:0"><?= h($row ? ($row['job_position'] ?: 'Job Details') : 'Job not found') ?></h2>
             <div style="margin-left:auto;display:flex;gap:8px">
-                <?php if ($returnUrl): ?>
-                    <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back to Position Summary</a>
-                <?php endif; ?>
-                <?php if ($row) {
-                    $appsUrl = h(keep_params(['apps' => (int)$row['id']]));
+
+                <?php
+                if ($row) {
+
+                    $currentUrl = $_SERVER['REQUEST_URI'];
+
+                    $basePath = '/adminconsole/operations/standard_jobs_report.php';
+
+                    $appsUrl = $basePath
+                        . '?apps=' . (int)$row['id']
+                        . '&return=' . urlencode($currentUrl);
                 ?>
-                    <a class="btn secondary" href="<?= $appsUrl ?>" target="_blank">View Applications (<?= (int)$row['apps_count'] ?>)</a>
+                    <a class="btn secondary" href="<?= h($appsUrl) ?>" target="_blank">
+                        View Applications (<?= (int)$row['apps_count'] ?>)
+                    </a>
                 <?php } ?>
-                <a class="btn secondary" href="<?= h(keep_params(['view' => null])) ?>">← Back to List</a>
+
+                <?php if ($returnUrl): ?>
+                    <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back to List</a>
+                <?php else: ?>
+                    <a class="btn secondary" href="premium_jobs_report.php">← Back to List</a>
+                <?php endif; ?>
                 <button class="btn secondary" onclick="window.print()">Print</button>
             </div>
         </div>
@@ -1103,11 +1121,11 @@ ob_start(); ?>
 
                 <input class="inp datepick" type="text" name="created_from"
                     value="<?= h($created_from_raw) ?>"
-                    placeholder="From Date">
+                    placeholder="DD-MM-YYYY">
 
                 <input class="inp datepick" type="text" name="created_to"
                     value="<?= h($created_to_raw) ?>"
-                    placeholder="To Date">
+                    placeholder="DD-MM-YYYY">
             </div>
 
             <!-- ROW 2 (4 columns) -->

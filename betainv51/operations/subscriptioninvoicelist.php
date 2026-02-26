@@ -578,6 +578,7 @@ ob_start();
                         <th style="width:220px">Payment ID</th>
                         <th style="width:120px">Status</th>
                         <th style="width:100px">User ID</th>
+                        <th style="width:140px">Get Invoice</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -604,6 +605,17 @@ ob_start();
                                 <td class="mono"><?= h($r['payment_id']) ?></td>
                                 <td><?= h($r['payment_status']) ?></td>
                                 <td class="center mono"><?= (int)$r['userid'] ?></td>
+                                <td class="center">
+    <?php if (!empty($r['invoiceno'])): ?>
+        <a class="btn primary" 
+           href="https://beta.inv51.in/webservices/genrateInvoicepdf.php?invoice_no=<?= urlencode($r['invoiceno']) ?>" 
+           target="_blank">
+            Get Invoice
+        </a>
+    <?php else: ?>
+        <span class="muted">N/A</span>
+    <?php endif; ?>
+</td>
                             </tr>
                     <?php endforeach;
                     endif; ?>

@@ -469,9 +469,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $source_id     = (int)($_POST['source_id'] ?? 0);
       $status_id     = (int)($_POST['status_id'] ?? 0);
       $assigned_to   = (int)($_POST['assigned_to'] ?? 0);
-      if ($MY_ROLE_ID != 1) {
-        $assigned_to = $MY_ID; // force assign to self
-      }
+     
 
       $reason        = trim($_POST['last_status_reason'] ?? '');
       $followup_ui   = trim($_POST['followup_at'] ?? '');
@@ -799,7 +797,7 @@ if ($isSuperAdmin) {
   }
 } else {
   // Non-superadmin can see only their assigned leads
-  $where .= " AND l.assigned_to=?";
+  $where .= " AND l.assigned_by=?";
   $bind[] = $MY_ID;
   $types .= 'i';
 }
@@ -1453,17 +1451,17 @@ ob_start(); ?>
           required>
 
           <?php if ($MY_ROLE_ID == 3): ?>
-            <option value="2" selected>Jobseeker (Profile 2)</option>
+            <option value="2" selected>Jobseeker </option>
 
           <?php elseif ($MY_ROLE_ID == 13): ?>
-            <option value="1" selected>Employer (Profile 1)</option>
+            <option value="1" selected>Employer </option>
 
           <?php else: ?>
             <option value="1" <?= $pt === 1 ? 'selected' : '' ?>>
-              Employer (Profile 1)
+              Employer 
             </option>
             <option value="2" <?= $pt === 2 ? 'selected' : '' ?>>
-              Jobseeker (Profile 2)
+              Jobseeker 
             </option>
           <?php endif; ?>
 
@@ -1480,8 +1478,8 @@ ob_start(); ?>
       <!-- <div>
         <label>Profile Type*</label>
         <select name="profile_type" id="profile_type" class="inp" required>
-          <option value="1" <?= $pt === 1 ? 'selected' : '' ?>>Employer (Profile 1)</option>
-          <option value="2" <?= $pt === 2 ? 'selected' : '' ?>>Jobseeker (Profile 2)</option>
+          <option value="1" <?= $pt === 1 ? 'selected' : '' ?>>Employer </option>
+          <option value="2" <?= $pt === 2 ? 'selected' : '' ?>>Jobseeker </option>
         </select>
       </div> -->
 
@@ -1510,9 +1508,6 @@ ob_start(); ?>
           </select>
           <div class="pac-hint"></div>
         </div>
-      <?php else: ?>
-        <!-- Force assign to self -->
-        <input type="hidden" name="assigned_to" value="<?= $MY_ID ?>">
       <?php endif; ?>
 
       <!-- Employer -->

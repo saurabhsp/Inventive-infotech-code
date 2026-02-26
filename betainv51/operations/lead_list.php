@@ -368,12 +368,14 @@ ob_start(); ?>
 </div>
 
 
-
+      <?php if ($loggedRoleId === 1): ?>  <!-- Super Admin Only -->
       <select name="ptype" class="inp">
         <option value="0">All Types</option>
         <option value="1" <?= $ptype===1?'selected':'' ?>>Employer</option>
         <option value="2" <?= $ptype===2?'selected':'' ?>>Jobseeker</option>
       </select>
+            <?php endif; ?>
+
 
       <select name="status" class="inp" id="statusSelect">
         <option value="0">All Status</option>

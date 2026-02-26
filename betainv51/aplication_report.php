@@ -1059,6 +1059,11 @@ ob_start(); ?>
     .table-wrap {
       overflow: auto;
     }
+    .table thead th {
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
+}
 
     .pill {
       padding: 2px 8px;

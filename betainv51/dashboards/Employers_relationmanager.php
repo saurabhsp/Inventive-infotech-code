@@ -28,6 +28,33 @@ if ($logged_admin_id <= 0) {
     die("Invalid user session.");
 }
 
+
+/* ---------------- ADMIN JOINING DATE ---------------- */
+
+$admin_created_at = '';
+
+$stmt = $con->prepare("SELECT created_at FROM jos_admin_users WHERE id = ?");
+$stmt->bind_param("i", $logged_admin_id);
+$stmt->execute();
+$res = $stmt->get_result();
+if ($row = $res->fetch_assoc()) {
+    $admin_created_at = $row['created_at'];
+}
+$stmt->close();
+
+$joiningFormatted = '';
+$daysSinceJoining = 0;
+
+if (!empty($admin_created_at)) {
+
+    $joiningDate = new DateTime($admin_created_at);
+    $todayDate   = new DateTime();
+
+    $interval = $joiningDate->diff($todayDate);
+    $daysSinceJoining = $interval->days;
+
+    $joiningFormatted = $joiningDate->format('l, d F Y');
+}
 /* ---------------- DATE RANGE FILTER ---------------- */
 
 $range = $_GET['range'] ?? 'daily';   // default = today
@@ -81,10 +108,12 @@ if ($range === 'lifetime') {
         "SELECT COUNT(*) as total 
          FROM `$usersTbl`
          WHERE profile_type_id = 1
-         AND ac_manager_id = ?",
+         AND ac_manager_id = ?
+         AND ac_manager_assigned_at IS NOT NULL",
         "i",
         [$logged_admin_id]
     );
+
 } else {
 
     $assignedEmployersCount = fetch_one(
@@ -93,10 +122,12 @@ if ($range === 'lifetime') {
          FROM `$usersTbl`
          WHERE profile_type_id = 1
          AND ac_manager_id = ?
-         AND created_at BETWEEN ? AND ?",
+         AND ac_manager_assigned_at IS NOT NULL
+         AND ac_manager_assigned_at BETWEEN ? AND ?",
         "iss",
         [$logged_admin_id, $from, $to]
     );
+
 }
 
 
@@ -423,7 +454,11 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
                     <?php endif; ?>
                 </h1>
                 <div class="muted">Stats for <?= $logged_admin_name ?></div>
-                <div id="todayDate" class="todayline"></div>
+                <div class="todayline">
+                    Joining Date :
+                    <?= $joiningFormatted ?>
+                    (<?= $daysSinceJoining ?> <?= $daysSinceJoining == 1 ? 'day' : 'days' ?>)
+                </div>
             </div>
 
             <div class="range-buttons">
@@ -496,9 +531,9 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
                     <a class="btn-link" href="#" onclick="openBreakdown('subscriptionrev'); return false;">View Details →</a>
                 </div>
             </div>
-            
+
             <!-- Total Applications -->
-               <div class="card kpi-card">
+            <div class="card kpi-card">
                 <div>
                     <div class="card-title">Total Applications</div>
                     <div class="card-value" id="total_applications"><?= $totalApplications ?></div>
@@ -524,6 +559,9 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
             <a href="#" onclick="openBreakdown('leads_self'); return false;">View My Leads</a>
             <a href="#" onclick="openBreakdown('employers_assigned'); return false;">View Employers</a>
             <a href="#" onclick="openBreakdown('subscriptionrev'); return false;">Revenue Details</a>
+            <a href="/adminconsole/operations/candidate_summary.php" onclick="">View Matching Candidates</a>
+            <a href="/adminconsole/operations/lead.php">Add New Lead</a>
+
         </div>
 
     </div>
@@ -551,7 +589,7 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
                 form.action = "/adminconsole/operations/subscription_invoicelist.php";
             } else if (mode === 'total_applications') {
                 form.action = "/adminconsole/operations/applications_report.php";
-            }  else if (mode === 'leads_assigned' || mode === 'leads_self' ) {
+            } else if (mode === 'leads_assigned' || mode === 'leads_self') {
                 form.action = "/adminconsole/operations/lead_list.php";
             } else {
                 // 🔹 Default 
@@ -560,24 +598,6 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
 
             form.submit();
         }
-
-
-
-        function showTodayDate() {
-            const now = new Date();
-            const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-            const dayName = days[now.getDay()];
-            const options = {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric'
-            };
-            const formattedDate = now.toLocaleDateString("en-IN", options);
-            document.getElementById("todayDate").innerText = dayName + ", " + formattedDate;
-        }
-
-        showTodayDate();
-        setRange("daily");
     </script>
 
 </body>

@@ -218,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $title        = clean($_POST['title'] ?? '');
             $action_type  = clean($_POST['action_type'] ?? '');
             $action_value = clean($_POST['action_value'] ?? '');
-            $profile_type = (int)($_POST['profile_type'] ?? 0);
+            $profile_type = clean($_POST['profile_type'] ?? '');
             $status       = (int)($_POST['status'] ?? 1);
 
             if ($title === '') {
@@ -234,10 +234,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($id > 0) {
                         if ($img_path) {
                             $st = $con->prepare("UPDATE $TABLE SET title=?, image=?, action_type=?, action_value=?, profile_type=?, status=?, updated_at=NOW() WHERE id=?");
-                            $st->bind_param('ssssiii', $title, $img_path, $action_type, $action_value, $profile_type, $status, $id);
+                            $st->bind_param('sssssii', $title, $img_path, $action_type, $action_value, $profile_type, $status, $id);
                         } else {
                             $st = $con->prepare("UPDATE $TABLE SET title=?, action_type=?, action_value=?, profile_type=?, status=?, updated_at=NOW() WHERE id=?");
-                            $st->bind_param('sssiii', $title, $action_type, $action_value, $profile_type, $status, $id);
+                            // $st->bind_param('sssiii', $title, $action_type, $action_value, $profile_type, $status, $id);
+                            $st->bind_param('ssssii', $title, $action_type, $action_value, $profile_type, $status, $id);
                         }
                         if ($st->execute()) {
                             $st->close();
@@ -248,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } else {
                         $st = $con->prepare("INSERT INTO $TABLE (title,image,action_type,action_value,profile_type,status,created_at,updated_at) VALUES (?,?,?,?,?,?,NOW(),NOW())");
                         $img_for_insert = $img_path ?? '';
-                        $st->bind_param('ssssii', $title, $img_for_insert, $action_type, $action_value, $profile_type, $status);
+                        $st->bind_param('sssssii', $title, $img_for_insert, $action_type, $action_value, $profile_type, $status);
                         if ($st->execute()) {
                             $st->close();
                             back_to_list('Added successfully.', $return_qs);
@@ -289,11 +290,21 @@ if ($q !== '') {
     $bind[] = $like;
     $type .= 's';
 }
-if ($pflt !== '' && is_numeric($pflt)) {
-    $pp = (int)$pflt;
-    $where .= " AND profile_type=?";
-    $bind[] = $pp;
-    $type .= 'i';
+if ($pflt !== '') {
+    $vals = array_filter(array_map('trim', explode(',', $pflt)));
+    if ($vals) {
+        $conditions = [];
+        foreach ($vals as $v) {
+            if (is_numeric($v)) {
+                $conditions[] = "FIND_IN_SET(?, profile_type)";
+                $bind[] = $v;
+                $type .= 's';
+            }
+        }
+        if ($conditions) {
+            $where .= " AND (" . implode(' OR ', $conditions) . ")";
+        }
+    }
 }
 
 switch ($sort) {
@@ -350,16 +361,95 @@ if ($mode === 'list') {
 /* ----- label helper for slider type (keeps DB col name profile_type) ----- */
 function slider_type_label($v)
 {
-    $v = (int)$v;
-    if ($v === 1) return 'Recruiter';
-    if ($v === 2) return 'Job Seeker';
-    if ($v === 4) return 'Refer & Earn';
-    if ($v === 0) return 'Login Screen';
-    return '—';
+    if (!$v) return '—';
+
+    $map = [
+        1 => 'Recruiter',
+        2 => 'Job Seeker',
+        3 => 'Promoter',
+        4 => 'Refer & Earn',
+        0 => 'Login Screen'
+    ];
+
+    $vals = explode(',', $v);
+    $labels = [];
+
+    foreach ($vals as $val) {
+        $val = trim($val);
+        if (isset($map[$val])) {
+            $labels[] = $map[$val];
+        }
+    }
+
+    return $labels ? implode(', ', $labels) : '—';
 }
 
 /* ---------- view ---------- */
 ob_start(); ?>
+
+<style>
+    .slider-filter-wrapper {
+        position: relative;
+        max-width: 250px;
+    }
+
+    .slider-dropdown-toggle {
+        padding: 8px 12px;
+        background: #0b1220;
+        border: 1px solid #1f2937;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+    }
+
+    .slider-dropdown {
+        top: 42px;
+        left: 0;
+        width: 100%;
+        max-height: 200px;
+        overflow-y: auto;
+        background: #0b1220;
+        border: 1px solid #1f2937;
+        border-radius: 8px;
+        display: none;
+        z-index: 50;
+        padding: 6px;
+    }
+
+    .slider-option {
+        display: block;
+        padding: 4px 6px;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .slider-option input {
+        margin-right: 6px;
+    }
+
+    .selected-tags {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .tag-pill {
+        background: #2563eb;
+        color: #fff;
+        padding: 6px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .tag-pill span {
+        cursor: pointer;
+        font-weight: bold;
+    }
+</style>
 <link rel="stylesheet" href="/adminconsole/assets/ui.css">
 
 <div class="master-wrap">
@@ -383,15 +473,47 @@ ob_start(); ?>
             <div class="toolbar">
                 <!-- LEFT: Search + filters + Search + View All -->
                 <form method="get" class="search">
-                    <input type="text" name="q" class="inp" placeholder="Search slider..." value="<?php echo htmlspecialchars($q); ?>" style="width:320px">
 
-                    <select name="ptype" class="inp small" title="Slider Type">
-                        <option value="">All Types</option>
-                        <option value="1" <?php echo ($pflt === '1') ? 'selected' : ''; ?>>Recruiter</option>
-                        <option value="2" <?php echo ($pflt === '2') ? 'selected' : ''; ?>>Job Seeker</option>
-                        <option value="4" <?php echo ($pflt === '4') ? 'selected' : ''; ?>>Refer &amp; Earn</option>
-                        <option value="0" <?php echo ($pflt === '0') ? 'selected' : ''; ?>>Login Screen</option>
-                    </select>
+                    <?php
+                    $selected_filter_types = [];
+                    if (!empty($pflt)) {
+                        $selected_filter_types = explode(',', $pflt);
+                    }
+                    ?>
+
+                    <div class="slider-filter-wrapper">
+
+                        <div class="slider-dropdown-toggle" id="filterDropdownToggle">
+                            All Types ▼
+                        </div>
+
+                        <div class="slider-dropdown" id="filterDropdown">
+                            <?php
+                            $types = [
+                                1 => 'Recruiter',
+                                2 => 'Job Seeker',
+                                3 => 'Promoter',
+                                4 => 'Refer & Earn',
+                                0 => 'Login Screen'
+                            ];
+
+                            foreach ($types as $key => $label):
+                                $checked = in_array((string)$key, $selected_filter_types) ? 'checked' : '';
+                            ?>
+                                <label class="slider-option">
+                                    <input type="checkbox" value="<?= $key ?>" <?= $checked ?>>
+                                    <?= $label ?>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <!-- Hidden input for GET -->
+                        <input type="hidden" name="ptype" id="filterProfileTypeInput"
+                            value="<?= htmlspecialchars($pflt ?? '') ?>">
+
+                        <div class="selected-tags" id="filterSelectedTags"></div>
+
+                    </div>
 
                     <select name="sort" class="inp small" title="Sort by">
                         <?php
@@ -530,13 +652,48 @@ ob_start(); ?>
 
                 <div>
                     <label>Slider Type</label>
-                    <?php $p = isset($edit['profile_type']) ? (int)$edit['profile_type'] : 0; ?>
-                    <select name="profile_type" class="inp">
-                        <option value="1" <?php echo $p === 1 ? 'selected' : ''; ?>>Recruiter</option>
-                        <option value="2" <?php echo $p === 2 ? 'selected' : ''; ?>>Job Seeker</option>
-                        <option value="4" <?php echo $p === 4 ? 'selected' : ''; ?>>Refer &amp; Earn</option>
-                        <option value="0" <?php echo $p === 0 ? 'selected' : ''; ?>>Login Screen</option>
-                    </select>
+
+                    <?php
+                    $selected_types = [];
+                    if (!empty($edit['profile_type'])) {
+                        $selected_types = explode(',', $edit['profile_type']);
+                    }
+                    ?>
+
+                    <div class="slider-filter-wrapper">
+
+                        <div class="slider-dropdown-toggle" id="sliderDropdownToggle">
+                            Select Slider Type ▼
+                        </div>
+
+                        <div class="slider-dropdown" id="sliderDropdown">
+
+                            <?php
+                            $types = [
+                                1 => 'Recruiter',
+                                2 => 'Job Seeker',
+                                3 => 'Promoter',
+                                4 => 'Refer & Earn',
+                                0 => 'Login Screen'
+                            ];
+
+                            foreach ($types as $key => $label):
+                                $checked = in_array((string)$key, $selected_types) ? 'checked' : '';
+                            ?>
+                                <label class="slider-option">
+                                    <input type="checkbox" value="<?= $key ?>" <?= $checked ?>>
+                                    <?= $label ?>
+                                </label>
+                            <?php endforeach; ?>
+
+                        </div>
+
+                        <!-- Hidden input to store comma values -->
+                        <input type="hidden" name="profile_type" id="profileTypeInput"
+                            value="<?= htmlspecialchars($edit['profile_type'] ?? '') ?>">
+                        <div class="selected-tags" id="selectedTags"></div>
+
+                    </div>
                 </div>
 
                 <div>
@@ -558,23 +715,153 @@ ob_start(); ?>
             </form>
         </div>
 
-        <script>
-            // keep viewport at top in form mode
-            (function() {
-                function toTop() {
-                    window.scrollTo({
-                        top: 0,
-                        behavior: 'instant'
-                    });
-                }
-                if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-                window.addEventListener('load', function() {
-                    toTop();
-                    setTimeout(toTop, 50);
-                    setTimeout(toTop, 150);
-                });
-            })();
-        </script>
+
     <?php endif; ?>
 </div>
+<script>
+    // keep viewport at top in form mode
+    (function() {
+        function toTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'instant'
+            });
+        }
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+        window.addEventListener('load', function() {
+            toTop();
+            setTimeout(toTop, 50);
+            setTimeout(toTop, 150);
+        });
+    })();
+    document.addEventListener('DOMContentLoaded', function() {
+
+        const toggle = document.getElementById('sliderDropdownToggle');
+        const dropdown = document.getElementById('sliderDropdown');
+        const hiddenInput = document.getElementById('profileTypeInput');
+        const tagsContainer = document.getElementById('selectedTags');
+
+        toggle.addEventListener('click', function() {
+            dropdown.style.display =
+                dropdown.style.display === 'block' ? 'none' : 'block';
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.slider-filter-wrapper')) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        function updateHiddenInput() {
+            let selected = [];
+            dropdown.querySelectorAll('input:checked').forEach(box => {
+                selected.push(box.value);
+            });
+            hiddenInput.value = selected.join(',');
+            renderTags();
+        }
+
+        function renderTags() {
+            tagsContainer.innerHTML = '';
+
+            dropdown.querySelectorAll('input:checked').forEach(box => {
+                const label = box.parentElement.textContent.trim();
+
+                const tag = document.createElement('div');
+                tag.className = 'tag-pill';
+                tag.innerHTML = `
+                ${label}
+                <span data-value="${box.value}">×</span>
+            `;
+
+                tagsContainer.appendChild(tag);
+            });
+
+            // remove tag click
+            tagsContainer.querySelectorAll('span').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const value = this.getAttribute('data-value');
+                    const checkbox = dropdown.querySelector(`input[value="${value}"]`);
+                    if (checkbox) {
+                        checkbox.checked = false;
+                        updateHiddenInput();
+                    }
+                });
+            });
+        }
+
+        dropdown.querySelectorAll('input').forEach(box => {
+            box.addEventListener('change', updateHiddenInput);
+        });
+
+        // initialize on page load (for edit mode)
+        renderTags();
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+        const toggle = document.getElementById('filterDropdownToggle');
+        const dropdown = document.getElementById('filterDropdown');
+        const hiddenInput = document.getElementById('filterProfileTypeInput');
+        const tagsContainer = document.getElementById('filterSelectedTags');
+
+        if (!toggle) return;
+
+        toggle.addEventListener('click', function() {
+            dropdown.style.display =
+                dropdown.style.display === 'block' ? 'none' : 'block';
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#filterDropdown') &&
+                !e.target.closest('#filterDropdownToggle')) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        function updateHiddenInput() {
+            let selected = [];
+            dropdown.querySelectorAll('input:checked').forEach(box => {
+                selected.push(box.value);
+            });
+            hiddenInput.value = selected.join(',');
+            renderTags();
+        }
+
+        function renderTags() {
+            tagsContainer.innerHTML = '';
+
+            dropdown.querySelectorAll('input:checked').forEach(box => {
+                const label = box.parentElement.textContent.trim();
+
+                const tag = document.createElement('div');
+                tag.className = 'tag-pill';
+                tag.innerHTML = `
+                ${label}
+                <span data-value="${box.value}">×</span>
+            `;
+
+                tagsContainer.appendChild(tag);
+            });
+
+            tagsContainer.querySelectorAll('span').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const value = this.getAttribute('data-value');
+                    const checkbox = dropdown.querySelector(`input[value="${value}"]`);
+                    if (checkbox) {
+                        checkbox.checked = false;
+                        updateHiddenInput();
+                    }
+                });
+            });
+        }
+
+        dropdown.querySelectorAll('input').forEach(box => {
+            box.addEventListener('change', updateHiddenInput);
+        });
+
+        renderTags();
+    });
+</script>
 <?php echo ob_get_clean(); ?>
