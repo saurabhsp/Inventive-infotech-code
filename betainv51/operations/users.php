@@ -92,6 +92,11 @@ if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); } // ensure sess
 ob_start();
 ?>
 <link rel="stylesheet" href="/adminconsole/assets/ui.css">
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<!-- Flatpickr JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
 .table a.ref-link { text-decoration:none; color:#3b82f6; }
 .table a.ref-link:hover { text-decoration:underline; }
@@ -618,8 +623,16 @@ if (isset($_GET['blocked']) && !empty($_SESSION['modal_html'])) {
     <option value="expired" <?= $subscription_status==='expired'?'selected':''?>>Expired</option>
   </select>
 
-  <input class="inp" type="date" name="created_from" value="<?=h($created_from)?>">
-  <input class="inp" type="date" name="created_to" value="<?=h($created_to)?>">
+
+            <input class="inp flatpickr" type="text" name="created_from"
+       value="<?= h($created_from) ?>"
+       placeholder="DD-MM-YYYY"
+       autocomplete="off">
+
+<input class="inp flatpickr" type="text" name="created_to"
+       value="<?= h($created_to) ?>"
+       placeholder="DD-MM-YYYY"
+       autocomplete="off">
 
   <!-- referrer filters -->
   <input class="inp" type="text"   name="referrer_q"  value="<?=h($referrer_q)?>" placeholder="Search Referrer: name/mobile" style="min-width:220px">
@@ -674,7 +687,7 @@ if (isset($_GET['blocked']) && !empty($_SESSION['modal_html'])) {
       <th>FCM</th>
       <th>Loc</th>
       <th>Created</th>
-      <th>Actions</th>
+      <!-- <th>Actions</th> -->
     </tr>
   </thead>
   <tbody>
@@ -773,8 +786,8 @@ while($row = $res->fetch_assoc()):
       <td><?= $fcm ?></td>
       <td><?= $loc ?></td>
       <td><?= h(date('d M Y', strtotime($row['created_at']))) ?></td>
-      <td>
-        <a class="btn secondary" href="#" onclick="alert('Open detail coming soon');return false;">View</a>
+        <!--<td>
+       <a class="btn secondary" href="#" onclick="alert('Open detail coming soon');return false;">View</a>
         <form id="<?= h($formId) ?>" method="post" style="display:inline">
           <input type="hidden" name="delete_user_id" value="<?= (int)$row['id'] ?>">
           <input type="hidden" name="csrf" value="<?= h($_SESSION['csrf_token']) ?>">
@@ -782,9 +795,9 @@ while($row = $res->fetch_assoc()):
           <button type="button" class="btn danger"
             onclick="openDeleteModal('<?= h($formId) ?>', 'User must be logged out from the app before deleting. If not, the app may malfunction.')">
             Delete
-          </button>
+          </button> 
         </form>
-      </td>
+      </td>-->
     </tr>
 <?php endwhile; $stmt->close(); ?>
 <?php if($sr=== (($view==='all')?1:($offset+1))){ ?>
@@ -804,5 +817,15 @@ while($row = $res->fetch_assoc()):
 
   </div>
 </div>
+ <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      flatpickr(".flatpickr", {
+        altInput: true, // user sees formatted date
+        altFormat: "d-m-Y", // display format
+        dateFormat: "Y-m-d", // value sent to backend
+        allowInput: false
+      });
+    });
+  </script>
 <?php
 echo ob_get_clean();

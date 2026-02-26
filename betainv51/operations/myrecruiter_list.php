@@ -260,6 +260,18 @@ ob_start();
       grid-template-columns: repeat(1, 1fr);
     }
   }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .filter-group label {
+    font-size: 12px;
+    color: #9ca3af;
+    font-weight: 600;
+  }
 </style>
 
 <script>
@@ -270,6 +282,8 @@ ob_start();
         allowInput: true
       });
     }
+
+    
 
 
 
@@ -736,6 +750,7 @@ ob_start();
     $sql_base = "
   FROM jos_app_users u
   LEFT JOIN jos_app_recruiter_profile rp ON (u.profile_type_id=1 AND rp.id=u.profile_id)
+  LEFT JOIN jos_admin_users am ON am.id = u.ac_manager_assigned_by
 
   LEFT JOIN jos_app_users ur ON ur.id = u.referred_by
   LEFT JOIN jos_app_recruiter_profile rrp ON (ur.profile_type_id=1 AND rrp.id=ur.profile_id)
@@ -834,12 +849,12 @@ LEFT JOIN jos_app_kycstatus ks ON ks.id = kyc.status
     }
 
     if ($created_from) {
-      $where_common[] = "DATE(u.created_at)>=?";
+      $where_common[] = "DATE(u.ac_manager_assigned_at)>=?";
       $types_common .= 's';
       $params_common[] = $created_from;
     }
     if ($created_to) {
-      $where_common[] = "DATE(u.created_at)<=?";
+      $where_common[] = "DATE(u.ac_manager_assigned_at)<=?";
       $types_common .= 's';
       $params_common[] = $created_to;
     }
@@ -933,10 +948,13 @@ LEFT JOIN jos_app_kycstatus ks ON ks.id = kyc.status
     }
 
     /* main query */
+
+
     $sql = "
 SELECT
   u.id, u.mobile_no, u.profile_id, u.city_id, u.referral_code, u.myreferral_code,
-  u.referred_by, u.active_plan_id, u.status_id, u.created_at,
+  u.referred_by, u.active_plan_id, u.status_id, u.created_at,  u.ac_manager_assigned_at,
+  u.ac_manager_assigned_by,  am.name AS assigned_by_name,
 
   rp.organization_name, rp.contact_person_name, rp.designation,rp.company_logo,
 
@@ -994,70 +1012,112 @@ SELECT
 
       <!-- ROW 1 -->
       <div class="filter-row">
-        <input class="inp" type="text" name="q"
-          value="<?= h($q) ?>"
-          placeholder="Search name/mobile/referral/org...">
 
-        <input class="inp" type="text" name="city_id"
-          value="<?= h($city_id) ?>"
-          placeholder="City Name">
+        <div class="filter-group">
+          <label>Search</label>
+          <input class="inp" type="text"
+            name="q"
+            value="<?= h($q) ?>"
+            placeholder="Search name/mobile/referral/org...">
+        </div>
 
-        <select class="inp" name="status_id">
-          <option value="1" <?= $status_id === 1 ? 'selected' : '' ?>>Active</option>
-          <option value="0" <?= $status_id === 0 ? 'selected' : '' ?>>Inactive</option>
-          <option value="-1" <?= $status_id === -1 ? 'selected' : '' ?>>Any Status</option>
-        </select>
+        <div class="filter-group">
+          <label>City Name</label>
+          <input class="inp" type="text"
+            name="city_id"
+            value="<?= h($city_id) ?>"
+            placeholder="Enter city name">
+        </div>
 
-        <select class="inp" name="kyc_status_id">
-          <option value="">All KYC Status</option>
-          <?php foreach ($kycStatuses as $st): ?>
-            <option value="<?= (int)$st['id'] ?>"
-              <?= ($kyc_status_id !== '' && (int)$kyc_status_id === (int)$st['id']) ? 'selected' : '' ?>>
-              <?= h($st['name']) ?>
+        <div class="filter-group">
+          <label>Status</label>
+          <select class="inp" name="status_id">
+            <option value="1" <?= $status_id === 1 ? 'selected' : '' ?>>Active</option>
+            <option value="0" <?= $status_id === 0 ? 'selected' : '' ?>>Inactive</option>
+            <option value="-1" <?= $status_id === -1 ? 'selected' : '' ?>>Any Status</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>KYC Status</label>
+          <select class="inp" name="kyc_status_id">
+            <option value="">All KYC Status</option>
+
+            <?php foreach ($kycStatuses as $st): ?>
+              <option value="<?= (int)$st['id'] ?>"
+                <?= ($kyc_status_id !== '' && (int)$kyc_status_id === (int)$st['id']) ? 'selected' : '' ?>>
+                <?= h($st['name']) ?>
+              </option>
+            <?php endforeach; ?>
+
+            <option value="NOT_SUBMITTED"
+              <?= ($kyc_status_id === 'NOT_SUBMITTED') ? 'selected' : '' ?>>
+              Not Submitted
             </option>
-          <?php endforeach; ?>
-          <option value="NOT_SUBMITTED"
-            <?= ($kyc_status_id === 'NOT_SUBMITTED') ? 'selected' : '' ?>>
-            Not Submitted
-          </option>
-        </select>
 
-        <select class="inp" name="subscription_status">
-          <option value="">Subscription: Any</option>
-          <option value="active" <?= $subscription_status === 'active' ? 'selected' : '' ?>>Active</option>
-          <option value="expired" <?= $subscription_status === 'expired' ? 'selected' : '' ?>>Expired</option>
-        </select>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Subscription</label>
+          <select class="inp" name="subscription_status">
+            <option value="">Any</option>
+            <option value="active" <?= $subscription_status === 'active' ? 'selected' : '' ?>>Active</option>
+            <option value="expired" <?= $subscription_status === 'expired' ? 'selected' : '' ?>>Expired</option>
+          </select>
+        </div>
+
       </div>
 
       <!-- ROW 2 -->
       <div class="filter-row">
-        <input class="inp js-date-ddmmyyyy" type="text"
-          name="created_from"
-          value="<?= h($created_from_raw) ?>"
-          placeholder="Reg Date From">
 
-        <input class="inp js-date-ddmmyyyy" type="text"
-          name="created_to"
-          value="<?= h($created_to_raw) ?>"
-          placeholder="Reg Date To">
+        <div class="filter-group">
+          <label>Assigned From Date</label>
+          <input class="inp js-date-ddmmyyyy"
+            type="text"
+            name="created_from"
+            value="<?= h($created_from_raw) ?>"
+            placeholder="DD-MM-YYYY">
+        </div>
 
-        <input class="inp" type="text"
-          name="referral_code"
-          value="<?= h($referral_code_in) ?>"
-          placeholder="Referral Code">
+        <div class="filter-group">
+          <label>Assigned To Date</label>
+          <input class="inp js-date-ddmmyyyy"
+            type="text"
+            name="created_to"
+            value="<?= h($created_to_raw) ?>"
+            placeholder="DD-MM-YYYY">
+        </div>
 
-        <select class="inp" name="image_filter">
-          <option value="">Image: All</option>
-          <option value="available" <?= $image_filter === 'available' ? 'selected' : '' ?>>Available</option>
-          <option value="not_available" <?= $image_filter === 'not_available' ? 'selected' : '' ?>>Not Available</option>
-        </select>
+        <div class="filter-group">
+          <label>Referral Code</label>
+          <input class="inp"
+            type="text"
+            name="referral_code"
+            value="<?= h($referral_code_in) ?>"
+            placeholder="Enter referral code">
+        </div>
 
-        <select class="inp" name="sort">
-          <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest first</option>
-          <option value="oldest" <?= $sort === 'oldest' ? 'selected' : '' ?>>Oldest first</option>
-          <option value="name_asc" <?= $sort === 'name_asc' ? 'selected' : '' ?>>Name A–Z</option>
-          <option value="name_desc" <?= $sort === 'name_desc' ? 'selected' : '' ?>>Name Z–A</option>
-        </select>
+        <div class="filter-group">
+          <label>Image Filter</label>
+          <select class="inp" name="image_filter">
+            <option value="">All</option>
+            <option value="available" <?= $image_filter === 'available' ? 'selected' : '' ?>>Available</option>
+            <option value="not_available" <?= $image_filter === 'not_available' ? 'selected' : '' ?>>Not Available</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Sort Order</label>
+          <select class="inp" name="sort">
+            <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest first</option>
+            <option value="oldest" <?= $sort === 'oldest' ? 'selected' : '' ?>>Oldest first</option>
+            <option value="name_asc" <?= $sort === 'name_asc' ? 'selected' : '' ?>>Name A–Z</option>
+            <option value="name_desc" <?= $sort === 'name_desc' ? 'selected' : '' ?>>Name Z–A</option>
+          </select>
+        </div>
+
       </div>
 
       <!-- ROW 3 BUTTONS -->
@@ -1095,6 +1155,7 @@ SELECT
             <th>Contact Info</th>
             <th>Mobile</th>
             <th>Referred By</th>
+            <th>Assigned By / Date</th>
             <th>Plan / Subscr.</th>
             <th>KYC Status</th>
             <th>Premium Jobs</th>
@@ -1170,6 +1231,9 @@ SELECT
             // $standardJobsUrl = '/adminconsole/operations/standard_jobs_report.php?recruiter_id=' . $recruiterProfileId;
 
             $profileUrl = keep_params(['mode' => 'profile', 'rid' => $recruiterProfileId, 'page' => null]);
+
+            $assignedByName = $row['assigned_by_name'] ?? '—';
+            $assignedAt = $row['ac_manager_assigned_at'] ?? null;
           ?>
             <tr>
               <td><?= (int)$sr++; ?></td>
@@ -1199,6 +1263,12 @@ SELECT
                 <?php } else {
                   echo $refByDisplay;
                 } ?>
+              </td>
+              <td>
+                <?= h($assignedByName) ?><br>
+                <small style="color:#9ca3af">
+                  <?= !empty($assignedAt) ? h(date('d-M-Y', strtotime($assignedAt))) : '—' ?>
+                </small>
               </td>
               <td>
                 <div><?= h($plan_label) ?></div>
@@ -1325,7 +1395,7 @@ SELECT
           $stmt->close(); ?>
           <?php if ($sr === (($view === 'all') ? 1 : ($offset + 1))) { ?>
             <tr>
-              <td colspan="12" style="text-align:center;color:#9ca3af">No records found.</td>
+              <td colspan="13" style="text-align:center;color:#9ca3af">No records found.</td>
             </tr>
           <?php } ?>
         </tbody>

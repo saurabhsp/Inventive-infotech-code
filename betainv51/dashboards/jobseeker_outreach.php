@@ -83,10 +83,12 @@ if ($range === 'lifetime') {
         "SELECT COUNT(*) as total 
          FROM `$usersTbl`
          WHERE profile_type_id = 2
-         AND ac_manager_id = ?",
+         AND ac_manager_id = ?
+         AND ac_manager_assigned_at IS NOT NULL",
         "i",
         [$logged_admin_id]
     );
+
 } else {
 
     $assignedEmployersCount = fetch_one(
@@ -95,10 +97,12 @@ if ($range === 'lifetime') {
          FROM `$usersTbl`
          WHERE profile_type_id = 2
          AND ac_manager_id = ?
-         AND created_at BETWEEN ? AND ?",
+         AND ac_manager_assigned_at IS NOT NULL
+         AND ac_manager_assigned_at BETWEEN ? AND ?",
         "iss",
         [$logged_admin_id, $from, $to]
     );
+
 }
 
 
@@ -487,9 +491,9 @@ $net_revenue = $revenue_subscription * 0.75;
         </div>
 
         <div class="actions">
-            <a href="#" onclick="openBreakdown('leads_self'); return false;">View My Leads</a>
-            <a href="#" onclick="openBreakdown('employers_assigned'); return false;">View Jobseekers</a>
-            <a href="#" onclick="openBreakdown('subscriptionrev'); return false;">Revenue Details</a>
+            <a href="/adminconsole/operations/jobpost_summary.php">View Matching Jobs </a>
+           <a href="/adminconsole/operations/lead.php">Add New Lead</a>
+           <!-- <a href="#">Revenue Details</a>-->
         </div>
 
     </div>

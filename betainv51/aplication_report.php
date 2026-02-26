@@ -891,12 +891,92 @@ $limit        = $view_all ? 1000 : 50;
 /* ----------------- status options ----------------- */
 $status_opts = [];
 $status_name_by_id = [];
-if ($rs = mysqli_query($con, "SELECT id,name FROM jos_app_applicationstatus WHERE status=1 ORDER BY COALESCE(order_by,0), id")) {
-  while ($r = mysqli_fetch_assoc($rs)) {
-    $status_opts[] = $r;
-    $status_name_by_id[(int)$r['id']] = $r['name'];
-  }
+
+$rs = mysqli_query($con, "SELECT id,name FROM jos_app_applicationstatus WHERE status=1 ORDER BY COALESCE(order_by,0), id");
+
+while ($r = mysqli_fetch_assoc($rs)) {
+  $status_opts[] = $r;
+  $status_name_by_id[(int)$r['id']] = $r['name'];
 }
+
+
+/* ----------------- STATUS CARDS COUNTS ----------------- */
+
+$status_counts = [];
+$total_status_count = 0;
+
+$sql_cards = "
+SELECT A.status_id, COUNT(*) AS cnt
+FROM jos_app_applications A
+LEFT JOIN jos_app_walkininterviews JW ON (A.job_listing_type=1 AND JW.id=A.job_id)
+LEFT JOIN jos_app_jobvacancies JV ON (A.job_listing_type=2 AND JV.id=A.job_id)
+LEFT JOIN jos_app_recruiter_profile RP1 ON RP1.id = JW.recruiter_id
+LEFT JOIN jos_app_recruiter_profile RP2 ON RP2.id = JV.recruiter_id
+LEFT JOIN jos_app_candidate_profile CP ON CP.userid = A.userid
+WHERE 1=1
+";
+
+$types_cards = '';
+$params_cards = [];
+
+if ($date_from !== '') {
+  $sql_cards .= " AND DATE(A.application_date)>=?";
+  $types_cards .= 's';
+  $params_cards[] = $date_from;
+}
+
+if ($date_to !== '') {
+  $sql_cards .= " AND DATE(A.application_date)<=?";
+  $types_cards .= 's';
+  $params_cards[] = $date_to;
+}
+
+if ($listing_type === 1)
+  $sql_cards .= " AND A.job_listing_type=1";
+
+elseif ($listing_type === 2)
+  $sql_cards .= " AND A.job_listing_type=2";
+
+if ($candidate_name !== '') {
+  $sql_cards .= " AND CP.candidate_name LIKE ?";
+  $types_cards .= 's';
+  $params_cards[] = "%" . $candidate_name . "%";
+}
+
+if ($company_name !== '') {
+  $sql_cards .= " AND (
+    JW.company_name LIKE ?
+    OR JV.company_name LIKE ?
+    OR RP1.organization_name LIKE ?
+    OR RP2.organization_name LIKE ?
+  )";
+
+  $types_cards .= 'ssss';
+
+  for ($i = 0; $i < 4; $i++)
+    $params_cards[] = "%" . $company_name . "%";
+}
+
+$sql_cards .= " GROUP BY A.status_id";
+
+$stmt = $con->prepare($sql_cards);
+
+if ($types_cards)
+  $stmt->bind_param($types_cards, ...$params_cards);
+
+$stmt->execute();
+
+$res_cards = stmt_fetch_all_assoc($stmt);
+
+$stmt->close();
+
+foreach ($res_cards as $r) {
+
+  $status_counts[(int)$r['status_id']] = (int)$r['cnt'];
+
+  $total_status_count += (int)$r['cnt'];
+}
+
 
 /* ----------------- company options ----------------- */
 $company_opts = [];
@@ -1059,11 +1139,12 @@ ob_start(); ?>
     .table-wrap {
       overflow: auto;
     }
+
     .table thead th {
-  position: static !important;
-  top: auto !important;
-  z-index: auto !important;
-}
+      position: static !important;
+      top: auto !important;
+      z-index: auto !important;
+    }
 
     .pill {
       padding: 2px 8px;
@@ -1088,6 +1169,44 @@ ob_start(); ?>
     .nowrap {
       white-space: nowrap;
     }
+
+
+
+    .cards-row {
+      display: flex;
+      gap: 12px;
+      overflow: auto;
+      padding: 6px 2px 10px;
+    }
+
+    .stat-card {
+      display: block;
+      min-width: 180px;
+      padding: 14px;
+      border: 1px solid #233045;
+      border-radius: 14px;
+      background: #0b1220;
+      color: #e5e7eb;
+      text-decoration: none;
+    }
+
+    .stat-card:hover {
+      border-color: #3b82f6;
+    }
+
+    .stat-card.active {
+      border-color: #22c55e;
+    }
+
+    .stat-title {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .stat-num {
+      font-size: 26px;
+      font-weight: 700;
+    }
   </style>
 </head>
 
@@ -1106,7 +1225,38 @@ ob_start(); ?>
       </div>
     </div>
 
+    <div class="cards-row">
+
+      <a class="stat-card <?= ($status_id == 0 ? 'active' : '') ?>"
+        href="<?= h(keep_params(['status_id' => null])) ?>">
+        <div class="stat-title">All Applications</div>
+        <div class="stat-num"><?= $total_status_count ?></div>
+      </a>
+
+      <?php foreach ($status_opts as $st):
+
+        $sid = (int)$st['id'];
+
+        $cnt = (int)($status_counts[$sid] ?? 0);
+
+      ?>
+
+        <a class="stat-card <?= ($status_id == $sid ? 'active' : '') ?>"
+          href="<?= h(keep_params(['status_id' => $sid])) ?>">
+
+          <div class="stat-title"><?= h($st['name']) ?></div>
+
+          <div class="stat-num"><?= $cnt ?></div>
+
+        </a>
+
+      <?php endforeach; ?>
+
+    </div>
+
+
     <div class="card toolbar">
+
       <form method="get">
         <div class="row">
           <div class="group">
@@ -1126,17 +1276,7 @@ ob_start(); ?>
               <option value="2" <?= $listing_type === 2 ? 'selected' : ''; ?>>Standard (Vacancy)</option>
             </select>
           </div>
-          <div class="group">
-            <label>Application Status</label>
-            <select class="inp" name="status_id">
-              <option value="0">All</option>
-              <?php foreach ($status_opts as $op): ?>
-                <option value="<?= (int)$op['id'] ?>" <?= $status_id == (int)$op['id'] ? 'selected' : ''; ?>>
-                  <?= h($op['name']) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
+
           <div class="group">
             <label>Rows</label>
             <select class="inp" name="all">

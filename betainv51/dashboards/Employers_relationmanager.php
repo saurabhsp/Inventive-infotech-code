@@ -556,9 +556,6 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
         </div>
 
         <div class="actions">
-            <a href="#" onclick="openBreakdown('leads_self'); return false;">View My Leads</a>
-            <a href="#" onclick="openBreakdown('employers_assigned'); return false;">View Employers</a>
-            <a href="#" onclick="openBreakdown('subscriptionrev'); return false;">Revenue Details</a>
             <a href="/adminconsole/operations/candidate_summary.php" onclick="">View Matching Candidates</a>
             <a href="/adminconsole/operations/lead.php">Add New Lead</a>
 

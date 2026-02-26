@@ -94,6 +94,11 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 ob_start();
 ?>
 <link rel="stylesheet" href="/adminconsole/assets/ui.css">
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<!-- Flatpickr JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
     .table a.ref-link {
         text-decoration: none;
@@ -916,8 +921,15 @@ SELECT
                 <option value="expired" <?= $subscription_status === 'expired' ? 'selected' : '' ?>>Expired</option>
             </select>
 
-            <input class="inp" type="date" name="created_from" value="<?= h($created_from) ?>">
-            <input class="inp" type="date" name="created_to" value="<?= h($created_to) ?>">
+           <input class="inp flatpickr" type="text" name="created_from"
+       value="<?= h($created_from) ?>"
+       placeholder="DD-MM-YYYY"
+       autocomplete="off">
+
+<input class="inp flatpickr" type="text" name="created_to"
+       value="<?= h($created_to) ?>"
+       placeholder="DD-MM-YYYY"
+       autocomplete="off">
 
             <select class="inp" name="ac_manager_filter" title="AC Operator">
                 <option value="-1" <?= $ac_manager_filter === -1 ? 'selected' : '' ?>>AC Operator: Any</option>
@@ -1168,5 +1180,15 @@ SELECT
 
     </div>
 </div>
+ <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      flatpickr(".flatpickr", {
+        altInput: true, // user sees formatted date
+        altFormat: "d-m-Y", // display format
+        dateFormat: "Y-m-d", // value sent to backend
+        allowInput: false
+      });
+    });
+  </script>
 <?php
 echo ob_get_clean();

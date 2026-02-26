@@ -328,17 +328,17 @@ if ($mode === 'candidate') {
    FETCH APPLICATIONS LIST
 --------------------------*/
 
-$app_rows = [];
-$status_name_by_id = [];
+    $app_rows = [];
+    $status_name_by_id = [];
 
-// status list
-if ($rs = mysqli_query($con, "SELECT id,name FROM jos_app_applicationstatus WHERE status=1")) {
-    while ($r = mysqli_fetch_assoc($rs)) {
-        $status_name_by_id[(int)$r['id']] = $r['name'];
+    // status list
+    if ($rs = mysqli_query($con, "SELECT id,name FROM jos_app_applicationstatus WHERE status=1")) {
+        while ($r = mysqli_fetch_assoc($rs)) {
+            $status_name_by_id[(int)$r['id']] = $r['name'];
+        }
     }
-}
 
-$sql_apps = "
+    $sql_apps = "
 SELECT
   A.id                  AS app_id,
   A.job_id              AS job_id,
@@ -360,11 +360,11 @@ WHERE A.userid = ?
 ORDER BY A.application_date DESC, A.id DESC
 ";
 
-$st = $con->prepare($sql_apps);
-$st->bind_param('i', $userid);
-$st->execute();
-$app_rows = stmt_fetch_all_assoc($st);
-$st->close();
+    $st = $con->prepare($sql_apps);
+    $st->bind_param('i', $userid);
+    $st->execute();
+    $app_rows = stmt_fetch_all_assoc($st);
+    $st->close();
 
     $apps_url = keep_params(['mode' => 'cand_apps', 'userid' => $userid]);
     $back_url = back_to_list_url();
@@ -541,95 +541,95 @@ $st->close();
                         </div>
                     <?php } ?>
                 </div>
-            
-             </div>
-            
-            
-            
-            
-            
+
+            </div>
+
+
+
+
+
             <?php if (!empty($app_rows)) { ?>
-    <div class="card" style="margin-top:16px">
-        <div style="font-weight:600;margin-bottom:12px;font-size:16px">
-            Applications (<?= count($app_rows) ?>)
-        </div>
+                <div class="card" style="margin-top:16px">
+                    <div style="font-weight:600;margin-bottom:12px;font-size:16px">
+                        Applications (<?= count($app_rows) ?>)
+                    </div>
 
-        <div class="table-wrap">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th style="width:60px;">SR</th>
-                        <th>Applied On</th>
-                        <th>Job</th>
-                        <th>Company</th>
-                        <th>Listing</th>
-                        <th>Status</th>
-                        <th style="width:180px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    $sr = 1;
-                    foreach ($app_rows as $r):
-                        $lt_text = ((int)$r['job_lt'] === 1) ? 'Premium' : 'Standard';
-                        $pill_cls = ((int)$r['job_lt'] === 1) ? 'pill-premium' : 'pill-standard';
-                        $status = $r['status_name'] ?: ($status_name_by_id[(int)$r['status_id']] ?? '—');
+                    <div class="table-wrap">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="width:60px;">SR</th>
+                                    <th>Applied On</th>
+                                    <th>Job</th>
+                                    <th>Company</th>
+                                    <th>Listing</th>
+                                    <th>Status</th>
+                                    <th style="width:180px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $sr = 1;
+                                foreach ($app_rows as $r):
+                                    $lt_text = ((int)$r['job_lt'] === 1) ? 'Premium' : 'Standard';
+                                    $pill_cls = ((int)$r['job_lt'] === 1) ? 'pill-premium' : 'pill-standard';
+                                    $status = $r['status_name'] ?: ($status_name_by_id[(int)$r['status_id']] ?? '—');
 
-                        $jobHref = keep_params([
-                            'mode'   => 'job',
-                            'lt'     => (int)$r['job_lt'],
-                            'id'     => (int)$r['job_id'],
-                            'userid' => $userid,
-                            'from'   => 'candapps'
-                        ]);
+                                    $jobHref = keep_params([
+                                        'mode'   => 'job',
+                                        'lt'     => (int)$r['job_lt'],
+                                        'id'     => (int)$r['job_id'],
+                                        'userid' => $userid,
+                                        'from'   => 'candapps'
+                                    ]);
 
-                        $appliedTs = $r['application_date'] ? strtotime($r['application_date']) : false;
-                    ?>
-                        <tr>
-                            <td><?= $sr++ ?></td>
-                            <td>
-                                <div><?= h(fmt_date($r['application_date'])) ?></div>
-                                <div class="muted"><?= h($appliedTs ? date('h:i A', $appliedTs) : '') ?></div>
-                            </td>
-                            <td><?= h($r['job_position'] ?: '—') ?></td>
-                            <td><?= h($r['company_name'] ?: '—') ?></td>
-                            <td>
-                                <span class="pill <?= $pill_cls ?>">
-                                    <?= h($lt_text) ?>
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge">
-                                    <?= h($status) ?>
-                                </span>
-                            </td>
-                            <td>
-                                <a class="btn secondary" 
-                                   href="<?= h($jobHref) ?>" 
-                                   target="_blank">
-                                   View Job
-                                </a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-<?php } else { ?>
-    <div class="card" style="margin-top:16px;text-align:center;color:#9aa0a6;">
-        No applications found for this candidate.
-    </div>
-<?php } ?>
-            
-            
-            
-            
-            
-            
-            
-            
-           
+                                    $appliedTs = $r['application_date'] ? strtotime($r['application_date']) : false;
+                                ?>
+                                    <tr>
+                                        <td><?= $sr++ ?></td>
+                                        <td>
+                                            <div><?= h(fmt_date($r['application_date'])) ?></div>
+                                            <div class="muted"><?= h($appliedTs ? date('h:i A', $appliedTs) : '') ?></div>
+                                        </td>
+                                        <td><?= h($r['job_position'] ?: '—') ?></td>
+                                        <td><?= h($r['company_name'] ?: '—') ?></td>
+                                        <td>
+                                            <span class="pill <?= $pill_cls ?>">
+                                                <?= h($lt_text) ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge">
+                                                <?= h($status) ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a class="btn secondary"
+                                                href="<?= h($jobHref) ?>"
+                                                target="_blank">
+                                                View Job
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php } else { ?>
+                <div class="card" style="margin-top:16px;text-align:center;color:#9aa0a6;">
+                    No applications found for this candidate.
+                </div>
+            <?php } ?>
+
+
+
+
+
+
+
+
+
         </div>
     </body>
 
@@ -1253,18 +1253,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $from            = $_POST['from'] ?? '';
     $to              = $_POST['to'] ?? '';
 
-    // 🔐 Security: Prevent tampering
+    // Security
     if ($posted_admin_id !== $logged_admin_id) {
         die("Unauthorized access.");
     }
 
-    // Override date filters ONLY if coming from dashboard
+    // Set SQL filter values
     if ($range !== 'lifetime' && !empty($from) && !empty($to)) {
-        $created_from_sql = date('Y-m-d', strtotime($from));
-        $created_to_sql   = date('Y-m-d', strtotime($to));
+
+        $created_from_sql = date('Y-m-d H:i:s', strtotime($from));
+        $created_to_sql   = date('Y-m-d H:i:s', strtotime($to));
+
+        // ✅ THIS SETS INPUT FIELD VALUES
+      $created_from_raw = date('Y-m-d', strtotime($from));
+$created_to_raw   = date('Y-m-d', strtotime($to));
     }
 
-    // Optional: Clear GET filters when coming from dashboard
+    // Optional reset other filters
     $q = '';
     $city_id = '';
     $status_id = -1;
@@ -1413,12 +1418,13 @@ if ($subscription_status === 'active') {
 }
 
 if ($created_from_sql !== '') {
-    $where_common[] = "DATE(u.created_at)>=?";
+    $where_common[] = "u.ac_manager_assigned_at >= ?";
     $types_common .= 's';
     $params_common[] = $created_from_sql;
 }
-if ($created_to_sql  !== '') {
-    $where_common[] = "DATE(u.created_at)<=?";
+
+if ($created_to_sql !== '') {
+    $where_common[] = "u.ac_manager_assigned_at <= ?";
     $types_common .= 's';
     $params_common[] = $created_to_sql;
 }
@@ -1705,7 +1711,7 @@ ob_start();
                     <input class="inp" type="text" name="city_id" value="<?= h($city_id) ?>" placeholder="City ID">
 
                     <div style="display:flex;flex-direction:column;min-width:180px">
-                        <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Registration Date From</span>
+                        <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Assigned Date From</span>
                         <input class="inp datepicker" type="text"
                             name="created_from"
                             value="<?= h($created_from_raw) ?>"
@@ -1713,7 +1719,7 @@ ob_start();
                     </div>
 
                     <div style="display:flex;flex-direction:column;min-width:180px">
-                        <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Registration Date To</span>
+                        <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Assigned Date To</span>
                         <input class="inp datepicker" type="text"
                             name="created_to"
                             value="<?= h($created_to_raw) ?>"
