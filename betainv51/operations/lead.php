@@ -223,11 +223,16 @@ if (!user_can('view', $MENU_ID, $con)) {
 /* ---------------- Flash redirect ---------------- */
 function flash_redirect(string $msg = 'Saved')
 {
-  $qs = $_GET;
-  unset($qs['add'], $qs['edit']);
-  $qs['ok'] = $msg;
-  header('Location: ?' . http_build_query($qs));
-  exit;
+?>
+<script>
+if (document.referrer && document.referrer !== window.location.href) {
+    window.location.href = document.referrer + (document.referrer.includes('?') ? '&' : '?') + 'ok=<?= urlencode($msg) ?>';
+} else {
+    window.location.href = 'lead_list.php?ok=<?= urlencode($msg) ?>';
+}
+</script>
+<?php
+exit;
 }
 
 /* ---------------- Load masters ---------------- */
@@ -469,7 +474,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $source_id     = (int)($_POST['source_id'] ?? 0);
       $status_id     = (int)($_POST['status_id'] ?? 0);
       $assigned_to   = (int)($_POST['assigned_to'] ?? 0);
-     
+
 
       $reason        = trim($_POST['last_status_reason'] ?? '');
       $followup_ui   = trim($_POST['followup_at'] ?? '');
@@ -1067,7 +1072,7 @@ ob_start(); ?>
   <div class="pac-panel" style="max-width:760px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <h3 style="margin:0">Access denied</h3>
-      <a class="btn gray" href="<?= h(keep_params(['edit' => null, 'add' => null])) ?>">Back to List</a>
+      <button type="button" class="btn gray" onclick="goBack()">Back to List</button>
     </div>
 
     <?php if ($err): ?>
@@ -1458,10 +1463,10 @@ ob_start(); ?>
 
           <?php else: ?>
             <option value="1" <?= $pt === 1 ? 'selected' : '' ?>>
-              Employer 
+              Employer
             </option>
             <option value="2" <?= $pt === 2 ? 'selected' : '' ?>>
-              Jobseeker 
+              Jobseeker
             </option>
           <?php endif; ?>
 
@@ -1494,6 +1499,12 @@ ob_start(); ?>
             <option value="<?= $sid ?>" <?= $sv === $sid ? 'selected' : '' ?>><?= h($nm) ?></option>
           <?php endforeach; ?>
         </select>
+      </div>
+
+      <div>
+        <label>Source Details</label>
+        <textarea name="source_detail" class="inp" rows="3"
+          placeholder="Source Details"><?= h($val('source_detail')) ?></textarea>
       </div>
 
       <?php if ($MY_ROLE_ID == 1): ?>
@@ -1583,7 +1594,7 @@ ob_start(); ?>
 
       <div class="actions">
         <button class="btn green" name="save" type="submit">Save</button>
-        <a class="btn gray" href="<?= h(keep_params(['edit' => null, 'add' => null])) ?>">Cancel</a>
+        <button type="button" class="btn gray" onclick="goBack()">Cancel</button>
       </div>
     </form>
   </div>
@@ -1651,6 +1662,22 @@ ob_start(); ?>
         }
       }
     })();
+
+   function goBack(){
+
+  const back = sessionStorage.getItem('lead_back');
+
+  if(back){
+    window.location.href = back;
+  }
+  else if(document.referrer){
+    window.location.href = document.referrer;
+  }
+  else{
+    window.location.href = 'lead_list.php';
+  }
+
+}
   </script>
 
 <?php endif; ?>
