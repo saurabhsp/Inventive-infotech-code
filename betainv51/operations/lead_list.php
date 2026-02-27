@@ -17,16 +17,25 @@ $TABLE     = 'jos_app_crm_leads';
 $STATUSTBL = 'jos_app_crm_lead_statuses';
 $SOURCETBL = 'jos_app_crm_lead_sources';
 $PLANTBL   = 'jos_app_subscription_plans';
+$HISTTBL   = 'jos_app_crm_lead_status_history';
 
 /* ---------------- Helpers ---------------- */
-function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
-function clean($v){ return trim((string)$v); }
-function table_exists(mysqli $con, string $name): bool {
+function h($s)
+{
+  return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
+}
+function clean($v)
+{
+  return trim((string)$v);
+}
+function table_exists(mysqli $con, string $name): bool
+{
   $name = mysqli_real_escape_string($con, $name);
   $rs = mysqli_query($con, "SHOW TABLES LIKE '$name'");
   return ($rs && mysqli_num_rows($rs) > 0);
 }
-function keep_params(array $changes = []) {
+function keep_params(array $changes = [])
+{
   $qs = $_GET;
   foreach ($changes as $k => $v) {
     if ($v === null) unset($qs[$k]);
@@ -37,8 +46,30 @@ function keep_params(array $changes = []) {
   $script = $_SERVER['SCRIPT_NAME'] ?? ($_SERVER['PHP_SELF'] ?? basename(__FILE__));
   return $script;
 }
-function fmt_dt($dt){
+function fmt_dt($dt)
+{
   return $dt ? date('d-m-Y h:i A', strtotime($dt)) : '—';
+}
+
+function parse_followup_to_db($v)
+{
+  $v = trim((string)$v);
+  if ($v === '') return null;
+  $dt = DateTime::createFromFormat('d-m-Y h:i A', $v);
+  if (!$dt) $dt = DateTime::createFromFormat('d-m-Y h:i a', $v);
+  if (!$dt) return null;
+  return $dt->format('Y-m-d H:i:s');
+}
+
+function stmt_bind(mysqli_stmt $st, string $types, array $params): void
+{
+  if (strlen($types) !== count($params)) {
+    throw new RuntimeException("bind_param mismatch");
+  }
+  $refs = [];
+  foreach ($params as $k => $v) $refs[$k] = &$params[$k];
+  array_unshift($refs, $types);
+  call_user_func_array([$st, 'bind_param'], $refs);
 }
 
 /* ---------------- Load masters ---------------- */
@@ -58,6 +89,31 @@ if (table_exists($con, $SOURCETBL)) {
   }
 }
 
+/* Plans */
+$plans = [];
+$plansByType = [0 => [], 1 => [], 2 => []];
+
+if (table_exists($con, $PLANTBL)) {
+  $rs = mysqli_query($con, "SELECT id,profile_type,plan_name FROM `$PLANTBL` WHERE plan_status=1");
+  while ($r = mysqli_fetch_assoc($rs)) {
+    $pid = (string)$r['id'];
+    $ptype = (int)$r['profile_type'];
+    $plans[$pid] = ['name' => $r['plan_name'], 'ptype' => $ptype];
+    if (isset($plansByType[$ptype])) {
+      $plansByType[$ptype][] = ['id' => $pid, 'name' => $r['plan_name']];
+    }
+  }
+}
+
+function plan_allowed_for_profile(array $plans, ?string $plan_id, int $profile_type): bool
+{
+  if (!$plan_id) return false;
+  if (!isset($plans[$plan_id])) return false;
+  $ptype = (int)$plans[$plan_id]['ptype'];
+  return ($ptype === 0 || $ptype === $profile_type);
+}
+
+
 /* admin users for assignment */
 $ADMINUSERS = table_exists($con, 'jos_admin_users') ? 'jos_admin_users' : (table_exists($con, 'jos_admin') ? 'jos_admin' : '');
 $adminUsers = []; // id=>name
@@ -72,7 +128,94 @@ if ($ADMINUSERS) {
   while ($rs && $r = mysqli_fetch_assoc($rs)) $adminUsers[(int)$r['id']] = $r['nm'];
 }
 
+/* =========================
+   ACTION HANDLERS
+========================= */
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+  if (!verify_csrf($_POST['csrf'] ?? null)) {
+    echo json_encode(['ok' => false, 'msg' => 'Invalid CSRF']);
+    exit;
+  }
+
+  /* -------- DELETE -------- */
+  if (isset($_POST['delete'])) {
+
+    $id = (int)$_POST['id'];
+
+    $st = $con->prepare("DELETE FROM `$TABLE` WHERE id=?");
+    $st->bind_param("i", $id);
+
+    if ($st->execute()) {
+      header("Location: lead_list.php?ok=Deleted");
+      exit;
+    }
+  }
+
+
+  /* -------- STATUS UPDATE -------- */
+  if (isset($_POST['status_update'])) {
+
+    header('Content-Type: application/json');
+
+    $lead_id = (int)$_POST['lead_id'];
+    $status_id = (int)$_POST['to_status_id'];
+    $remark = trim($_POST['remark']);
+    $followup = parse_followup_to_db($_POST['followup_at'] ?? '');
+    $plan_id = (string)($_POST['onboarded_plan_id'] ?? '0');
+
+    $st = $con->prepare("SELECT profile_type,status_id FROM `$TABLE` WHERE id=?");
+    $st->bind_param("i", $lead_id);
+    $st->execute();
+    $lead = $st->get_result()->fetch_assoc();
+    $st->close();
+
+    if (!$lead) {
+      echo json_encode(['ok' => false, 'msg' => 'Lead not found']);
+      exit;
+    }
+
+    $profile_type = (int)$lead['profile_type'];
+    $old_status = (int)$lead['status_id'];
+
+    if ($plan_id != '0') {
+      if (!plan_allowed_for_profile($plans, $plan_id, $profile_type)) {
+        echo json_encode(['ok' => false, 'msg' => 'Invalid plan']);
+        exit;
+      }
+    } else {
+      $plan_id = null;
+    }
+
+    $sql = "UPDATE `$TABLE`
+          SET status_id=?,
+              last_status_reason=?,
+              followup_at=?,
+              onboarded_plan_id=?
+          WHERE id=?";
+
+    $st = $con->prepare($sql);
+
+    stmt_bind($st, "isssi", [
+      $status_id,
+      $remark,
+      $followup,
+      $plan_id,
+      $lead_id
+    ]);
+
+    if (!$st->execute()) {
+      echo json_encode(['ok' => false, 'msg' => 'Update failed']);
+      exit;
+    }
+
+    $st->close();
+
+    echo json_encode(['ok' => true, 'msg' => 'Updated']);
+    exit;
+  }
+}
 /* ---------------- POST Filters (Advanced) ---------------- */
 $ptypePost   = isset($_POST['profile_type_id']) ? (int)$_POST['profile_type_id'] : 0;
 $acmPost     = isset($_POST['ac_manager_id']) ? (int)$_POST['ac_manager_id'] : 0;
@@ -115,18 +258,18 @@ $profileType = isset($_POST['profile_type_id']) ? (int)$_POST['profile_type_id']
 /* ---------------- Dashboard POST Handling (NO REDIRECT) ---------------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // Receive everything from dashboard
-    $mode        = $_POST['mode'] ?? '';
-    $admin_id    = isset($_POST['admin_id']) ? (int)$_POST['admin_id'] : 0;
-    $profileType = isset($_POST['profile_type_id']) ? (int)$_POST['profile_type_id'] : 0;
+  // Receive everything from dashboard
+  $mode        = $_POST['mode'] ?? '';
+  $admin_id    = isset($_POST['admin_id']) ? (int)$_POST['admin_id'] : 0;
+  $profileType = isset($_POST['profile_type_id']) ? (int)$_POST['profile_type_id'] : 0;
 
-    $dateFrom = $_POST['from'] ?? '';
-    $dateTo   = $_POST['to'] ?? '';
+  $dateFrom = $_POST['from'] ?? '';
+  $dateTo   = $_POST['to'] ?? '';
 
-    if (!empty($dateFrom) && !empty($dateTo)) {
-        $created_from = date('Y-m-d H:i:s', strtotime($dateFrom));
-        $created_to   = date('Y-m-d H:i:s', strtotime($dateTo));
-    }
+  if (!empty($dateFrom) && !empty($dateTo)) {
+    $created_from = date('Y-m-d H:i:s', strtotime($dateFrom));
+    $created_to   = date('Y-m-d H:i:s', strtotime($dateTo));
+  }
 }
 
 
@@ -146,31 +289,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 if ($profileType > 0) {
-    $whereBase .= " AND l.profile_type = ?";
-    $bindBase[] = $profileType;
-    $typesBase .= 'i';
+  $whereBase .= " AND l.profile_type = ?";
+  $bindBase[] = $profileType;
+  $typesBase .= 'i';
 }
 
 if ($admin_id > 0) {
 
-    if ($mode === 'leads_assigned') {
-        $whereBase .= " AND l.assigned_to = ?";
-        $bindBase[] = $admin_id;
-        $typesBase .= 'i';
-    }
+  if ($mode === 'leads_assigned') {
+    $whereBase .= " AND l.assigned_to = ?";
+    $bindBase[] = $admin_id;
+    $typesBase .= 'i';
+  }
 
-    if ($mode === 'leads_self') {
-        $whereBase .= " AND l.created_by = ?";
-        $bindBase[] = $admin_id;
-        $typesBase .= 'i';
-    }
+  if ($mode === 'leads_self') {
+    $whereBase .= " AND l.created_by = ?";
+    $bindBase[] = $admin_id;
+    $typesBase .= 'i';
+  }
 }
 
 if ($dateFrom && $dateTo) {
-    $whereBase .= " AND l.created_at BETWEEN ? AND ?";
-    $bindBase[] = $dateFrom;
-    $bindBase[] = $dateTo;
-    $typesBase .= 'ss';
+  $whereBase .= " AND l.created_at BETWEEN ? AND ?";
+  $bindBase[] = $dateFrom;
+  $bindBase[] = $dateTo;
+  $typesBase .= 'ss';
 }
 
 /* ---------------- Default Role Based Restriction ---------------- */
@@ -178,20 +321,32 @@ if ($dateFrom && $dateTo) {
 
 if (empty($mode)) {
 
-    // If NOT Super Admin (role_id != 1)
-    if ($loggedRoleId !== 1 && $loggedUserId > 0) {
+  // If NOT Super Admin (role_id != 1)
+  if ($loggedRoleId !== 1 && $loggedUserId > 0) {
 
-        $whereBase .= " AND (l.created_by = ? OR l.assigned_to = ?)";
-        $bindBase[] = $loggedUserId;
-        $bindBase[] = $loggedUserId;
-        $typesBase .= 'ii';
-    }
+    $whereBase .= " AND (l.created_by = ? OR l.assigned_to = ?)";
+    $bindBase[] = $loggedUserId;
+    $bindBase[] = $loggedUserId;
+    $typesBase .= 'ii';
+  }
 }
 
 
-if ($ptype === 1 || $ptype === 2) { $whereBase .= " AND l.profile_type=?"; $bindBase[]=$ptype; $typesBase.='i'; }
-if ($srcFilter > 0)              { $whereBase .= " AND l.source_id=?";    $bindBase[]=$srcFilter; $typesBase.='i'; }
-if ($assFilter > 0)              { $whereBase .= " AND l.assigned_to=?";  $bindBase[]=$assFilter; $typesBase.='i'; }
+if ($ptype === 1 || $ptype === 2) {
+  $whereBase .= " AND l.profile_type=?";
+  $bindBase[] = $ptype;
+  $typesBase .= 'i';
+}
+if ($srcFilter > 0) {
+  $whereBase .= " AND l.source_id=?";
+  $bindBase[] = $srcFilter;
+  $typesBase .= 'i';
+}
+if ($assFilter > 0) {
+  $whereBase .= " AND l.assigned_to=?";
+  $bindBase[] = $assFilter;
+  $typesBase .= 'i';
+}
 
 if ($q !== '') {
   $whereBase .= " AND (
@@ -205,17 +360,17 @@ if ($q !== '') {
 }
 
 if (!empty($created_from)) {
-    $fromDateTime = $created_from . ' 00:00:00';
-    $whereBase .= " AND l.created_at >= ?";
-    $bindBase[] = $fromDateTime;
-    $typesBase .= 's';
+  $fromDateTime = $created_from . ' 00:00:00';
+  $whereBase .= " AND l.created_at >= ?";
+  $bindBase[] = $fromDateTime;
+  $typesBase .= 's';
 }
 
 if (!empty($created_to)) {
-    $toDateTime = $created_to . ' 23:59:59';
-    $whereBase .= " AND l.created_at <= ?";
-    $bindBase[] = $toDateTime;
-    $typesBase .= 's';
+  $toDateTime = $created_to . ' 23:59:59';
+  $whereBase .= " AND l.created_at <= ?";
+  $bindBase[] = $toDateTime;
+  $typesBase .= 's';
 }
 
 
@@ -280,32 +435,148 @@ $rs = $st->get_result();
 while ($r = $rs->fetch_assoc()) $rows[] = $r;
 $st->close();
 
+
 /* ---------------- VIEW ---------------- */
 ob_start(); ?>
 <link rel="stylesheet" href="/adminconsole/assets/ui.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
+    /* .pac-modal{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,.6);
+z-index:9999;
+display:none;
+padding-top:100px;
+} */
+  
+
+
+  .hide {
+    display: none !important;
+  }
+
+  .topcards {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 10px 0 14px;
+  }
+
+  .scard {
+    min-width: 160px;
+    flex: 1;
+    max-width: 220px;
+    background: #0f1a2e;
+    border: 1px solid rgba(148, 163, 184, .18);
+    border-radius: 14px;
+    padding: 12px;
+    cursor: pointer;
+    transition: transform .08s ease;
+  }
+
+  .scard:hover {
+    transform: translateY(-1px);
+  }
+
+  .scard .k {
+    color: #9ca3af;
+    font-size: 12px;
+  }
+
+  .scard .v {
+    font-size: 22px;
+    font-weight: 800;
+    margin-top: 6px;
+    color: #e5e7eb;
+  }
+
+  .scard.active {
+    outline: 2px solid rgba(34, 197, 94, .65);
+  }
+
+  .filtersbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 10px 0 12px;
+  }
+
+  /* Modal CSS */
   .pac-panel{
-    background:#0b1220;border:1px solid rgba(148,163,184,.18);
-    border-radius:16px;padding:16px;box-shadow:0 14px 50px rgba(0,0,0,.45);
-  }
-  .pac-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;}
-  .pac-sub{color:#9ca3af;font-size:12px;margin-top:6px;}
-  .hide{display:none !important;}
-  .topcards{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 14px;}
-  .scard{
-    min-width:160px;flex:1;max-width:220px;
-    background:#0f1a2e;border:1px solid rgba(148,163,184,.18);
-    border-radius:14px;padding:12px;cursor:pointer;
-    transition:transform .08s ease;
-  }
-  .scard:hover{transform:translateY(-1px);}
-  .scard .k{color:#9ca3af;font-size:12px;}
-  .scard .v{font-size:22px;font-weight:800;margin-top:6px;color:#e5e7eb;}
-  .scard.active{outline:2px solid rgba(34,197,94,.65);}
-  .filtersbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 12px;}
+  background:#0b1220;
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:16px;
+  padding:16px;
+  box-shadow:0 14px 50px rgba(0,0,0,.45);
+}
+.pac-head{ display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px; }
+.pac-sub{ color:#9ca3af;font-size:12px;margin-top:6px; }
+
+.pac-grid3{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px 16px;
+  align-items:end;
+}
+.pac-grid3 .full{ grid-column:1/-1; }
+.pac-grid3 .actions{ grid-column:1/-1; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.pac-grid3 label{ display:block; margin:0 0 6px; font-weight:600; }
+.pac-hint{ color:#9ca3af; font-size:12px; margin-top:6px; }
+.hide{ display:none !important; }
+
+@media (max-width:1100px){ .pac-grid3{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:720px){ .pac-grid3{ grid-template-columns:1fr; } .pac-grid3 .full{ grid-column:1; } }
+  
+.pac-modal{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.55);
+  z-index:9999;
+  display:none;
+  overflow:auto;
+  padding:18px;
+}
+.pac-modal .pac-panel{ max-width:980px; margin:24px auto; }
+
+.pac-labelgrid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin-top:12px;
+}
+.pac-label{
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:12px;
+  padding:10px;
+  background:#0f1a2e;
+}
+
 </style>
+<script>
+window.PACIFIC_PLANS = <?= json_encode($plansByType, JSON_UNESCAPED_UNICODE) ?>;
+
+function buildPlanOptions(profileType, selectedId){
+
+  const common = window.PACIFIC_PLANS[0] || [];
+  const typed  = window.PACIFIC_PLANS[profileType] || [];
+
+  const list=[...common,...typed];
+
+  let html='<option value="0">— Select Plan —</option>';
+
+  list.forEach(p=>{
+    const sel = String(p.id)===String(selectedId) ? ' selected':'';
+    html+=`<option value="${p.id}" ${sel}>${p.name}</option>`;
+  });
+
+  return html;
+}
+</script>
 
 <h2 style="margin:8px 0 12px">Leads</h2>
 
@@ -328,15 +599,15 @@ ob_start(); ?>
 
   <!-- Status cards -->
   <div class="topcards" id="statusCards">
-    <div class="scard <?= ($stFilter===0?'active':'') ?>" data-status="0">
+    <div class="scard <?= ($stFilter === 0 ? 'active' : '') ?>" data-status="0">
       <div class="k">Total Records</div>
       <div class="v"><?= (int)$totalAll ?></div>
     </div>
 
-    <?php foreach ($statuses as $sid => $s): 
+    <?php foreach ($statuses as $sid => $s):
       $cnt = (int)($statusCounts[$sid] ?? 0);
-      ?>
-      <div class="scard <?= ($stFilter===$sid?'active':'') ?>" data-status="<?= (int)$sid ?>">
+    ?>
+      <div class="scard <?= ($stFilter === $sid ? 'active' : '') ?>" data-status="<?= (int)$sid ?>">
         <div class="k"><?= h($s['name']) ?></div>
         <div class="v"><?= $cnt ?></div>
       </div>
@@ -349,66 +620,66 @@ ob_start(); ?>
       <input type="text" name="q" class="inp" placeholder="Search company/candidate/phone/email" value="<?= h($q) ?>" style="min-width:240px">
 
 
-<div style="display:flex;flex-direction:column;min-width:160px">
-  <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">From Date</span>
-<input type="text"
-       name="created_from"
-       class="inp datepicker"
-       value="<?= h($created_from ?? '') ?>"
-       placeholder="DD-MM-YYYY" >
-</div>
+      <div style="display:flex;flex-direction:column;min-width:160px">
+        <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">From Date</span>
+        <input type="text"
+          name="created_from"
+          class="inp datepicker"
+          value="<?= h($created_from ?? '') ?>"
+          placeholder="DD-MM-YYYY">
+      </div>
 
-<div style="display:flex;flex-direction:column;min-width:160px">
-  <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">To Date</span>
-  <input type="text"
-       name="created_to"
-       class="inp datepicker"
-       value="<?= h($created_to ?? '') ?>"
-       placeholder="DD-MM-YYYY" >
-</div>
+      <div style="display:flex;flex-direction:column;min-width:160px">
+        <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">To Date</span>
+        <input type="text"
+          name="created_to"
+          class="inp datepicker"
+          value="<?= h($created_to ?? '') ?>"
+          placeholder="DD-MM-YYYY">
+      </div>
 
 
-      <?php if ($loggedRoleId === 1): ?>  <!-- Super Admin Only -->
-      <select name="ptype" class="inp">
-        <option value="0">All Types</option>
-        <option value="1" <?= $ptype===1?'selected':'' ?>>Employer</option>
-        <option value="2" <?= $ptype===2?'selected':'' ?>>Jobseeker</option>
-      </select>
-            <?php endif; ?>
+      <?php if ($loggedRoleId === 1): ?> <!-- Super Admin Only -->
+        <select name="ptype" class="inp">
+          <option value="0">All Types</option>
+          <option value="1" <?= $ptype === 1 ? 'selected' : '' ?>>Employer</option>
+          <option value="2" <?= $ptype === 2 ? 'selected' : '' ?>>Jobseeker</option>
+        </select>
+      <?php endif; ?>
 
 
       <select name="status" class="inp" id="statusSelect">
         <option value="0">All Status</option>
         <?php foreach ($statuses as $sid => $s): ?>
-          <option value="<?= (int)$sid ?>" <?= ($stFilter===$sid?'selected':'') ?>><?= h($s['name']) ?></option>
+          <option value="<?= (int)$sid ?>" <?= ($stFilter === $sid ? 'selected' : '') ?>><?= h($s['name']) ?></option>
         <?php endforeach; ?>
       </select>
 
       <select name="source" class="inp">
         <option value="0">All Sources</option>
         <?php foreach ($sources as $sid => $nm): ?>
-          <option value="<?= (int)$sid ?>" <?= ($srcFilter===$sid?'selected':'') ?>><?= h($nm) ?></option>
+          <option value="<?= (int)$sid ?>" <?= ($srcFilter === $sid ? 'selected' : '') ?>><?= h($nm) ?></option>
         <?php endforeach; ?>
       </select>
 
-      <?php if ($loggedRoleId === 1): ?>  <!-- Super Admin Only -->
+      <?php if ($loggedRoleId === 1): ?> <!-- Super Admin Only -->
 
-      <select name="assignee" class="inp">
-        <option value="0">All Assignees</option>
-        <?php foreach ($adminUsers as $uid => $nm): ?>
-          <option value="<?= (int)$uid ?>" <?= ($assFilter===$uid?'selected':'') ?>><?= h($nm) ?></option>
-        <?php endforeach; ?>
-      </select>
+        <select name="assignee" class="inp">
+          <option value="0">All Assignees</option>
+          <?php foreach ($adminUsers as $uid => $nm): ?>
+            <option value="<?= (int)$uid ?>" <?= ($assFilter === $uid ? 'selected' : '') ?>><?= h($nm) ?></option>
+          <?php endforeach; ?>
+        </select>
       <?php endif; ?>
 
 
       <button class="btn secondary" type="submit">Apply</button>
 
       <?php if (!$all && $total > $lim): ?>
-        <a class="btn secondary" href="<?= h(keep_params(['all'=>1])) ?>">View All (<?= (int)$total ?>)</a>
+        <a class="btn secondary" href="<?= h(keep_params(['all' => 1])) ?>">View All (<?= (int)$total ?>)</a>
       <?php endif; ?>
       <?php if ($all): ?>
-        <a class="btn secondary" href="<?= h(keep_params(['all'=>null])) ?>">Last 50</a>
+        <a class="btn secondary" href="<?= h(keep_params(['all' => null])) ?>">Last 50</a>
       <?php endif; ?>
     </form>
   </div>
@@ -433,19 +704,23 @@ ob_start(); ?>
           <th>Assigned By</th>
           <th>Assigned To</th>
           <th>Updated</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         <?php if (!$rows): ?>
-          <tr><td colspan="10" style="color:#9ca3af">No records</td></tr>
+          <tr>
+            <td colspan="10" style="color:#9ca3af">No records</td>
+          </tr>
         <?php endif; ?>
 
-        <?php $sr=0; foreach ($rows as $r): $sr++;
+        <?php $sr = 0;
+        foreach ($rows as $r): $sr++;
           $pt = (int)($r['profile_type'] ?? 1);
-          $typeLabel = ($pt===1) ? 'Employer' : 'Jobseeker';
-          $name = ($pt===1) ? ($r['company_name'] ?: '—') : ($r['candidate_name'] ?: '—');
+          $typeLabel = ($pt === 1) ? 'Employer' : 'Jobseeker';
+          $name = ($pt === 1) ? ($r['company_name'] ?: '—') : ($r['candidate_name'] ?: '—');
           $ass = (int)($r['assigned_to'] ?? 0);
-          $assName = $ass>0 ? ($adminUsers[$ass] ?? ('#'.$ass)) : '—';
+          $assName = $ass > 0 ? ($adminUsers[$ass] ?? ('#' . $ass)) : '—';
           $assignedByName = $r['assigned_by_name'] ?? '—';
           $assignedAt     = fmt_dt($r['assigned_at'] ?? null);
         ?>
@@ -460,11 +735,31 @@ ob_start(); ?>
             <td><span class="badge on"><?= h($r['status_name'] ?? '—') ?></span></td>
             <td><?= h($r['onboarded_plan_name'] ?? '—') ?></td>
             <td>
-                <?= h($assignedByName) ?><br>
-                <small style="color:#9ca3af"><?= h($assignedAt) ?></small>
-              </td>
+              <?= h($assignedByName) ?><br>
+              <small style="color:#9ca3af"><?= h($assignedAt) ?></small>
+            </td>
             <td><?= h($assName) ?></td>
             <td><?= h(fmt_dt($r['updated_at'] ?? null)) ?></td>
+            <td>
+
+              <button class="btn secondary"
+                onclick='openStatusModal(<?= (int)$r["id"] ?>,
+<?= json_encode($r, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
+                Update Status
+              </button>
+
+              <a class="btn secondary"
+                href="lead.php?edit=<?= (int)$r['id'] ?>">
+                Edit
+              </a>
+
+              <form method="post" style="display:inline">
+                <input type="hidden" name="csrf" value="<?= csrf_token() ?>">
+                <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+                <button name="delete" class="btn danger">Delete</button>
+              </form>
+
+            </td>
           </tr>
         <?php endforeach; ?>
       </tbody>
@@ -472,31 +767,87 @@ ob_start(); ?>
   </div>
 </div>
 
+
+<!-- STATUS UPDATE MODAL -->
+  <div id="statusModal" class="pac-modal">
+    <div class="pac-panel">
+      <div class="pac-head">
+        <h3 style="margin:0">Update Lead Status</h3>
+        <button class="btn gray" type="button" onclick="closeStatusModal()">Close</button>
+      </div>
+
+      <div id="leadLabels" class="pac-labelgrid"></div>
+
+      <hr style="opacity:.18;margin:14px 0">
+
+      <form id="statusForm" method="post" class="pac-grid3">
+        <input type="hidden" name="csrf" value="<?=h(csrf_token())?>">
+        <input type="hidden" name="status_update" value="1">
+        <input type="hidden" name="lead_id" id="m_lead_id" value="0">
+
+        <div>
+          <label>Status*</label>
+          <select class="inp" name="to_status_id" id="m_status_id" required onchange="syncModalFields()">
+            <?php foreach($statuses as $sid=>$s): ?>
+              <option value="<?=$sid?>" data-code="<?=h($s['code'])?>"><?=h($s['name'])?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
+        <div id="m_followup_box" class="hide">
+          <label>Follow-up Date/Time*</label>
+          <input type="text" class="inp" name="followup_at" id="m_followup_at" placeholder="dd-mm-yyyy hh:mm AM/PM">
+        </div>
+
+        <div id="m_plan_box" class="hide">
+          <label>On-boarded Plan*</label>
+          <select class="inp" name="onboarded_plan_id" id="m_plan_id">
+            <option value="0">— Select Plan —</option>
+          </select>
+        </div>
+
+        <div class="full">
+          <label>Remark*</label>
+          <textarea class="inp" rows="3" name="remark" id="m_remark"
+            placeholder="Remark will be saved in history each time you update status."></textarea>
+        </div>
+
+        <div class="actions">
+          <button class="btn green" type="submit">Update</button>
+          <span id="m_msg" style="color:#9ca3af"></span>
+        </div>
+      </form>
+    </div>
+  </div>
 <script>
   // hide/show filter panel (remember)
-  (function(){
+  (function() {
     const panel = document.getElementById('filterPanel');
     const btn = document.getElementById('btnToggleFilters');
     const key = 'lead_filters_hidden';
 
-    function setHidden(h){
+    function setHidden(h) {
       panel.classList.toggle('hide', !!h);
       btn.textContent = h ? 'Show Filters' : 'Hide Filters';
-      try{ localStorage.setItem(key, h ? '1':'0'); }catch(e){}
+      try {
+        localStorage.setItem(key, h ? '1' : '0');
+      } catch (e) {}
     }
 
     let hidden = false;
-    try{ hidden = (localStorage.getItem(key) === '1'); }catch(e){}
+    try {
+      hidden = (localStorage.getItem(key) === '1');
+    } catch (e) {}
     setHidden(hidden);
 
-    btn.addEventListener('click', function(){
+    btn.addEventListener('click', function() {
       hidden = !hidden;
       setHidden(hidden);
     });
   })();
 
   // click status card => set status filter and submit
-  (function(){
+  (function() {
     const cards = document.querySelectorAll('#statusCards .scard');
     const statusSelect = document.getElementById('statusSelect');
     const form = document.getElementById('filterForm');
@@ -516,12 +867,149 @@ ob_start(); ?>
   })();
 
   document.addEventListener("DOMContentLoaded", function() {
-  flatpickr(".datepicker", {
-    altInput: true,          // user sees formatted date
-    altFormat: "d-m-Y",      // display format
-    dateFormat: "Y-m-d",     // value sent to backend
-    allowInput: false
+    flatpickr(".datepicker", {
+      altInput: true, // user sees formatted date
+      altFormat: "d-m-Y", // display format
+      dateFormat: "Y-m-d", // value sent to backend
+      allowInput: false
+    });
   });
+
+let _modalProfileType = 1;
+let _modalFP = null;
+
+function escapeHtml(s){
+ return String(s).replace(/[&<>"']/g,
+ m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[m])
+ );
+}
+
+function openStatusModal(id,row){
+
+ document.getElementById("m_lead_id").value=id;
+
+ const pt=parseInt(row.profile_type||"1");
+ _modalProfileType=pt;
+
+ const name=(pt===1)?
+ (row.company_name||"—"):
+ (row.candidate_name||"—");
+
+ const labels=[
+ ["Type",pt===1?"Employer":"Jobseeker"],
+ ["Name",name],
+ ["Phone 1",row.phone1||"—"],
+ ["Phone 2",row.phone2||"—"],
+ ["Email",row.email||"—"],
+ ["City",row.city_location||"—"],
+ ["Source",row.source_name||"—"],
+ ["Current Status",row.status_name||"—"],
+ ["On-boarded Plan",row.onboarded_plan_name||"—"],
+ ["Assigned To",row.assigned_to||"—"],
+ ["Updated",row.updated_at||"—"]
+ ];
+
+ const wrap=document.getElementById("leadLabels");
+
+ wrap.innerHTML=labels.map(x=>`
+ <div class="pac-label">
+  <div class="k">${escapeHtml(x[0])}</div>
+  <div class="v">${escapeHtml(x[1])}</div>
+ </div>
+ `).join("");
+
+ if(row.status_id)
+ document.getElementById("m_status_id").value=row.status_id;
+
+ document.getElementById("m_followup_at").value="";
+ document.getElementById("m_remark").value="";
+ document.getElementById("m_msg").innerHTML="";
+
+ document.getElementById("m_plan_id").innerHTML=
+ buildPlanOptions(pt,row.onboarded_plan_id||"0");
+
+ document.getElementById("statusModal").style.display="block";
+
+ syncModalFields();
+
+ if(window.flatpickr){
+
+  if(_modalFP) _modalFP.destroy();
+
+  _modalFP=flatpickr("#m_followup_at",{
+
+   enableTime:true,
+   time_24hr:false,
+   dateFormat:"d-m-Y h:i K",
+   allowInput:true,
+   appendTo:document.getElementById("statusModal")
+
+  });
+
+ }
+}
+function syncModalFields(){
+
+ const sel=document.getElementById("m_status_id");
+
+ const opt=sel.options[sel.selectedIndex];
+
+ const code=opt.getAttribute("data-code");
+
+ document.getElementById("m_followup_box")
+ .classList.toggle("hide",code!=="FOLLOW_UP");
+
+ document.getElementById("m_plan_box")
+ .classList.toggle("hide",code!=="ON_BOARDED");
+
+ if(code==="ON_BOARDED"){
+
+  const cur=document.getElementById("m_plan_id").value;
+
+  document.getElementById("m_plan_id").innerHTML=
+  buildPlanOptions(_modalProfileType,cur);
+
+ }
+
+}
+
+function closeStatusModal(){
+
+  document.getElementById("statusModal").style.display="none";
+
+}
+
+document.getElementById("statusForm").addEventListener("submit",async function(e){
+
+  e.preventDefault();
+
+  const msg=document.getElementById("m_msg");
+
+  msg.innerHTML="Saving...";
+
+  const fd=new FormData(this);
+
+  const res=await fetch("",{
+    method:"POST",
+    body:fd
+  });
+
+  const data=await res.json();
+
+  if(data.ok){
+
+    msg.innerHTML="Saved";
+
+    setTimeout(()=>{
+      location.reload();
+    },500);
+
+  }else{
+
+    msg.innerHTML=data.msg;
+
+  }
+
 });
 </script>
 
