@@ -442,7 +442,7 @@ ob_start(); ?>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
-    /* .pac-modal{
+  /* .pac-modal{
 position:fixed;
 top:0;
 left:0;
@@ -453,7 +453,7 @@ z-index:9999;
 display:none;
 padding-top:100px;
 } */
-  
+
 
 
   .hide {
@@ -508,74 +508,127 @@ padding-top:100px;
   }
 
   /* Modal CSS */
-  .pac-panel{
-  background:#0b1220;
-  border:1px solid rgba(148,163,184,.18);
-  border-radius:16px;
-  padding:16px;
-  box-shadow:0 14px 50px rgba(0,0,0,.45);
-}
-.pac-head{ display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px; }
-.pac-sub{ color:#9ca3af;font-size:12px;margin-top:6px; }
+  .pac-panel {
+    background: #0b1220;
+    border: 1px solid rgba(148, 163, 184, .18);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 14px 50px rgba(0, 0, 0, .45);
+  }
 
-.pac-grid3{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:12px 16px;
-  align-items:end;
-}
-.pac-grid3 .full{ grid-column:1/-1; }
-.pac-grid3 .actions{ grid-column:1/-1; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-.pac-grid3 label{ display:block; margin:0 0 6px; font-weight:600; }
-.pac-hint{ color:#9ca3af; font-size:12px; margin-top:6px; }
-.hide{ display:none !important; }
+  .pac-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
 
-@media (max-width:1100px){ .pac-grid3{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media (max-width:720px){ .pac-grid3{ grid-template-columns:1fr; } .pac-grid3 .full{ grid-column:1; } }
-  
-.pac-modal{
-  position:fixed; inset:0;
-  background:rgba(0,0,0,.55);
-  z-index:9999;
-  display:none;
-  overflow:auto;
-  padding:18px;
-}
-.pac-modal .pac-panel{ max-width:980px; margin:24px auto; }
+  .pac-sub {
+    color: #9ca3af;
+    font-size: 12px;
+    margin-top: 6px;
+  }
 
-.pac-labelgrid{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:10px;
-  margin-top:12px;
-}
-.pac-label{
-  border:1px solid rgba(148,163,184,.18);
-  border-radius:12px;
-  padding:10px;
-  background:#0f1a2e;
-}
+  .pac-grid3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px 16px;
+    align-items: end;
+  }
 
+  .pac-grid3 .full {
+    grid-column: 1/-1;
+  }
+
+  .pac-grid3 .actions {
+    grid-column: 1/-1;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .pac-grid3 label {
+    display: block;
+    margin: 0 0 6px;
+    font-weight: 600;
+  }
+
+  .pac-hint {
+    color: #9ca3af;
+    font-size: 12px;
+    margin-top: 6px;
+  }
+
+  .hide {
+    display: none !important;
+  }
+
+  @media (max-width:1100px) {
+    .pac-grid3 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width:720px) {
+    .pac-grid3 {
+      grid-template-columns: 1fr;
+    }
+
+    .pac-grid3 .full {
+      grid-column: 1;
+    }
+  }
+
+  .pac-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .55);
+    z-index: 9999;
+    display: none;
+    overflow: auto;
+    padding: 18px;
+  }
+
+  .pac-modal .pac-panel {
+    max-width: 980px;
+    margin: 24px auto;
+  }
+
+  .pac-labelgrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .pac-label {
+    border: 1px solid rgba(148, 163, 184, .18);
+    border-radius: 12px;
+    padding: 10px;
+    background: #0f1a2e;
+  }
 </style>
 <script>
-window.PACIFIC_PLANS = <?= json_encode($plansByType, JSON_UNESCAPED_UNICODE) ?>;
+  window.PACIFIC_PLANS = <?= json_encode($plansByType, JSON_UNESCAPED_UNICODE) ?>;
 
-function buildPlanOptions(profileType, selectedId){
+  function buildPlanOptions(profileType, selectedId) {
 
-  const common = window.PACIFIC_PLANS[0] || [];
-  const typed  = window.PACIFIC_PLANS[profileType] || [];
+    const common = window.PACIFIC_PLANS[0] || [];
+    const typed = window.PACIFIC_PLANS[profileType] || [];
 
-  const list=[...common,...typed];
+    const list = [...common, ...typed];
 
-  let html='<option value="0">— Select Plan —</option>';
+    let html = '<option value="0">— Select Plan —</option>';
 
-  list.forEach(p=>{
-    const sel = String(p.id)===String(selectedId) ? ' selected':'';
-    html+=`<option value="${p.id}" ${sel}>${p.name}</option>`;
-  });
+    list.forEach(p => {
+      const sel = String(p.id) === String(selectedId) ? ' selected' : '';
+      html += `<option value="${p.id}" ${sel}>${p.name}</option>`;
+    });
 
-  return html;
-}
+    return html;
+  }
 </script>
 
 <h2 style="margin:8px 0 12px">Leads</h2>
@@ -731,7 +784,15 @@ function buildPlanOptions(profileType, selectedId){
             <td><?= h($name) ?></td>
             <td><?= h($r['phone1'] ?: '—') ?></td>
             <td><?= h($r['city_location'] ?: '—') ?></td>
-            <td><?= h($r['source_name'] ?? '—') ?></td>
+            <td>
+              <?= h($r['source_name'] ?? '—') ?>
+              <?php if (!empty($r['source_detail'])): ?>
+                <br>
+                <small style="color:#9ca3af">
+                  (<?= h($r['source_detail']) ?>)
+                </small>
+              <?php endif; ?>
+            </td>
             <td><span class="badge on"><?= h($r['status_name'] ?? '—') ?></span></td>
             <td><?= h($r['onboarded_plan_name'] ?? '—') ?></td>
             <td>
@@ -749,14 +810,21 @@ function buildPlanOptions(profileType, selectedId){
               </button>
 
               <a class="btn secondary"
-                href="lead.php?edit=<?= (int)$r['id'] ?>">
+                href="lead.php?edit=<?= (int)$r['id'] ?>"
+                onclick="sessionStorage.setItem('lead_back', window.location.href)">
                 Edit
               </a>
 
               <form method="post" style="display:inline">
-                <input type="hidden" name="csrf" value="<?= csrf_token() ?>">
-                <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
-                <button name="delete" class="btn danger">Delete</button>
+                <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
+                <input type="hidden" name="id" value="<?= h($r['id']) ?>">
+
+                <button type="submit"
+                  name="delete"
+                  class="btn red"
+                  onclick="return confirmDelete();">
+                  Delete
+                </button>
               </form>
 
             </td>
@@ -769,56 +837,56 @@ function buildPlanOptions(profileType, selectedId){
 
 
 <!-- STATUS UPDATE MODAL -->
-  <div id="statusModal" class="pac-modal">
-    <div class="pac-panel">
-      <div class="pac-head">
-        <h3 style="margin:0">Update Lead Status</h3>
-        <button class="btn gray" type="button" onclick="closeStatusModal()">Close</button>
+<div id="statusModal" class="pac-modal">
+  <div class="pac-panel">
+    <div class="pac-head">
+      <h3 style="margin:0">Update Lead Status</h3>
+      <button class="btn gray" type="button" onclick="closeStatusModal()">Close</button>
+    </div>
+
+    <div id="leadLabels" class="pac-labelgrid"></div>
+
+    <hr style="opacity:.18;margin:14px 0">
+
+    <form id="statusForm" method="post" class="pac-grid3">
+      <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
+      <input type="hidden" name="status_update" value="1">
+      <input type="hidden" name="lead_id" id="m_lead_id" value="0">
+
+      <div>
+        <label>Status*</label>
+        <select class="inp" name="to_status_id" id="m_status_id" required onchange="syncModalFields()">
+          <?php foreach ($statuses as $sid => $s): ?>
+            <option value="<?= $sid ?>" data-code="<?= h($s['code']) ?>"><?= h($s['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
       </div>
 
-      <div id="leadLabels" class="pac-labelgrid"></div>
+      <div id="m_followup_box" class="hide">
+        <label>Follow-up Date/Time*</label>
+        <input type="text" class="inp" name="followup_at" id="m_followup_at" placeholder="dd-mm-yyyy hh:mm AM/PM">
+      </div>
 
-      <hr style="opacity:.18;margin:14px 0">
+      <div id="m_plan_box" class="hide">
+        <label>On-boarded Plan*</label>
+        <select class="inp" name="onboarded_plan_id" id="m_plan_id">
+          <option value="0">— Select Plan —</option>
+        </select>
+      </div>
 
-      <form id="statusForm" method="post" class="pac-grid3">
-        <input type="hidden" name="csrf" value="<?=h(csrf_token())?>">
-        <input type="hidden" name="status_update" value="1">
-        <input type="hidden" name="lead_id" id="m_lead_id" value="0">
+      <div class="full">
+        <label>Remark*</label>
+        <textarea class="inp" rows="3" name="remark" id="m_remark"
+          placeholder="Remark will be saved in history each time you update status."></textarea>
+      </div>
 
-        <div>
-          <label>Status*</label>
-          <select class="inp" name="to_status_id" id="m_status_id" required onchange="syncModalFields()">
-            <?php foreach($statuses as $sid=>$s): ?>
-              <option value="<?=$sid?>" data-code="<?=h($s['code'])?>"><?=h($s['name'])?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-
-        <div id="m_followup_box" class="hide">
-          <label>Follow-up Date/Time*</label>
-          <input type="text" class="inp" name="followup_at" id="m_followup_at" placeholder="dd-mm-yyyy hh:mm AM/PM">
-        </div>
-
-        <div id="m_plan_box" class="hide">
-          <label>On-boarded Plan*</label>
-          <select class="inp" name="onboarded_plan_id" id="m_plan_id">
-            <option value="0">— Select Plan —</option>
-          </select>
-        </div>
-
-        <div class="full">
-          <label>Remark*</label>
-          <textarea class="inp" rows="3" name="remark" id="m_remark"
-            placeholder="Remark will be saved in history each time you update status."></textarea>
-        </div>
-
-        <div class="actions">
-          <button class="btn green" type="submit">Update</button>
-          <span id="m_msg" style="color:#9ca3af"></span>
-        </div>
-      </form>
-    </div>
+      <div class="actions">
+        <button class="btn green" type="submit">Update</button>
+        <span id="m_msg" style="color:#9ca3af"></span>
+      </div>
+    </form>
   </div>
+</div>
 <script>
   // hide/show filter panel (remember)
   (function() {
@@ -875,142 +943,153 @@ function buildPlanOptions(profileType, selectedId){
     });
   });
 
-let _modalProfileType = 1;
-let _modalFP = null;
+  let _modalProfileType = 1;
+  let _modalFP = null;
 
-function escapeHtml(s){
- return String(s).replace(/[&<>"']/g,
- m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[m])
- );
-}
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g,
+      m => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      } [m])
+    );
+  }
 
-function openStatusModal(id,row){
+  function openStatusModal(id, row) {
 
- document.getElementById("m_lead_id").value=id;
+    document.getElementById("m_lead_id").value = id;
 
- const pt=parseInt(row.profile_type||"1");
- _modalProfileType=pt;
+    const pt = parseInt(row.profile_type || "1");
+    _modalProfileType = pt;
 
- const name=(pt===1)?
- (row.company_name||"—"):
- (row.candidate_name||"—");
+    const name = (pt === 1) ?
+      (row.company_name || "—") :
+      (row.candidate_name || "—");
 
- const labels=[
- ["Type",pt===1?"Employer":"Jobseeker"],
- ["Name",name],
- ["Phone 1",row.phone1||"—"],
- ["Phone 2",row.phone2||"—"],
- ["Email",row.email||"—"],
- ["City",row.city_location||"—"],
- ["Source",row.source_name||"—"],
- ["Current Status",row.status_name||"—"],
- ["On-boarded Plan",row.onboarded_plan_name||"—"],
- ["Assigned To",row.assigned_to||"—"],
- ["Updated",row.updated_at||"—"]
- ];
+    const labels = [
+      ["Type", pt === 1 ? "Employer" : "Jobseeker"],
+      ["Name", name],
+      ["Phone 1", row.phone1 || "—"],
+      ["Phone 2", row.phone2 || "—"],
+      ["Email", row.email || "—"],
+      ["City", row.city_location || "—"],
+      ["Source", row.source_name || "—"],
+      ["Current Status", row.status_name || "—"],
+      ["On-boarded Plan", row.onboarded_plan_name || "—"],
+      ["Assigned To", row.assigned_to || "—"],
+      ["Updated", row.updated_at || "—"]
+    ];
 
- const wrap=document.getElementById("leadLabels");
+    const wrap = document.getElementById("leadLabels");
 
- wrap.innerHTML=labels.map(x=>`
+    wrap.innerHTML = labels.map(x => `
  <div class="pac-label">
   <div class="k">${escapeHtml(x[0])}</div>
   <div class="v">${escapeHtml(x[1])}</div>
  </div>
  `).join("");
 
- if(row.status_id)
- document.getElementById("m_status_id").value=row.status_id;
+    if (row.status_id)
+      document.getElementById("m_status_id").value = row.status_id;
 
- document.getElementById("m_followup_at").value="";
- document.getElementById("m_remark").value="";
- document.getElementById("m_msg").innerHTML="";
+    document.getElementById("m_followup_at").value = "";
+    document.getElementById("m_remark").value = "";
+    document.getElementById("m_msg").innerHTML = "";
 
- document.getElementById("m_plan_id").innerHTML=
- buildPlanOptions(pt,row.onboarded_plan_id||"0");
+    document.getElementById("m_plan_id").innerHTML =
+      buildPlanOptions(pt, row.onboarded_plan_id || "0");
 
- document.getElementById("statusModal").style.display="block";
+    document.getElementById("statusModal").style.display = "block";
 
- syncModalFields();
+    syncModalFields();
 
- if(window.flatpickr){
+    if (window.flatpickr) {
 
-  if(_modalFP) _modalFP.destroy();
+      if (_modalFP) _modalFP.destroy();
 
-  _modalFP=flatpickr("#m_followup_at",{
+      _modalFP = flatpickr("#m_followup_at", {
 
-   enableTime:true,
-   time_24hr:false,
-   dateFormat:"d-m-Y h:i K",
-   allowInput:true,
-   appendTo:document.getElementById("statusModal")
+        enableTime: true,
+        time_24hr: false,
+        dateFormat: "d-m-Y h:i K",
+        allowInput: true,
+        appendTo: document.getElementById("statusModal")
 
-  });
+      });
 
- }
-}
-function syncModalFields(){
+    }
+  }
 
- const sel=document.getElementById("m_status_id");
+  function syncModalFields() {
 
- const opt=sel.options[sel.selectedIndex];
+    const sel = document.getElementById("m_status_id");
 
- const code=opt.getAttribute("data-code");
+    const opt = sel.options[sel.selectedIndex];
 
- document.getElementById("m_followup_box")
- .classList.toggle("hide",code!=="FOLLOW_UP");
+    const code = opt.getAttribute("data-code");
 
- document.getElementById("m_plan_box")
- .classList.toggle("hide",code!=="ON_BOARDED");
+    document.getElementById("m_followup_box")
+      .classList.toggle("hide", code !== "FOLLOW_UP");
 
- if(code==="ON_BOARDED"){
+    document.getElementById("m_plan_box")
+      .classList.toggle("hide", code !== "ON_BOARDED");
 
-  const cur=document.getElementById("m_plan_id").value;
+    if (code === "ON_BOARDED") {
 
-  document.getElementById("m_plan_id").innerHTML=
-  buildPlanOptions(_modalProfileType,cur);
+      const cur = document.getElementById("m_plan_id").value;
 
- }
+      document.getElementById("m_plan_id").innerHTML =
+        buildPlanOptions(_modalProfileType, cur);
 
-}
-
-function closeStatusModal(){
-
-  document.getElementById("statusModal").style.display="none";
-
-}
-
-document.getElementById("statusForm").addEventListener("submit",async function(e){
-
-  e.preventDefault();
-
-  const msg=document.getElementById("m_msg");
-
-  msg.innerHTML="Saving...";
-
-  const fd=new FormData(this);
-
-  const res=await fetch("",{
-    method:"POST",
-    body:fd
-  });
-
-  const data=await res.json();
-
-  if(data.ok){
-
-    msg.innerHTML="Saved";
-
-    setTimeout(()=>{
-      location.reload();
-    },500);
-
-  }else{
-
-    msg.innerHTML=data.msg;
+    }
 
   }
 
-});
+  function closeStatusModal() {
+
+    document.getElementById("statusModal").style.display = "none";
+
+  }
+
+  document.getElementById("statusForm").addEventListener("submit", async function(e) {
+
+    e.preventDefault();
+
+    const msg = document.getElementById("m_msg");
+
+    msg.innerHTML = "Saving...";
+
+    const fd = new FormData(this);
+
+    const res = await fetch("", {
+      method: "POST",
+      body: fd
+    });
+
+    const data = await res.json();
+
+    if (data.ok) {
+
+      msg.innerHTML = "Saved";
+
+      setTimeout(() => {
+        location.reload();
+      }, 500);
+
+    } else {
+
+      msg.innerHTML = data.msg;
+
+    }
+
+  });
+
+  function confirmDelete() {
+    return confirm("Are you sure you want to delete this lead?");
+  }
 </script>
 
 <?php
