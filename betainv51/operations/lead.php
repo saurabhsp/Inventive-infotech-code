@@ -224,15 +224,15 @@ if (!user_can('view', $MENU_ID, $con)) {
 function flash_redirect(string $msg = 'Saved')
 {
 ?>
-<script>
-if (document.referrer && document.referrer !== window.location.href) {
-    window.location.href = document.referrer + (document.referrer.includes('?') ? '&' : '?') + 'ok=<?= urlencode($msg) ?>';
-} else {
-    window.location.href = 'lead_list.php?ok=<?= urlencode($msg) ?>';
-}
-</script>
+  <script>
+    if (document.referrer && document.referrer !== window.location.href) {
+      window.location.href = document.referrer + (document.referrer.includes('?') ? '&' : '?') + 'ok=<?= urlencode($msg) ?>';
+    } else {
+      window.location.href = 'lead_list.php?ok=<?= urlencode($msg) ?>';
+    }
+  </script>
 <?php
-exit;
+  exit;
 }
 
 /* ---------------- Load masters ---------------- */
@@ -474,6 +474,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $source_id     = (int)($_POST['source_id'] ?? 0);
       $status_id     = (int)($_POST['status_id'] ?? 0);
       $assigned_to   = (int)($_POST['assigned_to'] ?? 0);
+      $source_detail = clean($_POST['source_detail'] ?? '');
 
 
       $reason        = trim($_POST['last_status_reason'] ?? '');
@@ -582,6 +583,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         email=?,
                         city_location=?,
                         source_id=?,
+                        source_detail=?,
                         status_id=?,
                         assigned_to=?,
                         assigned_by=?,
@@ -606,6 +608,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               $email,
               $city_location,
               $source_id_db,
+              $source_detail,
               $status_id,
               $assigned_to_db,
               $assigned_by_db,
@@ -618,7 +621,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               $id
             ];
 
-            $types = "issssssssiiiisssssii"; // ✅ 20 params
+            $types = "issssssssisiiisssssii"; // ✅ 21 params
             stmt_bind($st, $types, $params);
 
             $ok = $st->execute();
@@ -656,14 +659,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $sql = "INSERT INTO `$TABLE`
                     (profile_type,company_name,owner_hr_name,sector,candidate_name,
                      phone1,phone2,email,city_location,
-                     source_id,status_id,
+                     source_id,source_detail,status_id,
                      assigned_to,assigned_by,assigned_at,reassigned_at,
                      last_status_reason,followup_at,onboarded_plan_id,not_contactable_flag,
                      created_by)
                     VALUES
                     (?,?,?,?,?,
                      ?,?,?,?,
-                     ?,?,
+                     ?,?,?,
                      ?,?,?,?,
                      ?,?,?,?,
                      ?)";
@@ -683,6 +686,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               $email,
               $city_location,
               $source_id_db,
+              $source_detail,
               $status_id,
               $assigned_to_db,
               $assigned_by_db,
@@ -695,7 +699,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               $created_by_db
             ];
 
-            $types = "issssssssiiiisssssii"; // ✅ 20 params
+            $types = "issssssssisiiisssssii"; // ✅ 20 params
             stmt_bind($st, $types, $params);
 
             $ok = $st->execute();
@@ -1215,7 +1219,15 @@ ob_start(); ?>
               <td><?= h($name) ?></td>
               <td><?= h($r['phone1'] ?: '—') ?></td>
               <td><?= h($r['city_location'] ?: '—') ?></td>
-              <td><?= h($r['source_name'] ?? '—') ?></td>
+              <td>
+                <?= h($r['source_name'] ?? '—') ?>
+                <?php if (!empty($r['source_detail'])): ?>
+                  <br>
+                  <small style="color:#9ca3af">
+                    (<?= h($r['source_detail']) ?>)
+                  </small>
+                <?php endif; ?>
+              </td>
               <td><span class="badge on"><?= h($r['status_name'] ?? '—') ?></span></td>
               <td><?= h($r['onboarded_plan_name'] ?? '—') ?></td>
               <td>
@@ -1501,7 +1513,7 @@ ob_start(); ?>
         </select>
       </div>
 
-      <div>
+      <div class="full">
         <label>Source Details</label>
         <textarea name="source_detail" class="inp" rows="3"
           placeholder="Source Details"><?= h($val('source_detail')) ?></textarea>
@@ -1663,21 +1675,19 @@ ob_start(); ?>
       }
     })();
 
-   function goBack(){
+    function goBack() {
 
-  const back = sessionStorage.getItem('lead_back');
+      const back = sessionStorage.getItem('lead_back');
 
-  if(back){
-    window.location.href = back;
-  }
-  else if(document.referrer){
-    window.location.href = document.referrer;
-  }
-  else{
-    window.location.href = 'lead_list.php';
-  }
+      if (back) {
+        window.location.href = back;
+      } else if (document.referrer) {
+        window.location.href = document.referrer;
+      } else {
+        window.location.href = 'lead_list.php';
+      }
 
-}
+    }
   </script>
 
 <?php endif; ?>

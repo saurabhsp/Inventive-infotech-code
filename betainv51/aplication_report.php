@@ -287,6 +287,76 @@ if ($mode === 'candidate') {
 
   // subscription
   $subscription = ['status' => 'no_subscription', 'valid_from' => '', 'valid_to' => '', 'plan_name' => '', 'validity_months' => null];
+
+
+
+
+
+
+
+  /* ======================================================
+   Fetch Applications of this Candidate
+====================================================== */
+
+  $appSql = "
+SELECT
+    A.id AS app_id,
+    A.job_id,
+    A.job_listing_type,
+    A.application_date,
+    A.status_id,
+    S.name AS status_name,
+
+    COALESCE(JP1.name, JP2.name, '') AS job_position,
+
+    COALESCE(
+        JW.company_name,
+        JV.company_name,
+        RP1.organization_name,
+        RP2.organization_name,
+        ''
+    ) AS company_name
+
+FROM jos_app_applications A
+
+LEFT JOIN jos_app_applicationstatus S ON S.id = A.status_id
+
+LEFT JOIN jos_app_walkininterviews JW 
+    ON (A.job_listing_type=1 AND JW.id=A.job_id)
+
+LEFT JOIN jos_crm_jobpost JP1 
+    ON JP1.id = JW.job_position_id
+
+LEFT JOIN jos_app_recruiter_profile RP1 
+    ON RP1.id = JW.recruiter_id
+
+LEFT JOIN jos_app_jobvacancies JV 
+    ON (A.job_listing_type=2 AND JV.id=A.job_id)
+
+LEFT JOIN jos_crm_jobpost JP2 
+    ON JP2.id = JV.job_position_id
+
+LEFT JOIN jos_app_recruiter_profile RP2 
+    ON RP2.id = JV.recruiter_id
+
+WHERE A.userid = ?
+
+ORDER BY A.application_date DESC
+";
+
+  $appStmt = $con->prepare($appSql);
+  $appStmt->bind_param("i", $userid);
+  $appStmt->execute();
+
+  $applications = stmt_fetch_all_assoc($appStmt);
+
+  $appStmt->close();
+
+
+
+
+
+
   if ($active_plan_id > 0) {
     $sq = "
       SELECT log.start_date, log.end_date, plan.plan_name, plan.validity_months
@@ -373,6 +443,8 @@ if ($mode === 'candidate') {
       .muted {
         color: #9aa0a6;
       }
+
+     
     </style>
   </head>
 
@@ -397,11 +469,11 @@ if ($mode === 'candidate') {
             <div class="muted">
               <?= h($C['email'] ?: '') ?><?= ($C['email'] && $C['mobile_no']) ? ' • ' : '' ?><?= h($C['mobile_no'] ?: '') ?>
             </div>
-            <?php if ($job_positions) { ?>
+            <!-- <?php if ($job_positions) { ?>
               <div class="chips" style="margin-top:6px">
                 <?php foreach ($job_positions as $jp) { ?><span class="chip"><?= h($jp) ?></span><?php } ?>
               </div>
-            <?php } ?>
+            <?php } ?> -->
           </div>
         </div>
 
@@ -472,13 +544,116 @@ if ($mode === 'candidate') {
               <?php } ?>
             </div>
           </div>
+
+
           <?php if ($myreferral_code) { ?>
             <div class="row">
               <div class="lbl">Referral Code</div>
               <div class="val"><?= h($myreferral_code) ?></div>
             </div>
           <?php } ?>
+          <?php if (!empty($job_positions)): ?>
+            <div class="row" style="margin-top:10px">
+              <div class="lbl">Job Positions</div>
+              <div class="val">
+                <?= h(implode(', ', $job_positions)) ?>
+              </div>
+            </div>
+          <?php endif; ?>
         </div>
+
+
+        <?php if (!empty($applications)): ?>
+
+          <div style="height:1px;background:#1f2937;margin:20px 0"></div>
+
+          <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:10px">
+            Applied Positions (<?= count($applications) ?>)
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Sr</th>
+                  <th>Application ID</th>
+                  <th>Applied On</th>
+                  <th>Job Position</th>
+                  <th>Company</th>
+                  <th>Listing</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+
+                <?php
+                $sr = 1;
+
+                foreach ($applications as $a):
+
+                  $jobHref = h(keep_params([
+                    'mode' => 'job',
+                    'lt' => (int)$a['job_listing_type'],
+                    'id' => (int)$a['job_id']
+                  ]));
+
+                  $lt_text = ((int)$a['job_listing_type'] == 1)
+                    ? 'Premium'
+                    : 'Standard';
+                ?>
+
+                  <tr>
+
+                    <td><?= $sr++ ?></td>
+
+                    <td><?= (int)$a['app_id'] ?></td>
+
+                    <td><?= h(fmt_date($a['application_date'])) ?></td>
+
+                    <td><?= h($a['job_position']) ?></td>
+
+                    <td><?= h($a['company_name']) ?></td>
+
+                    <td>
+                      <span class="badge">
+                        <?= h($lt_text) ?>
+                      </span>
+                    </td>
+
+                    <td>
+                      <span class="badge">
+                        <?= h($a['status_name']) ?>
+                      </span>
+                    </td>
+
+                    <td>
+
+                      <a class="btn secondary"
+                        href="<?= $jobHref ?>"
+                        target="_blank">
+                        View Job
+                      </a>
+
+                    </td>
+
+                  </tr>
+
+                <?php endforeach; ?>
+
+              </tbody>
+            </table>
+          </div>
+
+        <?php else: ?>
+
+          <div style="height:1px;background:#1f2937;margin:20px 0"></div>
+
+          <div class="badge">
+            No applications found for this candidate.
+          </div>
+
+        <?php endif; ?>
       </div>
     </div>
   </body>
@@ -627,6 +802,42 @@ if ($mode === 'job') {
     die('Job not found');
   }
 
+
+  /* ================================
+   Fetch Applications for this job
+================================ */
+
+  $appSql = "
+SELECT 
+    a.id,
+    a.userid,
+    a.application_date,
+    a.status_id,
+    s.name AS status_name,
+    a.interview_date_time,
+    cp.candidate_name,
+    cp.mobile_no,
+    cp.email
+FROM jos_app_applications a
+LEFT JOIN jos_app_candidate_profile cp ON cp.userid = a.userid
+LEFT JOIN jos_app_applicationstatus s ON s.id = a.status_id
+WHERE a.job_listing_type = ?
+AND a.job_id = ?
+ORDER BY a.application_date DESC
+";
+
+  $appStmt = $con->prepare($appSql);
+  $appStmt->bind_param('ii', $lt, $id);
+  $appStmt->execute();
+  $appRes = $appStmt->get_result();
+
+  $appRows = [];
+
+  while ($ar = $appRes->fetch_assoc()) {
+    $appRows[] = $ar;
+  }
+
+  $appStmt->close();
   // company logo
   $company_logo = DOMAIN_URL . 'webservices/uploads/nologo.png';
   if (!empty($row['recruiter_id'])) {
@@ -787,6 +998,7 @@ if ($mode === 'job') {
 
         <?php if ($lt === 1 && (!empty($row['job_description']) || !empty($row['skills_required']) || !empty($row['languages_required']) || !empty($row['work_equipment']))) { ?>
           <div style="height:1px;background:#1f2937;margin:16px 0"></div>
+
           <?php if (!empty($row['job_description'])) { ?>
             <div style="margin-bottom:12px">
               <div style="font-weight:600;color:#cbd5e1;margin-bottom:6px">Job Description</div>
@@ -850,6 +1062,99 @@ if ($mode === 'job') {
           }
           ?>
         </div>
+
+        <?php if ($appRows): ?>
+
+          <div style="height:1px;background:#1f2937;margin:20px 0"></div>
+
+          <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:10px">
+            Applications (<?= count($appRows) ?>)
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Sr</th>
+                  <th>Application ID</th>
+                  <th>Candidate</th>
+                  <th>Contact</th>
+                  <th>Applied On</th>
+                  <th>Status</th>
+                  <th>Interview</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+
+                <?php
+                $sr = 1;
+
+                foreach ($appRows as $r):
+
+                  $profileHref = h(keep_params([
+                    'mode' => 'candidate',
+                    'userid' => (int)$r['userid']
+                  ]));
+
+                ?>
+
+                  <tr>
+
+                    <td><?= $sr++ ?></td>
+
+                    <td><?= (int)$r['id'] ?></td>
+
+                    <td>
+                      <?= h($r['candidate_name'] ?: ('User #' . $r['userid'])) ?>
+                    </td>
+
+                    <td>
+                      <?= h($r['mobile_no']) ?><br>
+                      <?= h($r['email']) ?>
+                    </td>
+
+                    <td>
+                      <?= h(fmt_date($r['application_date'])) ?>
+                    </td>
+
+                    <td>
+                      <span class="badge">
+                        <?= h($r['status_name']) ?>
+                      </span>
+                    </td>
+
+                    <td>
+                      <?= h(fmt_dt_ampm($r['interview_date_time'])) ?>
+                    </td>
+
+                    <td>
+
+                      <a class="btn secondary"
+                        href="<?= $profileHref ?>"
+                        target="_blank">
+                        View Profile
+                      </a>
+
+                    </td>
+
+                  </tr>
+
+                <?php endforeach; ?>
+
+              </tbody>
+            </table>
+          </div>
+
+        <?php else: ?>
+
+          <div style="height:1px;background:#1f2937;margin:20px 0"></div>
+
+          <div class="badge">
+            No applications yet.
+          </div>
+
+        <?php endif; ?>
       </div>
     </div>
   </body>
@@ -1207,6 +1512,9 @@ ob_start(); ?>
       font-size: 26px;
       font-weight: 700;
     }
+    .hide {
+  display: none !important;
+}
   </style>
 </head>
 
@@ -1251,11 +1559,20 @@ ob_start(); ?>
         </a>
 
       <?php endforeach; ?>
+      <!-- Show/Hide Filter Button -->
+      <div style="margin-left:auto; display:flex; align-items:center;">
+        <button type="button"
+  id="toggleFilterBtn"
+  class="btn secondary"
+  onclick="toggleFilterBox(); return false;">
+  Show Filters
+</button>
+      </div>
 
     </div>
 
 
-    <div class="card toolbar">
+    <div id="filterPanel" class="card toolbar hide">
 
       <form method="get">
         <div class="row">
@@ -1370,11 +1687,39 @@ ob_start(); ?>
     </div>
   </div>
   <script>
+function toggleFilterBox()
+{
+  var box = document.getElementById('filterPanel');
+  var btn = document.getElementById('toggleFilterBtn');
+
+  if (!box || !btn) return;
+
+  if (box.classList.contains('hide'))
+  {
+    box.classList.remove('hide');
+    btn.innerText = 'Hide Filters';
+  }
+  else
+  {
+    box.classList.add('hide');
+    btn.innerText = 'Show Filters';
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+
+  flatpickr(".datepicker", {
+    altInput: true,
+    altFormat: "d-m-Y",
+    dateFormat: "Y-m-d"
+  });
+
+});
     document.addEventListener("DOMContentLoaded", function() {
       flatpickr(".datepicker", {
-        altInput: true, // user sees formatted date
-        altFormat: "d-m-Y", // display format
-        dateFormat: "Y-m-d", // value sent to backend
+        altInput: true,
+        altFormat: "d-m-Y",
+        dateFormat: "Y-m-d",
         allowInput: false
       });
     });

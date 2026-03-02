@@ -283,7 +283,7 @@ ob_start();
       });
     }
 
-    
+
 
 
 
@@ -353,6 +353,18 @@ ob_start();
     });
 
   });
+   function toggleFilterBox() {
+      var box = document.getElementById('filterBox');
+      var btn = document.getElementById('toggleFilterBtn');
+
+      if (box.style.display === "none" || box.style.display === "") {
+        box.style.display = "block";
+        btn.innerText = "Hide Filters";
+      } else {
+        box.style.display = "none";
+        btn.innerText = "Show Filters";
+      }
+    }
 </script>
 
 <div class="master-wrap">
@@ -685,6 +697,109 @@ ob_start();
       exit;
     }
 
+
+
+    /* ADD NEW BLOCK HERE — EXACTLY HERE */
+
+    /* =====================
+   SHOW ASSIGNMENT LOGS (by user_id)
+===================== */
+
+    if (isset($_GET['show_logs_user_id']) && (int)$_GET['show_logs_user_id'] > 0) {
+
+      $log_user_id = (int)$_GET['show_logs_user_id'];
+
+      echo '<div style="margin-bottom:10px;">
+    <a class="btn secondary" href="' . h($_SERVER['PHP_SELF']) . '">
+    ← Back to List
+    </a>
+    </div>';
+
+      // Fetch recruiter name safely
+      $nameStmt = $con->prepare("
+    SELECT 
+        rp.organization_name,
+        rp.contact_person_name,
+        u.mobile_no
+    FROM jos_app_users u
+    LEFT JOIN jos_app_recruiter_profile rp ON rp.id = u.profile_id
+    WHERE u.id = ?
+    LIMIT 1
+    ");
+
+      $nameStmt->bind_param("i", $log_user_id);
+      $nameStmt->execute();
+      $nameRes = $nameStmt->get_result();
+      $nameRow = $nameRes->fetch_assoc();
+      $nameStmt->close();
+
+      $displayName =
+        ($nameRow['organization_name'] ?? '')
+        ?: ($nameRow['contact_person_name'] ?? '')
+        ?: ($nameRow['mobile_no'] ?? '')
+        ?: '-';
+
+      echo '<h3>Account Operator Assignment History — ' . h($displayName) . '</h3>';
+      $sqlLogs = "
+    SELECT 
+        l.id,
+        l.user_id,
+        l.changed_at,
+        l.remark,
+        oldop.name AS old_operator,
+        newop.name AS new_operator,
+        changedop.name AS changed_by_name
+    FROM jos_app_user_ac_manager_log l
+    LEFT JOIN jos_admin_users oldop ON oldop.id = l.old_ac_manager_id
+    LEFT JOIN jos_admin_users newop ON newop.id = l.new_ac_manager_id
+    LEFT JOIN jos_admin_users changedop ON changedop.id = l.changed_by
+    WHERE l.user_id = ?
+    ORDER BY l.changed_at DESC
+    ";
+
+      $stmtLogs = $con->prepare($sqlLogs);
+      $stmtLogs->bind_param("i", $log_user_id);
+      $stmtLogs->execute();
+      $resultLogs = $stmtLogs->get_result();
+
+      if ($resultLogs->num_rows > 0) {
+
+        echo '<div class="table-wrap"><table class="table">';
+        echo '<thead><tr>
+        <th>Sr No.</th>
+        <th>Old Operator</th>
+        <th>New Operator</th>
+        <th>Changed By</th>
+        <th>Date</th>
+        <th>Remark</th>
+        </tr></thead><tbody>';
+        $sr = 1;
+        while ($log = $resultLogs->fetch_assoc()) {
+
+          echo '<tr>';
+          echo '<td>' . $sr++ . '</td>';
+          echo '<td>' . h($log['old_operator'] ?: '-') . '</td>';
+          echo '<td>' . h($log['new_operator'] ?: '-') . '</td>';
+          echo '<td>' . h($log['changed_by_name'] ?: '-') . '</td>';
+          echo '<td>' . (!empty($log['changed_at']) ? date("d M Y H:i", strtotime($log['changed_at'])) : '-') . '</td>';
+          echo '<td>' . h($log['remark'] ?: '-') . '</td>';
+          echo '</tr>';
+        }
+
+        echo '</tbody></table></div>';
+      } else {
+
+        echo '<div class="alert warn">No logs found.</div>';
+      }
+
+      $stmtLogs->close();
+
+      echo ob_get_clean();
+
+      exit;
+    }
+
+
     /* ====================== LIST MODE BELOW ======================= */
 
     if ($logged_admin_id <= 0) {
@@ -1004,9 +1119,26 @@ SELECT
           <div class="stat-num"><?= $cnt ?></div>
         </a>
       <?php endforeach; ?>
+      <!-- Show / Hide Filter Button -->
+   <!-- Show / Hide Filter Button -->
+<div style="margin-left:auto; align-items:center;">
+  <button type="button"
+    onclick="toggleFilterBox()"
+    id="toggleFilterBtn"
+    class="btn secondary"
+    style="white-space:nowrap;">
+    Show Filters
+  </button>
+</div>
     </div>
 
-    <form method="get" class="filter-box">
+    
+
+
+    <form method="get"
+      class="filter-box"
+      id="filterBox"
+      style="display:none;">
 
       <input type="hidden" name="plan_id" value="<?= (int)$plan_id_filter ?>">
 
@@ -1389,7 +1521,11 @@ SELECT
                   <?= $standardJobsCount ?>
                 <?php } ?>
               </td>
-              <td><a class="btn secondary" href="<?= h($profileUrl) ?>">View</a></td>
+              <td><a class="btn secondary" href="<?= h($profileUrl) ?>">View</a>
+                <a class="btn primary" style="margin:2px; white-space:nowrap;" href="<?= h(keep_params(['show_logs_user_id' => $row['id'], 'page' => null])) ?>">
+                  Assign History
+                </a>
+              </td>
             </tr>
           <?php endwhile;
           $stmt->close(); ?>

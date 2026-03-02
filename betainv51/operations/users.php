@@ -1007,7 +1007,32 @@ SELECT
               <td><?= $loc ?></td>
               <td><?= h(date('d M Y', strtotime($row['created_at']))) ?></td>
               <td>
+                <!-- Edit Employer Block  -->
+                <?php
+                $edit_action = '';
 
+                if ($row['profile_type_id'] == 1) {
+                  $edit_action = 'update_recruiter_profile.php';
+                } elseif ($row['profile_type_id'] == 2) {
+                  $edit_action = 'update_jobseeker_profile.php';
+                } elseif ($row['profile_type_id'] == 3) {
+                  $edit_action = 'update_promoter_profile.php';
+                }
+                ?>
+
+                <form method="post" action="<?= h($edit_action) ?>" style="margin-top:6px;">
+
+                  <input type="hidden" name="user_id" value="<?= (int)$row['id'] ?>">
+                  <input type="hidden" name="profile_type_id" value="<?= (int)$row['profile_type_id'] ?>">
+                  <input type="hidden" name="profile_id" value="<?= (int)$row['profile_id'] ?>">
+                  <input type="hidden" name="csrf" value="<?= h($_SESSION['csrf_token']) ?>">
+
+                  <button type="submit" class="btn secondary">
+                    Edit Profile
+                  </button>
+
+                </form>
+                <!-- Verification Block -->
                 <div style="font-size:12px;color:#6b7280;margin-bottom:4px">
                   Verified:
                 </div>

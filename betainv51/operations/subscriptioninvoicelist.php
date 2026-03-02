@@ -472,6 +472,10 @@ ob_start();
         .center {
             text-align: center;
         }
+
+        .hide {
+            display: none !important;
+        }
     </style>
 </head>
 
@@ -484,85 +488,100 @@ ob_start();
 
         <div class="card">
 
-            <form method="get" class="toolbar">
-                <div class="row">
-                    <div>
-                        <label class="lbl">From (start date)</label>
-<input class="inp flatpickr" 
-       type="text" 
-       name="from" 
-       placeholder="DD-MM-YYYY"
-       value="<?= $from_date ? h(date('d-m-Y', strtotime($from_date))) : '' ?>">
-                    </div>
-                    <div>
-                        <label class="lbl">To (start date)</label>
-<input class="inp flatpickr" 
-       type="text" 
-       name="to" 
-       placeholder="DD-MM-YYYY"
-       value="<?= $to_date ? h(date('d-m-Y', strtotime($to_date))) : '' ?>">                    </div>
-                    <?php if ($logged_admin_roleid == 1): ?>
-                        <div>
-                            <label class="lbl">Profile Type</label>
-                            <select class="inp" name="profile_type_id">
-                                <?php foreach ($ptype_opts as $k => $v): ?>
-                                    <option value="<?= $k ?>" <?= ($k === $profile_type_id) ? 'selected' : '' ?>><?= h($v) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    <?php endif; ?>
-                    <?php if ($logged_admin_roleid == 1): ?>
-                        <div>
-                            <label class="lbl">AC Operator</label>
-                            <select class="inp" name="ac_manager_filter">
-                                <option value="-1" <?= $ac_manager_filter === -1 ? 'selected' : '' ?>>All</option>
-                                <option value="0" <?= $ac_manager_filter === 0 ? 'selected' : '' ?>>Unassigned</option>
-                                <?php foreach ($acManagers as $a): ?>
-                                    <option value="<?= (int)$a['id'] ?>"
-                                        <?= $ac_manager_filter === (int)$a['id'] ? 'selected' : '' ?>>
-                                        <?= h($a['name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    <?php endif; ?>
-                    <div>
-                        <label class="lbl">Payment Status</label>
-                        <select class="inp" name="payment_status">
-                            <?php foreach ($pstatus_opts as $k => $v): ?>
-                                <option value="<?= h($k) ?>" <?= ($k === $payment_status) ? 'selected' : '' ?>><?= h($v) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
+            <!-- Hide/Show Button -->
+            <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+                <button type="button"
+                    id="toggleFilterBtn"
+                    class="btn secondary"
+                    onclick="toggleFilterBox()">
+                    Show Filters
+                </button>
+            </div>
 
-                <div class="row">
-                    <div>
-                        <label class="lbl">Invoice Type</label>
-                        <select class="inp" name="invoice_type">
-                            <?php foreach ($itype_opts as $k => $v): ?>
-                                <option value="<?= h($k) ?>" <?= ($k === $invoice_type) ? 'selected' : '' ?>><?= h($v) ?></option>
-                            <?php endforeach; ?>
-                        </select>
+            <!-- Filter Panel -->
+            <div id="filterPanel" class="hide">
+
+                <form method="get" class="toolbar">
+                    <div class="row">
+                        <div>
+                            <label class="lbl">From (start date)</label>
+                            <input class="inp flatpickr"
+                                type="text"
+                                name="from"
+                                placeholder="DD-MM-YYYY"
+                                value="<?= $from_date ? h(date('d-m-Y', strtotime($from_date))) : '' ?>">
+                        </div>
+                        <div>
+                            <label class="lbl">To (start date)</label>
+                            <input class="inp flatpickr"
+                                type="text"
+                                name="to"
+                                placeholder="DD-MM-YYYY"
+                                value="<?= $to_date ? h(date('d-m-Y', strtotime($to_date))) : '' ?>">
+                        </div>
+                        <?php if ($logged_admin_roleid == 1): ?>
+                            <div>
+                                <label class="lbl">Profile Type</label>
+                                <select class="inp" name="profile_type_id">
+                                    <?php foreach ($ptype_opts as $k => $v): ?>
+                                        <option value="<?= $k ?>" <?= ($k === $profile_type_id) ? 'selected' : '' ?>><?= h($v) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($logged_admin_roleid == 1): ?>
+                            <div>
+                                <label class="lbl">AC Operator</label>
+                                <select class="inp" name="ac_manager_filter">
+                                    <option value="-1" <?= $ac_manager_filter === -1 ? 'selected' : '' ?>>All</option>
+                                    <option value="0" <?= $ac_manager_filter === 0 ? 'selected' : '' ?>>Unassigned</option>
+                                    <?php foreach ($acManagers as $a): ?>
+                                        <option value="<?= (int)$a['id'] ?>"
+                                            <?= $ac_manager_filter === (int)$a['id'] ? 'selected' : '' ?>>
+                                            <?= h($a['name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        <?php endif; ?>
+                        <div>
+                            <label class="lbl">Payment Status</label>
+                            <select class="inp" name="payment_status">
+                                <?php foreach ($pstatus_opts as $k => $v): ?>
+                                    <option value="<?= h($k) ?>" <?= ($k === $payment_status) ? 'selected' : '' ?>><?= h($v) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </div>
-                    <div class="grow">
-                        <label class="lbl">Search (Invoice / Payment / User)</label>
-                        <input class="inp" type="text" name="q" placeholder="APP2025-00041 / pay_xxx / 123" value="<?= h($q) ?>">
+
+                    <div class="row">
+                        <div>
+                            <label class="lbl">Invoice Type</label>
+                            <select class="inp" name="invoice_type">
+                                <?php foreach ($itype_opts as $k => $v): ?>
+                                    <option value="<?= h($k) ?>" <?= ($k === $invoice_type) ? 'selected' : '' ?>><?= h($v) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="grow">
+                            <label class="lbl">Search (Invoice / Payment / User)</label>
+                            <input class="inp" type="text" name="q" placeholder="APP2025-00041 / pay_xxx / 123" value="<?= h($q) ?>">
+                        </div>
+                        <div>
+                            <label class="lbl">Show</label>
+                            <select class="inp" name="show">
+                                <?php foreach ($show_opts as $k => $v): ?>
+                                    <option value="<?= h($k) ?>" <?= ($k === $show) ? 'selected' : '' ?>><?= h($v) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div style="align-self:flex-end">
+                            <button class="btn primary" type="submit">Apply</button>
+                            <a class="btn secondary" href="<?= h(strtok($_SERVER['REQUEST_URI'], '?')) ?>">Reset</a>
+                        </div>
                     </div>
-                    <div>
-                        <label class="lbl">Show</label>
-                        <select class="inp" name="show">
-                            <?php foreach ($show_opts as $k => $v): ?>
-                                <option value="<?= h($k) ?>" <?= ($k === $show) ? 'selected' : '' ?>><?= h($v) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div style="align-self:flex-end">
-                        <button class="btn primary" type="submit">Apply</button>
-                        <a class="btn secondary" href="<?= h(strtok($_SERVER['REQUEST_URI'], '?')) ?>">Reset</a>
-                    </div>
-                </div>
-            </form>
+                </form>
+            </div> <!-- END filterPanel -->
         </div>
 
         <div class="card table-wrap" style="margin-top:12px">
@@ -606,16 +625,16 @@ ob_start();
                                 <td><?= h($r['payment_status']) ?></td>
                                 <td class="center mono"><?= (int)$r['userid'] ?></td>
                                 <td class="center">
-    <?php if (!empty($r['invoiceno'])): ?>
-        <a class="btn primary" 
-           href="https://beta.inv51.in/webservices/genrateInvoicepdf.php?invoice_no=<?= urlencode($r['invoiceno']) ?>" 
-           target="_blank">
-            Get Invoice
-        </a>
-    <?php else: ?>
-        <span class="muted">N/A</span>
-    <?php endif; ?>
-</td>
+                                    <?php if (!empty($r['invoiceno'])): ?>
+                                        <a class="btn primary"
+                                            href="https://beta.inv51.in/webservices/genrateInvoicepdf.php?invoice_no=<?= urlencode($r['invoiceno']) ?>"
+                                            target="_blank">
+                                            Get Invoice
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="muted">N/A</span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                     <?php endforeach;
                     endif; ?>
@@ -642,17 +661,29 @@ ob_start();
 
     </div><!-- /master-wrap -->
     <!-- Flatpickr JS -->
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script>
-     document.addEventListener("DOMContentLoaded", function() {
-    flatpickr(".flatpickr", {
-        altInput: true, // user sees formatted date
-        altFormat: "d-m-Y", // display format
-        dateFormat: "Y-m-d", // value sent to backend
-        allowInput: false
-      });
-    });
-</script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        function toggleFilterBox() {
+            var box = document.getElementById('filterPanel');
+            var btn = document.getElementById('toggleFilterBtn');
+
+            if (box.classList.contains('hide')) {
+                box.classList.remove('hide');
+                btn.innerText = 'Hide Filters';
+            } else {
+                box.classList.add('hide');
+                btn.innerText = 'Show Filters';
+            }
+        }
+        document.addEventListener("DOMContentLoaded", function() {
+            flatpickr(".flatpickr", {
+                altInput: true, // user sees formatted date
+                altFormat: "d-m-Y", // display format
+                dateFormat: "Y-m-d", // value sent to backend
+                allowInput: false
+            });
+        });
+    </script>
 </body>
 
 </html>

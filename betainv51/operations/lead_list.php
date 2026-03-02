@@ -10,6 +10,7 @@ $loggedUserId = (int)($_SESSION['admin_user']['id'] ?? 0);
 $loggedRoleId = (int)($_SESSION['admin_user']['role_id'] ?? 0);
 
 
+
 global $con;
 
 /* ---------------- Tables ---------------- */
@@ -645,7 +646,12 @@ padding-top:100px;
     </div>
 
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <button class="btn secondary" type="button" id="btnToggleFilters">Hide Filters</button>
+      <button type="button"
+        onclick="toggleFilterBox()"
+        id="toggleFilterBtn"
+        class="btn secondary">
+        Show Filters
+      </button>
       <?php /* keep your Add button if you want later; currently list-only file */ ?>
     </div>
   </div>
@@ -668,7 +674,7 @@ padding-top:100px;
   </div>
 
   <!-- Filters -->
-  <div id="filterPanel">
+  <div id="filterPanel" class="hide">
     <form method="get" class="filtersbar" id="filterForm">
       <input type="text" name="q" class="inp" placeholder="Search company/candidate/phone/email" value="<?= h($q) ?>" style="min-width:240px">
 
@@ -889,30 +895,18 @@ padding-top:100px;
 </div>
 <script>
   // hide/show filter panel (remember)
-  (function() {
-    const panel = document.getElementById('filterPanel');
-    const btn = document.getElementById('btnToggleFilters');
-    const key = 'lead_filters_hidden';
+function toggleFilterBox() {
+  var box = document.getElementById('filterPanel');
+  var btn = document.getElementById('toggleFilterBtn');
 
-    function setHidden(h) {
-      panel.classList.toggle('hide', !!h);
-      btn.textContent = h ? 'Show Filters' : 'Hide Filters';
-      try {
-        localStorage.setItem(key, h ? '1' : '0');
-      } catch (e) {}
-    }
-
-    let hidden = false;
-    try {
-      hidden = (localStorage.getItem(key) === '1');
-    } catch (e) {}
-    setHidden(hidden);
-
-    btn.addEventListener('click', function() {
-      hidden = !hidden;
-      setHidden(hidden);
-    });
-  })();
+  if (box.classList.contains('hide')) {
+    box.classList.remove('hide');
+    btn.innerText = "Hide Filters";
+  } else {
+    box.classList.add('hide');
+    btn.innerText = "Show Filters";
+  }
+}
 
   // click status card => set status filter and submit
   (function() {

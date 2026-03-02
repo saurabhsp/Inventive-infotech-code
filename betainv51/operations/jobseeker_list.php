@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_login();
 $userloggedin = current_user();
 $uid = isset($u['id']) ? (int)$userloggedin['id'] : 0;
-$userroleid = isset($u['role_id']) ? (int)$userloggedin['role_id'] : 0;
+$userroleid = isset($u['id']) ? (int)$userloggedin['role_id'] : 0;
 
 /* ------------------ View-only ACL guard (inserted) ------------------
    Same behaviour as applications_report.php:
@@ -26,8 +26,8 @@ if (!isset($con) || !$con) {
 }
 
 /* Normalize current script path for menu matching */
-$script_path = $_SERVER['PHP_SELF'];            // e.g. /adminconsole/operations/candidate_list.php
-$script_basename = basename($script_path);      // e.g. candidate_list.php
+$script_path = $_SERVER['PHP_SELF'];            // e.g. /adminconsole/operations/jobseeker_list.php
+$script_basename = basename($script_path);      // e.g. jobseeker_list.php
 
 $menu_id_override = isset($_GET['menu_id']) ? (int)$_GET['menu_id'] : 0;
 $can_view = 0;
@@ -229,22 +229,22 @@ function back_to_list_url()
 $mode = get_str('mode', '');
 
 /* **********************************************************************
-   MODE: CANDIDATE PROFILE  (?mode=candidate&userid=123)
+   MODE: Jobseeker PROFILE  (?mode=jobseeker&userid=123)
    ********************************************************************** */
-if ($mode === 'candidate') {
+if ($mode === 'jobseeker') {
   $userid = get_int('userid', 0);
   if ($userid <= 0) {
     die('Invalid userid');
   }
 
-  // count applications for this candidate
+  // count applications for this jobseeker
   $apps_count = 0;
   if ($rs = mysqli_query($con, "SELECT COUNT(*) AS c FROM jos_app_applications WHERE userid=" . $userid)) {
     if ($r = mysqli_fetch_assoc($rs)) {
       $apps_count = (int)$r['c'];
     }
   }
-  /* ---------------- Candidate Applications ---------------- */
+  /* ---------------- Jobseeker Applications ---------------- */
 
   $app_rows = [];
 
@@ -296,7 +296,7 @@ if ($mode === 'candidate') {
   $active_plan_id  = (int)$U['active_plan_id'];
   $myreferral_code = $U['myreferral_code'];
 
-  // candidate profile (with joins as per your API)
+  // jobseeker profile (with joins as per your API)
   $c_sql = "
       SELECT c.*,
              c.resume_generated,
@@ -319,7 +319,7 @@ if ($mode === 'candidate') {
   $C = stmt_fetch_one_assoc($st);
   $st->close();
   if (!$C) {
-    die('Candidate profile not found');
+    die('Jobseeker profile not found');
   }
 
   // job positions
@@ -371,7 +371,7 @@ if ($mode === 'candidate') {
     }
   }
 
-  // count applications for this candidate (for conditional button)
+  // count applications for this jobseeker (for conditional button)
   $apps_count = 0;
   if ($rs = mysqli_query($con, "SELECT COUNT(*) AS c FROM jos_app_applications WHERE userid=" . $userid)) {
     if ($r = mysqli_fetch_assoc($rs)) {
@@ -388,7 +388,7 @@ if ($mode === 'candidate') {
 
   <head>
     <meta charset="utf-8" />
-    <title>Candidate Profile</title>
+    <title>Jobseeker Profile</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/adminconsole/assets/ui.css">
     <style>
@@ -453,7 +453,7 @@ if ($mode === 'candidate') {
   <body>
     <div class="master-wrap">
       <div class="headbar" style="display:flex;align-items:center;gap:12px">
-        <h2>Candidate Profile</h2>
+        <h2>Jobseeker Profile</h2>
         <div style="margin-left:auto;display:flex;gap:8px">
           <?php if ($apps_count > 0) { ?>
             <a class="btn secondary" href="<?= h($apps_url) ?>">View Applications</a>
@@ -472,7 +472,7 @@ if ($mode === 'candidate') {
             <img src="<?= h($photo_url) ?>" alt="photo" style="height:100%;width:100%;object-fit:cover">
           </div>
           <div>
-            <div style="font-size:18px;font-weight:700;color:#fff"><?= h($C['candidate_name'] ?: 'Candidate') ?></div>
+            <div style="font-size:18px;font-weight:700;color:#fff"><?= h($C['candidate_name'] ?: 'Jobseeker') ?></div>
             <div class="muted">
               <?= h($C['email'] ?: '') ?><?= ($C['email'] && $C['mobile_no']) ? ' • ' : '' ?><?= h($C['mobile_no'] ?: '') ?>
             </div>
@@ -658,7 +658,7 @@ if ($mode === 'candidate') {
 }
 
 /* **********************************************************************
-   MODE: CANDIDATE APPLICATIONS  (?mode=cand_apps&userid=123)
+   MODE: Jobseeker APPLICATIONS  (?mode=cand_apps&userid=123)
    ********************************************************************** */
 if ($mode === 'cand_apps') {
   $userid = get_int('userid', 0);
@@ -666,7 +666,7 @@ if ($mode === 'cand_apps') {
     die('Invalid userid');
   }
 
-  // Candidate basic info
+  // Jobseeker basic info
   $c_sql = "SELECT candidate_name, mobile_no, email, city_id FROM jos_app_candidate_profile WHERE userid=? LIMIT 1";
   $st = $con->prepare($c_sql);
   $st->bind_param('i', $userid);
@@ -674,7 +674,7 @@ if ($mode === 'cand_apps') {
   $C = stmt_fetch_one_assoc($st);
   $st->close();
   if (!$C) {
-    die('Candidate not found');
+    die('Jobseeker not found');
   }
 
   // Status options for labels
@@ -687,7 +687,7 @@ if ($mode === 'cand_apps') {
     }
   }
 
-  // Query applications only for this candidate
+  // Query applications only for this jobseeker
   $rows = [];
   $sql = [];
   $sql[] = "SELECT";
@@ -725,7 +725,7 @@ if ($mode === 'cand_apps') {
   $rows = stmt_fetch_all_assoc($st);
   $st->close();
 
-  $back_profile = $_SERVER['PHP_SELF'] . '?' . http_build_query(['mode' => 'candidate', 'userid' => $userid]);
+  $back_profile = $_SERVER['PHP_SELF'] . '?' . http_build_query(['mode' => 'jobseeker', 'userid' => $userid]);
   $back_list    = back_to_list_url();
 
   ob_start(); ?>
@@ -734,7 +734,7 @@ if ($mode === 'cand_apps') {
 
   <head>
     <meta charset="utf-8" />
-    <title>Applications – Candidate</title>
+    <title>Applications – Jobseeker</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/adminconsole/assets/ui.css">
     <style>
@@ -794,7 +794,7 @@ if ($mode === 'cand_apps') {
       <div class="headbar">
         <div style="display:flex;align-items:center;gap:12px">
           <div>
-            <h2 style="margin:0">Applications – Candidate</h2>
+            <h2 style="margin:0">Applications – Jobseeker</h2>
             <div class="muted">
               <?= h($C['candidate_name'] ?: ('User #' . $userid)) ?>
               <?php if ($C['city_id']) { ?> • <?= h($C['city_id']) ?><?php } ?>
@@ -823,7 +823,7 @@ if ($mode === 'cand_apps') {
           <tbody>
             <?php if (empty($rows)): ?>
               <tr>
-                <td colspan="7" style="text-align:center;padding:12px;">No applications found for this candidate</td>
+                <td colspan="7" style="text-align:center;padding:12px;">No applications found for this jobseeker</td>
               </tr>
               <?php else: $sr = 1;
               foreach ($rows as $r):
@@ -1029,7 +1029,7 @@ if ($mode === 'job') {
     $qs = ['mode' => 'cand_apps', 'userid' => $userid_for_back];
     $back_url = $_SERVER['PHP_SELF'] . '?' . http_build_query($qs);
   } elseif ($userid_for_back > 0) {
-    $qs = ['mode' => 'candidate', 'userid' => $userid_for_back];
+    $qs = ['mode' => 'jobseeker', 'userid' => $userid_for_back];
     $back_url = $_SERVER['PHP_SELF'] . '?' . http_build_query($qs);
   } else {
     $back_url = back_to_list_url();
@@ -1258,7 +1258,7 @@ if ($mode === 'job') {
    ********************************************************************** */
 
 /* -------- page config -------- */
-$page_title = 'Users – Candidate-wise List';
+$page_title = 'Users – Jobseekers List';
 ob_start();
 ?>
 <link rel="stylesheet" href="/adminconsole/assets/ui.css">
@@ -1393,14 +1393,14 @@ ob_start();
   <div class="headbar">
     <h2 style="margin:0"><?= htmlspecialchars($page_title) ?></h2>
   </div>
-      <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-      <button type="button"
-        id="toggleFilterBtn"
-        class="btn secondary"
-        onclick="toggleFilterBox(); return false;">
-        Show Filters
-      </button>
-    </div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+    <button type="button"
+      id="toggleFilterBtn"
+      class="btn secondary"
+      onclick="toggleFilterBox(); return false;">
+      Show Filters
+    </button>
+  </div>
   <div class="card">
     <?php
     if (!$con) {
@@ -1410,7 +1410,7 @@ ob_start();
     }
 
     /* ---- filters (GET) ---- */
-    /* profile_type forced to candidate */
+    /* profile_type forced to jobseeker */
     $profile_type_id     = 2;                     // ONLY candidates
     $q                   = get_str('q', '');       // main search
     $referrer_q          = get_str('referrer_q', ''); // referrer name/mobile
@@ -1485,7 +1485,7 @@ LEFT JOIN (
     $types = '';
     $params = [];
 
-    /* only candidates */
+    /* only Jobseekers */
     $where[] = "u.profile_type_id=2";
 
     if ($q !== '') {
@@ -1667,9 +1667,10 @@ SELECT
     /* ---- filters UI ---- */
     ?>
 
+
     <div id="filterPanel" class="hide">
 
-      <form method="get" class="toolbar" style="gap:10px;flex-wrap:wrap"> <input class="inp" type="text" name="q" value="<?= h($q) ?>" placeholder="Search name/mobile/referral..." style="min-width:240px">
+      <form method="get" class="toolbar" style="gap:10px;flex-wrap:wrap"> <input class="inp" type="text" name="q" value="<?= h($q) ?>" placeholder="Search name/referral..." style="min-width:240px">
 
         <input class="inp" type="text" name="city_id" value="<?= h($city_id) ?>" placeholder="City Name">
 
@@ -1817,7 +1818,7 @@ SELECT
             <th>SR No.</th>
             <th>Reg Date</th>
             <th>Name / Profile</th>
-            <th>Mobile</th>
+            <!-- <th>Mobile</th> -->
             <th>City</th>
             <th>Referral Code</th>
             <th>Referred By</th>
@@ -1831,7 +1832,7 @@ SELECT
           <?php
           $sr = ($view === 'all') ? 1 : ($offset + 1);
           while ($row = $res->fetch_assoc()):
-            // Only candidates are loaded here
+            // Only Jobseekers are loaded here
             $display = $row['candidate_name'] ?: $row['mobile_no'];
             $profile_summary = 'Gender: ' . h($row['gender_name'] ?? '');
             $apps_count = (int)$row['apps_count'];
@@ -1869,7 +1870,7 @@ SELECT
 
             $status_badge = ((int)$row['status_id'] === 1) ? '<span class="badge success">Active</span>' : '<span class="badge danger">Inactive</span>';
 
-            $viewHref  = keep_params(['mode' => 'candidate', 'userid' => (int)$row['id']]);
+            $viewHref  = keep_params(['mode' => 'jobseeker', 'userid' => (int)$row['id']]);
             $appsHref  = keep_params(['mode' => 'cand_apps', 'userid' => (int)$row['id']]);
             $reg_date  = fmt_reg_short($row['created_at']);
           ?>
@@ -1881,7 +1882,7 @@ SELECT
                 <div style="font-size:12px;color:#9ca3af"><?= $profile_summary ?></div>
                 <div style="margin-top:2px"><?= $status_badge ?></div>
               </td>
-              <td><?= h($row['mobile_no']) ?></td>
+              <!-- <td><?= h($row['mobile_no']) ?></td> -->
               <td><?= h($row['city_id']) ?></td>
               <td><?= h($row['referral_code'] ?: '—') ?></td>
               <td>

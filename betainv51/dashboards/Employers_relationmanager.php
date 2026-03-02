@@ -565,6 +565,7 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
 
     <form id="dashboardPostForm" method="post" action="/adminconsole/operations/lead_list.php" style="display:none;">
         <input type="hidden" name="mode" id="f_mode">
+        <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
         <input type="hidden" name="range" value="<?= $range ?>">
         <input type="hidden" name="admin_id" value="<?= $logged_admin_id ?>">
         <input type="hidden" name="profile_type_id" value="1">
