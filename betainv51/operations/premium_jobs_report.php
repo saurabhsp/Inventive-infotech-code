@@ -11,10 +11,10 @@ if (!$con) {
 require_once __DIR__ . '/../includes/auth.php';
 require_login();
 
-$recruiter_id = 0;
+$employer_id = 0;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $recruiter_id = isset($_POST['recruiter_id']) ? (int)$_POST['recruiter_id'] : 0;
+    $employer_id = isset($_POST['recruiter_id']) ? (int)$_POST['recruiter_id'] : 0;
 }
 
 /* ----------------------------
@@ -210,7 +210,7 @@ if ($position_id > 0) {
 }
 
 /* ======================================================================
-   MODE: Candidate Profile Details  (?candidate={userid})
+   MODE: Employer Profile Details  (?candidate={userid})
    ====================================================================== */
 if (isset($_GET['candidate'])) {
     $userid = (int)$_GET['candidate'];
@@ -300,7 +300,7 @@ if (isset($_GET['candidate'])) {
     <link rel="stylesheet" href="/adminconsole/assets/ui.css">
     <div class="master-wrap">
         <div class="headbar">
-            <h2 style="margin:0"><?= h($row['candidate_name'] ?: 'Candidate') ?></h2>
+            <h2 style="margin:0"><?= h($row['candidate_name'] ?: 'Employer') ?></h2>
             <div style="margin-left:auto;display:flex;gap:8px">
                 <?php if ($returnUrl): ?>
                     <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back to Position Summary</a>
@@ -438,7 +438,7 @@ if (isset($_GET['apps'])) {
                         <tr>
                             <th>Sr No.</th>
                             <th>Application ID</th>
-                            <th>Candidate</th>
+                            <th>Employer</th>
                             <th>Contact</th>
                             <th>Applied On</th>
                             <th>Status</th>
@@ -762,7 +762,7 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
                                 <tr>
                                     <th>Sr No.</th>
                                     <th>Application ID</th>
-                                    <th>Candidate</th>
+                                    <th>Employer</th>
                                     <th>Contact</th>
                                     <th>Applied On</th>
                                     <th>Status</th>
@@ -960,11 +960,11 @@ $where = [];
 $types = '';
 $params = [];
 
-// Apply recruiter filter only if recruiter_id exists
-if ($recruiter_id > 0) {
+// Apply Employer filter only if recruiter_id exists
+if ($employer_id > 0) {
     $where[] = "w.recruiter_id = ?";
     $types  .= 'i';
-    $params[] = $recruiter_id;
+    $params[] = $employer_id;
 }
 
 

@@ -12,10 +12,10 @@ require_once __DIR__ . '/../includes/auth.php';
 require_login();
 
 // ACCEPT RECRUITER ID FROM LIST
-$recruiter_id = 0;
+$employer_id = 0;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $recruiter_id = isset($_POST['recruiter_id']) ? (int)$_POST['recruiter_id'] : 0;
+  $employer_id = isset($_POST['recruiter_id']) ? (int)$_POST['recruiter_id'] : 0;
 }
 /* ----------------------------
    ACL: view-only guard (same as standard_jobs_report.php)
@@ -224,7 +224,7 @@ if ($position_id > 0) {
 }
 
 /* ======================================================================
-   MODE: Candidate Profile Details  (?candidate={userid})
+   MODE: Employer Profile Details  (?candidate={userid})
    ====================================================================== */
 if (isset($_GET['candidate'])) {
   $userid = (int)$_GET['candidate'];
@@ -267,7 +267,7 @@ if (isset($_GET['candidate'])) {
   <link rel="stylesheet" href="/adminconsole/assets/ui.css">
   <div class="master-wrap">
     <div class="headbar">
-      <h2 style="margin:0"><?= h($row['candidate_name'] ?? 'Candidate') ?></h2>
+      <h2 style="margin:0"><?= h($row['candidate_name'] ?? 'Employer') ?></h2>
       <div style="margin-left:auto;display:flex;gap:8px">
 
         <?php if ($returnUrl): ?>
@@ -456,7 +456,7 @@ if (isset($_GET['apps'])) {
             <tr>
               <th>Sr No.</th>
               <th>Application ID</th>
-              <th>Candidate</th>
+              <th>Employer</th>
               <th>Contact</th>
               <th>Applied On</th>
               <th>Status</th>
@@ -497,7 +497,7 @@ if (isset($_GET['apps'])) {
                   href="' . h($viewCandUrl) . '"
                   target="_blank"
                   rel="noopener">
-                  View Candidate
+                  View Employer
                 </a>
                 </td>';
                 echo '</tr>';
@@ -746,7 +746,7 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
                 <tr>
                   <th>SR No.</th>
                   <th>Application ID</th>
-                  <th>Candidate</th>
+                  <th>Employer</th>
                   <th>Contact</th>
                   <th>Applied On</th>
                   <th>Status</th>
@@ -788,7 +788,7 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
                         href="<?= $viewCandUrl ?>"
                         target="_blank"
                         rel="noopener">
-                        View Candidate
+                        View Employer
                       </a>
                     </td>
                   </tr>
@@ -912,10 +912,10 @@ $types = '';
 $params = [];
 
 // Apply recruiter filter only if recruiter_id exists
-if ($recruiter_id > 0) {
+if ($employer_id > 0) {
   $where[] = "jv.recruiter_id = ?";
   $types  .= 'i';
-  $params[] = $recruiter_id;
+  $params[] = $employer_id;
 }
 
 if ($q !== '') {
@@ -1093,8 +1093,8 @@ ob_start(); ?>
         <input type="hidden" name="return" value="<?= h($returnUrl) ?>">
       <?php endif; ?>
 
-      <?php if ($recruiter_id > 0): ?>
-        <input type="hidden" name="recruiter_id" value="<?= (int)$recruiter_id ?>">
+      <?php if ($employer_id > 0): ?>
+        <input type="hidden" name="recruiter_id" value="<?= (int)$employer_id ?>">
       <?php endif; ?>
 
 

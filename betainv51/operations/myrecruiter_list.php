@@ -459,7 +459,7 @@ ob_start();
           die("Invalid cropped image data.");
         }
 
-        $newName = 'recruiter_' . $rid . '_' . time() . '.png';
+        $newName = 'employer_' . $rid . '_' . time() . '.png';
 
         $uploadDir = __DIR__ . '/../../webservices/uploads/company_logos/';
         if (!is_dir($uploadDir)) {
@@ -1222,14 +1222,14 @@ SELECT
             placeholder="DD-MM-YYYY">
         </div>
 
-        <div class="filter-group">
+        <!-- <div class="filter-group">
           <label>Referral Code</label>
           <input class="inp"
             type="text"
             name="referral_code"
             value="<?= h($referral_code_in) ?>"
             placeholder="Enter referral code">
-        </div>
+        </div> -->
 
         <div class="filter-group">
           <label>Image Filter</label>

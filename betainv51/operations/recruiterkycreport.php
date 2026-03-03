@@ -169,7 +169,7 @@ if (!function_exists('acl_view_guard_executed')) {
 }
 /* ---------------- end ACL guard ---------------- */
 
-$page_title = 'Recruiter KYC Report (Recruiter-wise)';
+$page_title = 'Employer KYC Report (Employer-wise)';
 
 /* ---------------- config ---------------- */
 // Base for document URLs (works with relative paths like uploads/kyc/..)
@@ -305,7 +305,7 @@ $selected_status_name = $status_is_real && isset($statuses[(int)$status_id])
     ? $statuses[(int)$status_id]['name']
     : '';
 
-/* ---------------- recruiters (KEY BY PROFILE ID) ---------------- */
+/* ---------------- employers (KEY BY PROFILE ID) ---------------- */
 $limitSql   = ($view === 'last50') ? "LIMIT 50" : "";
 $recruiters = [];
 $recWhere = [];
@@ -415,8 +415,8 @@ if ($status_id !== '') {
 }
 
 /* ---------------- sort: In-Review first, then newest ---------------- */
-$recruitersSorted = array_values($recruiters);
-usort($recruitersSorted, function ($a, $b) use ($logsByRecruiter, $inReviewIds) {
+$employersSorted = array_values($recruiters);
+usort($employersSorted, function ($a, $b) use ($logsByRecruiter, $inReviewIds) {
     $aid = (int)$a['id'];
     $bid = (int)$b['id'];
     $aLogs = $logsByRecruiter[$aid] ?? [];
@@ -634,7 +634,7 @@ ob_start();
     <div class="headbar">
         <div class="title"><?= clean($page_title) ?></div>
         <div class="actions" style="display:flex;gap:.5rem">
-            <a class="btn secondary" href="<?= clean(keep_params(['view' => 'last50'])) ?>">Last 50 recruiters</a>
+            <a class="btn secondary" href="<?= clean(keep_params(['view' => 'last50'])) ?>">Last 50 employers</a>
             <a class="btn secondary" href="<?= clean(keep_params(['view' => 'all'])) ?>">View All</a>
         </div>
     </div>
@@ -660,7 +660,7 @@ ob_start();
             <input type="date" class="inp" name="from" value="<?= clean($from) ?>">
             <input type="date" class="inp" name="to" value="<?= clean($to) ?>">
 
-            <!-- Recruiter name filter with autocomplete -->
+            <!-- Employer name filter with autocomplete -->
             <span class="name-wrap">
                 <input type="text" class="inp" name="q" list="recruiterNames" placeholder="Filter by recruiter name..." value="<?= clean($q) ?>">
                 <datalist id="recruiterNames">
@@ -685,18 +685,18 @@ ob_start();
                 <thead>
                     <tr>
                         <th style="width:60px">#</th>
-                        <th>Recruiter</th>
+                        <th>Employer</th>
                         <th>Documents</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (!$recruitersSorted): ?>
+                    <?php if (!$employersSorted): ?>
                         <tr>
-                            <td colspan="3" style="text-align:center">No recruiters found</td>
+                            <td colspan="3" style="text-align:center">No employers found</td>
                         </tr>
                         <?php else:
                         $sr = 0;
-                        foreach ($recruitersSorted as $rec):
+                        foreach ($employersSorted as $rec):
                             $sr++;
                             $profileId = (int)$rec['id'];
                             $userId = (int)$rec['userid'];

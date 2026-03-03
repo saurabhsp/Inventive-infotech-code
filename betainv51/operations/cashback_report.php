@@ -194,8 +194,8 @@ $user_id  = get_int('user_id', 0);
 /* ---------------- SQL Snippets ---------------- */
 $displayNameSQL = "
   CASE u.profile_type_id
-    WHEN 1 THEN COALESCE(rp.organization_name, CONCAT('Recruiter #', u.id))
-    WHEN 2 THEN COALESCE(cp.candidate_name,   CONCAT('Candidate #', u.id))
+    WHEN 1 THEN COALESCE(rp.organization_name, CONCAT('Employer #', u.id))
+    WHEN 2 THEN COALESCE(cp.candidate_name,   CONCAT('Jobseeker #', u.id))
     WHEN 3 THEN COALESCE(pp.name,             CONCAT('Promoter #', u.id))
     ELSE CONCAT('User #', u.id)
   END
@@ -265,8 +265,8 @@ ob_start();
           <label class="lbl">Profile Type</label>
           <select class="inp" name="profile_type_id">
             <option value="0"  <?= $profile_type_id===0?'selected':''; ?>>All</option>
-            <option value="1"  <?= $profile_type_id===1?'selected':''; ?>>Recruiter</option>
-            <option value="2"  <?= $profile_type_id===2?'selected':''; ?>>Candidate</option>
+            <option value="1"  <?= $profile_type_id===1?'selected':''; ?>>Employer</option>
+            <option value="2"  <?= $profile_type_id===2?'selected':''; ?>>Jobseeker</option>
             <option value="3"  <?= $profile_type_id===3?'selected':''; ?>>Promoter</option>
           </select>
         </div>
@@ -390,7 +390,7 @@ if ($mode==='details' && $user_id>0):
       <h4>Profile Type</h4>
       <div>
         <?php $pt = (int)($userHdr['profile_type_id'] ?? 0);
-          echo $pt===1?'Recruiter':($pt===2?'Candidate':($pt===3?'Promoter':'-')); ?>
+          echo $pt===1?'Employer':($pt===2?'Jobseeker':($pt===3?'Promoter':'-')); ?>
       </div>
     </div>
   </div>
@@ -427,7 +427,7 @@ if ($mode==='details' && $user_id>0):
               <?php
                 $rid = (int)$r['referral_userid'];
                 $rm  = h((string)($r['referral_mobile'] ?? ''));
-                $rp  = $rpt===1?'Recruiter':($rpt===2?'Candidate':($rpt===3?'Promoter':'-'));
+                $rp  = $rpt===1?'Employer':($rpt===2?'Jobseeker':($rpt===3?'Promoter':'-'));
                 echo $rid>0?("#$rid / $rm / $rp"):'-';
               ?>
             </td>
@@ -542,7 +542,7 @@ else:
       <span class="badge">Range: <?=fmt_d($date_from)?> → <?=fmt_d($date_to)?></span>
       <?php if($profile_type_id>0): ?>
         <span class="badge">
-          <?php echo $profile_type_id===1?'Recruiter':($profile_type_id===2?'Candidate':($profile_type_id===3?'Promoter':'All')); ?>
+          <?php echo $profile_type_id===1?'Employer':($profile_type_id===2?'Jobseeker':($profile_type_id===3?'Promoter':'All')); ?>
         </span>
       <?php endif; ?>
     </div>
@@ -582,7 +582,7 @@ else:
             <span class="badge">
               <?php
               $pt=(int)$r['profile_type_id'];
-              echo $pt===1?'Recruiter':($pt===2?'Candidate':($pt===3?'Promoter':'-'));
+              echo $pt===1?'Employer':($pt===2?'Jobseeker':($pt===3?'Promoter':'-'));
               ?>
             </span>
           </td>

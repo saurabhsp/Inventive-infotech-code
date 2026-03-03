@@ -264,7 +264,7 @@ if ($mode === 'candidate') {
     $C = stmt_fetch_one_assoc($st);
     $st->close();
     if (!$C) {
-        die('Candidate profile not found');
+        die('Jobseeker profile not found');
     }
 
     // job positions
@@ -375,7 +375,7 @@ ORDER BY A.application_date DESC, A.id DESC
 
     <head>
         <meta charset="utf-8" />
-        <title>Candidate Profile</title>
+        <title>Jobseeker Profile</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="stylesheet" href="/adminconsole/assets/ui.css">
         <style>
@@ -436,7 +436,7 @@ ORDER BY A.application_date DESC, A.id DESC
     <body>
         <div class="master-wrap">
             <div class="headbar" style="display:flex;align-items:center;gap:12px">
-                <h2>Candidate Profile</h2>
+                <h2>Jobseeker Profile</h2>
                 <div style="margin-left:auto;display:flex;gap:8px">
                     <?php if ($apps_count > 0) { ?>
                         <a class="btn secondary" href="<?= h($apps_url) ?>">View Applications</a>
@@ -454,7 +454,7 @@ ORDER BY A.application_date DESC, A.id DESC
                         <img src="<?= h($photo_url) ?>" alt="photo" style="height:100%;width:100%;object-fit:cover">
                     </div>
                     <div>
-                        <div style="font-size:18px;font-weight:700;color:#fff"><?= h($C['candidate_name'] ?: 'Candidate') ?></div>
+                        <div style="font-size:18px;font-weight:700;color:#fff"><?= h($C['candidate_name'] ?: 'Jobseeker') ?></div>
                         <div class="muted">
                             <?= h($C['email'] ?: '') ?><?= ($C['email'] && $C['mobile_no']) ? ' • ' : '' ?><?= h($C['mobile_no'] ?: '') ?>
                         </div>
@@ -618,7 +618,7 @@ ORDER BY A.application_date DESC, A.id DESC
                 </div>
             <?php } else { ?>
                 <div class="card" style="margin-top:16px;text-align:center;color:#9aa0a6;">
-                    No applications found for this candidate.
+                    No applications found for this jobseeker.
                 </div>
             <?php } ?>
 
@@ -655,7 +655,7 @@ if ($mode === 'cand_apps') {
     $C = stmt_fetch_one_assoc($st);
     $st->close();
     if (!$C) {
-        die('Candidate not found');
+        die('Jobseeker not found');
     }
 
     $status_opts = [];
@@ -710,7 +710,7 @@ if ($mode === 'cand_apps') {
 
     <head>
         <meta charset="utf-8" />
-        <title>Applications – Candidate</title>
+        <title>Applications – Jobseeker</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="stylesheet" href="/adminconsole/assets/ui.css">
         <style>
@@ -762,7 +762,7 @@ if ($mode === 'cand_apps') {
             <div class="headbar">
                 <div style="display:flex;align-items:center;gap:12px">
                     <div>
-                        <h2 style="margin:0">Applications – Candidate</h2>
+                        <h2 style="margin:0">Applications – Jobseeker</h2>
                         <div class="muted">
                             <?= h($C['candidate_name'] ?: ('User #' . $userid)) ?>
                             <?php if ($C['city_id']) { ?> • <?= h($C['city_id']) ?><?php } ?>
@@ -791,7 +791,7 @@ if ($mode === 'cand_apps') {
                     <tbody>
                         <?php if (empty($rows)): ?>
                             <tr>
-                                <td colspan="7" style="text-align:center;padding:12px;">No applications found for this candidate</td>
+                                <td colspan="7" style="text-align:center;padding:12px;">No applications found for this jobseeker</td>
                             </tr>
                             <?php else: $sr = 1;
                             foreach ($rows as $r):
@@ -1210,7 +1210,7 @@ if ($mode === 'job') {
    DEFAULT MODE: MAIN LIST (CANDIDATES) + PLAN CARDS + HIDE FILTERS
    ********************************************************************** */
 
-$page_title = 'Users – Candidate-wise List';
+$page_title = 'Users – Jobseeker-wise List';
 
 /* ==============================
    IMPORTANT: AC MANAGER FILTER
@@ -1265,8 +1265,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $created_to_sql   = date('Y-m-d H:i:s', strtotime($to));
 
         // ✅ THIS SETS INPUT FIELD VALUES
-      $created_from_raw = date('Y-m-d', strtotime($from));
-$created_to_raw   = date('Y-m-d', strtotime($to));
+        $created_from_raw = date('Y-m-d', strtotime($from));
+        $created_to_raw   = date('Y-m-d', strtotime($to));
     }
 
     // Optional reset other filters
@@ -1664,6 +1664,48 @@ ob_start();
         .filters-hidden {
             display: none;
         }
+
+        /* Job suggestions */
+      .autocomplete-box {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #111827;          /* darker but visible */
+    border: 1px solid #334155;    /* clearer border */
+    border-radius: 10px;
+    max-height: 220px;
+    overflow-y: auto;
+    display: none;
+    z-index: 9999;
+    box-shadow: 0 12px 25px rgba(0,0,0,0.6);
+}
+
+.autocomplete-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    color: #f1f5f9;               /* brighter text */
+    font-size: 14px;
+    border-bottom: 1px solid #1f2937;
+    background: #111827;
+    transition: all 0.15s ease;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+/* Hover effect */
+.autocomplete-item:hover {
+    background: #1e293b;
+    color: #ffffff;
+}
+
+/* Keyboard selected (arrow key) */
+.autocomplete-item.active {
+    background: #2563eb;          /* blue highlight */
+    color: #ffffff;
+}
     </style>
 </head>
 
@@ -1738,7 +1780,7 @@ ob_start();
                         <option value="0" <?= $has_referrer === 0 ? 'selected' : '' ?>>No Referrer</option>
                     </select>
 
-                    <input class="inp" type="text" name="referral_code" value="<?= h($referral_code_in) ?>" placeholder="Referral Code">
+                    <!-- <input class="inp" type="text" name="referral_code" value="<?= h($referral_code_in) ?>" placeholder="Referral Code"> -->
 
                     <select class="inp" name="plan_access" title="Plan Access">
                         <option value="0" <?= $plan_access_in === 0 ? 'selected' : '' ?>>Plan Access: Any</option>
@@ -1752,14 +1794,26 @@ ob_start();
                         <option value="expired" <?= $subscription_status === 'expired' ? 'selected' : '' ?>>Expired</option>
                     </select>
 
-                    <select class="inp" name="job_position_ids[]" multiple size="3" title="Preferred Job Positions" style="min-width:220px;">
+                    <!-- <select class="inp" name="job_position_ids[]" multiple size="3" title="Preferred Job Positions" style="min-width:220px;">
                         <?php foreach ($job_positions_opts as $jp):
                             $id = (int)$jp['id'];
                             $sel = in_array($id, $preferred_job_ids, true) ? 'selected' : '';
                         ?>
                             <option value="<?= $id ?>" <?= $sel ?>><?= h($jp['name']) ?></option>
                         <?php endforeach; ?>
-                    </select>
+                    </select> -->
+
+   <div style="position:relative;min-width:240px;">
+    <input type="text"
+        id="jobSearch"
+        class="inp"
+        placeholder="Search Preferred Job Position"
+        autocomplete="off">
+
+    <input type="hidden" name="job_position_ids[]" id="jobHidden">
+
+    <div id="jobSuggestions" class="autocomplete-box"></div>
+</div>
 
                     <input class="inp" type="text" name="referrer_q" value="<?= h($referrer_q) ?>" placeholder="Search Referrer: name/mobile" style="min-width:220px">
 
@@ -1930,6 +1984,139 @@ ob_start();
     </div>
 
     <script>
+    const jobPositions = <?= json_encode($job_positions_opts) ?>;
+const preSelected = <?= json_encode($preferred_job_ids) ?>;
+
+const searchInput = document.getElementById('jobSearch');
+const suggestionsBox = document.getElementById('jobSuggestions');
+const hiddenInput = document.getElementById('jobHidden');
+
+let currentFocus = -1;
+let currentList = [];
+
+// Pre-fill if filter already selected
+if (preSelected.length > 0) {
+    const job = jobPositions.find(j => parseInt(j.id) === parseInt(preSelected[0]));
+    if (job) {
+        searchInput.value = job.name;
+        hiddenInput.value = job.id;
+    }
+}
+
+function closeDropdown() {
+    suggestionsBox.style.display = 'none';
+    suggestionsBox.innerHTML = '';
+    currentFocus = -1;
+}
+
+function setActive(items) {
+    if (!items || items.length === 0) return;
+
+    items = Array.from(items); // convert to array safely
+
+    items.forEach(item => item.classList.remove("active"));
+
+    // If first time pressing ↓
+    if (currentFocus === -1) {
+        currentFocus = 0;
+    }
+
+    if (currentFocus >= items.length) currentFocus = 0;
+    if (currentFocus < 0) currentFocus = items.length - 1;
+
+    items[currentFocus].classList.add("active");
+    items[currentFocus].scrollIntoView({ block: "nearest" });
+}
+
+searchInput.addEventListener("input", function () {
+    const value = this.value.toLowerCase();
+    hiddenInput.value = '';
+    suggestionsBox.innerHTML = '';
+    currentFocus = -1;
+
+    if (!value) {
+        closeDropdown();
+        return;
+    }
+
+    currentList = jobPositions.filter(j =>
+        j.name.toLowerCase().includes(value)
+    );
+
+    if (currentList.length === 0) {
+        closeDropdown();
+        return;
+    }
+
+    currentList.forEach((job, index) => {
+        const div = document.createElement("div");
+        div.classList.add("autocomplete-item");
+        div.textContent = job.name;
+
+        div.addEventListener("click", function () {
+            searchInput.value = job.name;
+            hiddenInput.value = job.id;
+            closeDropdown();
+        });
+
+        suggestionsBox.appendChild(div);
+    });
+
+    suggestionsBox.style.display = "block";
+});
+
+searchInput.addEventListener("keydown", function (e) {
+
+    let items = suggestionsBox.querySelectorAll(".autocomplete-item");
+
+    if (suggestionsBox.style.display !== "block" || items.length === 0) {
+        return;
+    }
+
+    if (e.key === "ArrowDown") {
+        e.preventDefault();
+        currentFocus++;
+        setActive(items);
+    }
+
+    else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        currentFocus--;
+        setActive(items);
+    }
+
+    else if (e.key === "Enter") {
+        e.preventDefault();
+        if (currentFocus > -1 && items[currentFocus]) {
+            items[currentFocus].click();
+        }
+        closeDropdown();
+    }
+
+    else if (e.key === "Escape") {
+        closeDropdown();
+    }
+});
+
+// Close when clicking outside
+document.addEventListener("click", function (e) {
+if (!e.target.closest("#jobSearch") && !e.target.closest("#jobSuggestions")) {        closeDropdown();
+    }
+});
+searchInput.addEventListener("focus", function () {
+    if (this.value.length > 0) {
+        this.dispatchEvent(new Event('input'));
+    }
+});
+
+
+
+
+
+
+
+
+
         (function() {
             const btn = document.getElementById('toggleFiltersBtn');
             const wrap = document.getElementById('filtersWrap');

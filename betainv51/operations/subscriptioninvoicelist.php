@@ -261,7 +261,7 @@ if ($is_from_dashboard) {
     $dt_in = get_str('to', '');
     $from_date = dfmt_in($df_in);
     $to_date   = dfmt_in($dt_in);
-    $profile_type_id = get_int('profile_type_id', 0); //0=All, 1=Recruiter, 2=Job Seeker, 3=Promoter
+    $profile_type_id = get_int('profile_type_id', 0); //0=All, 1=Employer, 2=Job Seeker, 3=Promoter
 }
 $payment_status  = get_str('payment_status', '');  // '', success, failed, pending, free...
 $invoice_type    = get_str('invoice_type', 'all'); // all | paid | free
@@ -288,8 +288,8 @@ $sql = "
     plans.plan_name,
     plans.validity_months,
     CASE log.profile_type_id
-      WHEN 1 THEN COALESCE(r.organization_name, CONCAT('Recruiter #', log.profile_id))
-      WHEN 2 THEN COALESCE(c.candidate_name,    CONCAT('Candidate #', log.profile_id))
+      WHEN 1 THEN COALESCE(r.organization_name, CONCAT('Employer #', log.profile_id))
+      WHEN 2 THEN COALESCE(c.candidate_name,    CONCAT('Jobseeker #', log.profile_id))
       WHEN 3 THEN COALESCE(p.name,              CONCAT('Promoter #', log.profile_id))
       ELSE CONCAT('Profile #', log.profile_id)
     END AS party_name
@@ -403,7 +403,7 @@ while ($r = $res->fetch_assoc()) {
 }
 
 /* ---------------- Options (same naming style) ---------------- */
-$ptype_opts   = [0 => 'All', 1 => 'Recruiter', 2 => 'Job Seeker', 3 => 'Promoter'];
+$ptype_opts   = [0 => 'All', 1 => 'Employer', 2 => 'Job Seeker', 3 => 'Promoter'];
 $pstatus_opts = ['' => 'All', 'success' => 'success', 'failed' => 'failed', 'pending' => 'pending', 'free' => 'free'];
 $itype_opts   = ['all' => 'All', 'paid' => 'Paid Invoices', 'free' => 'Free Signup Invoices'];
 $show_opts    = ['last50' => 'Last 50', 'all' => 'View All'];

@@ -199,6 +199,11 @@ if ($range === 'lifetime') {
 
 
 /* 5️⃣ Revenue + Purchase Count */
+// createdat > assigned_at
+/* Condition added:
+   usl.created_at > u.ac_manager_assigned_at
+*/
+
 
 
 if ($range === 'lifetime') {
@@ -211,10 +216,13 @@ if ($range === 'lifetime') {
         JOIN `$subscriptionTbl` usl ON usl.userid = u.id
         WHERE u.profile_type_id = 1
         AND u.ac_manager_id = ?
+        AND u.ac_manager_assigned_at IS NOT NULL
         AND usl.payment_status = 'success'
+        AND usl.created_at > u.ac_manager_assigned_at
     ");
 
     $stmt->bind_param("i", $logged_admin_id);
+
 } else {
 
     $stmt = $con->prepare("
@@ -225,7 +233,9 @@ if ($range === 'lifetime') {
         JOIN `$subscriptionTbl` usl ON usl.userid = u.id
         WHERE u.profile_type_id = 1
         AND u.ac_manager_id = ?
+        AND u.ac_manager_assigned_at IS NOT NULL
         AND usl.payment_status = 'success'
+        AND usl.created_at > u.ac_manager_assigned_at
         AND usl.created_at BETWEEN ? AND ?
     ");
 
@@ -239,39 +249,89 @@ if ($range === 'lifetime') {
 
 /* 6️⃣ Total Applications */
 
+
+
 $applicationsTbl = 'jos_app_applications';
+
+/* 6️⃣ Total Applications (Premium + Standard split) */
 
 if ($range === 'lifetime') {
 
-    $totalApplications = fetch_one(
-        $con,
-        "SELECT COUNT(*) AS total
-         FROM `$applicationsTbl` A
-         INNER JOIN `$usersTbl` U ON U.id = A.userid
-         WHERE U.ac_manager_id = ?",
-        "i",
-        [$logged_admin_id]
-    );
+    $stmt = $con->prepare("
+        SELECT 
+            COUNT(A.id) AS total_applications,            
+            SUM(CASE WHEN A.job_listing_type = 1 THEN 1 ELSE 0 END) 
+                AS premium_applications,                
+            SUM(CASE WHEN A.job_listing_type = 2 THEN 1 ELSE 0 END) 
+                AS standard_applications
+        FROM jos_app_applications A
+        LEFT JOIN jos_app_jobvacancies JV 
+               ON A.job_listing_type = 2 
+               AND A.job_id = JV.id
+        LEFT JOIN jos_app_walkininterviews WI 
+               ON A.job_listing_type = 1 
+               AND A.job_id = WI.id
+        LEFT JOIN jos_app_users U
+               ON (
+                    (A.job_listing_type = 2 AND JV.recruiter_id = U.id)
+                    OR
+                    (A.job_listing_type = 1 AND WI.recruiter_id = U.id)
+                  )
+        WHERE U.ac_manager_id = ?
+        AND U.profile_type_id = 1
+    ");
+
+    $stmt->bind_param("i", $logged_admin_id);
 
 } else {
 
-    $totalApplications = fetch_one(
-        $con,
-        "SELECT COUNT(*) AS total
-         FROM `$applicationsTbl` A
-         INNER JOIN `$usersTbl` U ON U.id = A.userid
-         WHERE U.ac_manager_id = ?
-         AND A.application_date BETWEEN ? AND ?",
-        "iss",
-        [$logged_admin_id, $from, $to]
-    );
+    $stmt = $con->prepare("
+        SELECT 
+            COUNT(A.id) AS total_applications,
+            
+            SUM(CASE WHEN A.job_listing_type = 1 THEN 1 ELSE 0 END) 
+                AS premium_applications,
+                
+            SUM(CASE WHEN A.job_listing_type = 2 THEN 1 ELSE 0 END) 
+                AS standard_applications
+
+        FROM jos_app_applications A
+
+        LEFT JOIN jos_app_jobvacancies JV 
+               ON A.job_listing_type = 2 
+               AND A.job_id = JV.id
+
+        LEFT JOIN jos_app_walkininterviews WI 
+               ON A.job_listing_type = 1 
+               AND A.job_id = WI.id
+
+        LEFT JOIN jos_app_users U
+               ON (
+                    (A.job_listing_type = 2 AND JV.recruiter_id = U.id)
+                    OR
+                    (A.job_listing_type = 1 AND WI.recruiter_id = U.id)
+                  )
+
+        WHERE U.ac_manager_id = ?
+        AND U.profile_type_id = 1
+        AND A.application_date BETWEEN ? AND ?
+    ");
+
+    $stmt->bind_param("iss", $logged_admin_id, $from, $to);
 }
 
 $stmt->execute();
-$result = $stmt->get_result();
-$row = $result->fetch_assoc();
+$res = $stmt->get_result();
+$appRow = $res->fetch_assoc();
 $stmt->close();
 
+
+// Applications
+$totalApplications   = (int)($appRow['total_applications'] ?? 0);
+$premiumApplications = (int)($appRow['premium_applications'] ?? 0);
+$standardApplications = (int)($appRow['standard_applications'] ?? 0);
+
+// Revenue
 $revenue_subscription   = (float)($row['subscriptionrev'] ?? 0);
 $purchases = (int)($row['purchases'] ?? 0);
 $net_revenue = $revenue_subscription * 0.75; // minus 25%
@@ -533,10 +593,18 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
             </div>
 
             <!-- Total Applications -->
-            <div class="card kpi-card">
+               <div class="card kpi-card">
                 <div>
                     <div class="card-title">Total Applications</div>
-                    <div class="card-value" id="total_applications"><?= $totalApplications ?></div>
+
+                    <div class="card-value" >
+                        <?=  $totalApplications ?> 
+                    </div>
+
+                    <div style="font-size:16px; ">
+                        Standard : <?= $standardApplications ?>
+                        Premium : <?= $premiumApplications ?>
+                    </div>
                 </div>
                 <div class="card-actions">
                     <a class="btn-link" href="#" onclick="openBreakdown('total_applications'); return false;">View Details →</a>
@@ -564,8 +632,8 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
     </div>
 
     <form id="dashboardPostForm" method="post" action="/adminconsole/operations/lead_list.php" style="display:none;">
+            <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
         <input type="hidden" name="mode" id="f_mode">
-        <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
         <input type="hidden" name="range" value="<?= $range ?>">
         <input type="hidden" name="admin_id" value="<?= $logged_admin_id ?>">
         <input type="hidden" name="profile_type_id" value="1">

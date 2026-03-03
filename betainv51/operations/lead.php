@@ -491,7 +491,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       } elseif ($profile_type === 1 && $company_name === '') {
         $err = 'Company Name is required.';
       } elseif ($profile_type === 2 && $candidate_name === '') {
-        $err = 'Candidate Name is required.';
+        $err = 'Jobseeker  Name is required.';
       } elseif ($phone1 === '') {
         $err = 'Contact - 1 is required.';
       } elseif ($status_id <= 0 || !isset($statuses[$status_id])) {
@@ -1106,7 +1106,7 @@ ob_start(); ?>
     </div>
 
     <form method="get" class="search" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 12px">
-      <input type="text" name="q" class="inp" placeholder="Search company/candidate/phone/email" value="<?= h($q) ?>" style="min-width:240px">
+      <input type="text" name="q" class="inp" placeholder="Search company/jobseeker /phone/email" value="<?= h($q) ?>" style="min-width:240px">
 
       <?php if ($MY_ROLE_ID == 1): ?>
         <select name="ptype" class="inp">
@@ -1160,7 +1160,7 @@ ob_start(); ?>
           <tr>
             <th>SR</th>
             <th>Type</th>
-            <th>Company / Candidate</th>
+            <th>Company / Jobseeker </th>
             <th>Phone</th>
             <th>City</th>
             <th>Source</th>
@@ -1549,8 +1549,8 @@ ob_start(); ?>
 
       <!-- Jobseeker -->
       <div id="js_candidate" style="grid-column: span 2">
-        <label>Candidate Name*</label>
-        <input name="candidate_name" class="inp" value="<?= h($val('candidate_name')) ?>" placeholder="Candidate name">
+        <label>Jobseeker  Name*</label>
+        <input name="candidate_name" class="inp" value="<?= h($val('candidate_name')) ?>" placeholder="Jobseeker  name">
       </div>
       <div id="js_fill" class="hide"></div>
 

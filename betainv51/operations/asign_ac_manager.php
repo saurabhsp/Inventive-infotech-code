@@ -531,7 +531,7 @@ ob_start();
                 }
             }
 
-            // 1) Recruiter (type 1) dependencies:
+            // 1) Employer (type 1) dependencies:
             if ($ptype === 1) {
                 $cnt_walkins = table_has(
                     $con,
@@ -540,7 +540,7 @@ ob_start();
                     $pid
                 );
                 if ($cnt_walkins > 0) {
-                    $reasons[] = "Recruiter has <strong>$cnt_walkins</strong> walk-in interview record(s).";
+                    $reasons[] = "Employer has <strong>$cnt_walkins</strong> walk-in interview record(s).";
                 }
                 $cnt_jobs = table_has(
                     $con,
@@ -549,11 +549,11 @@ ob_start();
                     $pid
                 );
                 if ($cnt_jobs > 0) {
-                    $reasons[] = "Recruiter has <strong>$cnt_jobs</strong> job vacancy record(s).";
+                    $reasons[] = "Employer has <strong>$cnt_jobs</strong> job vacancy record(s).";
                 }
             }
 
-            // 2) Candidate (type 2) dependencies:
+            // 2) Jobseeker (type 2) dependencies:
             if ($ptype === 2) {
                 $cnt_apps = table_has(
                     $con,
@@ -562,7 +562,7 @@ ob_start();
                     $uid
                 );
                 if ($cnt_apps > 0) {
-                    $reasons[] = "Candidate has <strong>$cnt_apps</strong> application record(s).";
+                    $reasons[] = "Jobseeker has <strong>$cnt_apps</strong> application record(s).";
                 }
             }
 
@@ -872,8 +872,8 @@ SELECT
 
             <select class="inp" name="profile_type_id" title="Profile Type">
                 <option value="0" <?= $profile_type_id === 0 ? 'selected' : '' ?>>All Types</option>
-                <option value="1" <?= $profile_type_id === 1 ? 'selected' : '' ?>>Recruiter</option>
-                <option value="2" <?= $profile_type_id === 2 ? 'selected' : '' ?>>Candidate</option>
+                <option value="1" <?= $profile_type_id === 1 ? 'selected' : '' ?>>Employer</option>
+                <option value="2" <?= $profile_type_id === 2 ? 'selected' : '' ?>>Jobseeker</option>
                 <option value="3" <?= $profile_type_id === 3 ? 'selected' : '' ?>>Promoter</option>
             </select>
 
@@ -1040,11 +1040,11 @@ SELECT
                             if ($row['contact_person_name']) $summary[] = 'Person: ' . $row['contact_person_name'];
                             if ($row['designation']) $summary[] = 'Desig: ' . $row['designation'];
                             $profile_summary = implode(' | ', $summary);
-                            $ptype_badge = '<span class="badge">Recruiter</span>';
+                            $ptype_badge = '<span class="badge">Employer</span>';
                         } elseif ($ptype === 2) {
                             $display = $row['candidate_name'] ?: $row['mobile_no'];
                             $profile_summary = 'Gender: ' . h($row['gender_name'] ?? '');
-                            $ptype_badge = '<span class="badge">Candidate</span>';
+                            $ptype_badge = '<span class="badge">Jobseeker</span>';
                         } else {
                             $display = $row['promoter_name'] ?: $row['mobile_no'];
                             $profile_summary = 'PAN: ' . h($row['pan_no'] ?? '');

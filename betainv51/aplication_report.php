@@ -1,6 +1,6 @@
 <?php
 /* ======================================================================
-   Applications – Date-wise (Premium + Standard) + Job View + Candidate View
+   Applications – Date-wise (Premium + Standard) + Job View + Jobseeker View
    Single file with modes:
      - default/list view:      ? (no mode)
      - candidate view:         ?mode=candidate&userid=#
@@ -259,7 +259,7 @@ if ($mode === 'candidate') {
   $C = stmt_fetch_one_assoc($st);
   $st->close();
   if (!$C) {
-    die('Candidate profile not found');
+    die('Jobseeker profile not found');
   }
 
   // job positions
@@ -295,7 +295,7 @@ if ($mode === 'candidate') {
 
 
   /* ======================================================
-   Fetch Applications of this Candidate
+   Fetch Applications of this Jobseeker
 ====================================================== */
 
   $appSql = "
@@ -451,7 +451,7 @@ ORDER BY A.application_date DESC
   <body>
     <div class="master-wrap">
       <div class="headbar" style="display:flex;align-items:center;gap:12px">
-        <h2>Candidate Profile</h2>
+        <h2>Jobseeker Profile</h2>
         <div style="margin-left:auto;display:flex;gap:8px">
           <a class="btn secondary" href="<?= base_back_to_list() ?>">← Back to List</a>
           <button class="btn secondary" onclick="window.print()">Print</button>
@@ -465,7 +465,7 @@ ORDER BY A.application_date DESC
             <img src="<?= h($photo_url) ?>" alt="photo" style="height:100%;width:100%;object-fit:cover">
           </div>
           <div>
-            <div style="font-size:18px;font-weight:700;color:#fff"><?= h($C['candidate_name'] ?: 'Candidate') ?></div>
+            <div style="font-size:18px;font-weight:700;color:#fff"><?= h($C['candidate_name'] ?: 'Jobseeker') ?></div>
             <div class="muted">
               <?= h($C['email'] ?: '') ?><?= ($C['email'] && $C['mobile_no']) ? ' • ' : '' ?><?= h($C['mobile_no'] ?: '') ?>
             </div>
@@ -650,7 +650,7 @@ ORDER BY A.application_date DESC
           <div style="height:1px;background:#1f2937;margin:20px 0"></div>
 
           <div class="badge">
-            No applications found for this candidate.
+            No applications found for this Jobseeker.
           </div>
 
         <?php endif; ?>
@@ -1077,7 +1077,7 @@ ORDER BY a.application_date DESC
                 <tr>
                   <th>Sr</th>
                   <th>Application ID</th>
-                  <th>Candidate</th>
+                  <th>Jobseeker</th>
                   <th>Contact</th>
                   <th>Applied On</th>
                   <th>Status</th>
@@ -1170,10 +1170,40 @@ ORDER BY a.application_date DESC
    ********************************************************************** */
 
 /* ----------------- filters ----------------- */
-// $date_from    = get_str('from', '');      // YYYY-MM-DD on A.application_date
-// $date_to      = get_str('to', '');        // YYYY-MM-DD
-$date_from = get_str('from', '');
-$date_to   = get_str('to', '');
+
+/* detect dashboard POST */
+$is_from_dashboard = false;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_id']))
+{
+    $is_from_dashboard = true;
+
+    $date_from = $_POST['from'] ?? '';
+    $date_to   = $_POST['to'] ?? '';
+}
+else
+{
+    $date_from = get_str('from', '');
+    $date_to   = get_str('to', '');
+}
+
+
+/* convert dd-mm-yyyy to yyyy-mm-dd */
+if ($date_from)
+{
+    $d = DateTime::createFromFormat('Y-m-d', $date_from)
+      ?: DateTime::createFromFormat('d-m-Y', $date_from);
+
+    if ($d) $date_from = $d->format('Y-m-d');
+}
+
+if ($date_to)
+{
+    $d = DateTime::createFromFormat('Y-m-d', $date_to)
+      ?: DateTime::createFromFormat('d-m-Y', $date_to);
+
+    if ($d) $date_to = $d->format('Y-m-d');
+}
 
 /* convert dd/mm/yyyy to yyyy-mm-dd for DB */
 if ($date_from) {
@@ -1321,7 +1351,7 @@ $sql[] = "LEFT JOIN jos_app_recruiter_profile RP1 ON RP1.id = JW.recruiter_id";
 $sql[] = "LEFT JOIN jos_app_jobvacancies JV ON (A.job_listing_type=2 AND JV.id=A.job_id)";
 $sql[] = "LEFT JOIN jos_crm_jobpost JP2 ON JP2.id = JV.job_position_id";
 $sql[] = "LEFT JOIN jos_app_recruiter_profile RP2 ON RP2.id = JV.recruiter_id";
-/* Candidate */
+/* Jobseeker */
 $sql[] = "LEFT JOIN jos_app_candidate_profile CP ON CP.userid = A.userid";
 $sql[] = "WHERE 1=1";
 
@@ -1603,10 +1633,10 @@ ob_start(); ?>
           </div>
 
           <div class="group">
-            <label>Candidate Name</label>
+            <label>Jobseeker Name</label>
             <input class="inp" type="text" name="candidate_name"
               value="<?= h($candidate_name) ?>"
-              placeholder="Enter candidate name" />
+              placeholder="Enter jobseeker name" />
           </div>
 
           <div class="group">
@@ -1633,7 +1663,7 @@ ob_start(); ?>
           <tr>
             <th style="width:60px;">SR</th>
             <th>Applied On</th>
-            <th>Candidate</th>
+            <th>Jobseeker</th>
             <th>Job</th>
             <th>Company</th>
             <th>Listing</th>
@@ -1706,15 +1736,7 @@ function toggleFilterBox()
   }
 }
 
-document.addEventListener("DOMContentLoaded", function() {
 
-  flatpickr(".datepicker", {
-    altInput: true,
-    altFormat: "d-m-Y",
-    dateFormat: "Y-m-d"
-  });
-
-});
     document.addEventListener("DOMContentLoaded", function() {
       flatpickr(".datepicker", {
         altInput: true,

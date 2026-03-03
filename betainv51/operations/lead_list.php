@@ -676,7 +676,7 @@ padding-top:100px;
   <!-- Filters -->
   <div id="filterPanel" class="hide">
     <form method="get" class="filtersbar" id="filterForm">
-      <input type="text" name="q" class="inp" placeholder="Search company/candidate/phone/email" value="<?= h($q) ?>" style="min-width:240px">
+      <input type="text" name="q" class="inp" placeholder="Search company/jobseekers/phone/email" value="<?= h($q) ?>" style="min-width:240px">
 
 
       <div style="display:flex;flex-direction:column;min-width:160px">
@@ -754,7 +754,7 @@ padding-top:100px;
           <th>SR</th>
           <th>Lead Date</th>
           <th>Type</th>
-          <th>Company / Candidate</th>
+          <th>Company / Jobseeker </th>
           <th>Phone</th>
           <th>City</th>
           <th>Source</th>

@@ -179,6 +179,12 @@ if ($range === 'lifetime') {
 /* 5️⃣ Revenue + Purchase Count */
 
 
+/* 5️⃣ Revenue + Purchase Count */
+// createdat > assigned_at
+/* Condition added:
+   usl.created_at > u.ac_manager_assigned_at
+*/
+
 if ($range === 'lifetime') {
 
     $stmt = $con->prepare("
@@ -189,10 +195,13 @@ if ($range === 'lifetime') {
         JOIN `$subscriptionTbl` usl ON usl.userid = u.id
         WHERE u.profile_type_id = 2
         AND u.ac_manager_id = ?
+        AND u.ac_manager_assigned_at IS NOT NULL
         AND usl.payment_status = 'success'
+        AND usl.created_at > u.ac_manager_assigned_at
     ");
 
     $stmt->bind_param("i", $logged_admin_id);
+
 } else {
 
     $stmt = $con->prepare("
@@ -203,7 +212,9 @@ if ($range === 'lifetime') {
         JOIN `$subscriptionTbl` usl ON usl.userid = u.id
         WHERE u.profile_type_id = 2
         AND u.ac_manager_id = ?
+        AND u.ac_manager_assigned_at IS NOT NULL
         AND usl.payment_status = 'success'
+        AND usl.created_at > u.ac_manager_assigned_at
         AND usl.created_at BETWEEN ? AND ?
     ");
 
@@ -499,6 +510,7 @@ $net_revenue = $revenue_subscription * 0.75;
     </div>
 
     <form id="dashboardPostForm" method="post" style="display:none;">
+        <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
         <input type="hidden" name="mode" id="f_mode">
         <input type="hidden" name="range" value="<?= $range ?>">
         <input type="hidden" name="admin_id" value="<?= $logged_admin_id ?>">

@@ -1387,6 +1387,49 @@ ob_start();
   .hide {
     display: none !important;
   }
+
+  /* Job suggestions */
+      .autocomplete-box {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #111827;          /* darker but visible */
+    border: 1px solid #334155;    /* clearer border */
+    border-radius: 10px;
+    max-height: 220px;
+    overflow-y: auto;
+    display: none;
+    z-index: 9999;
+    box-shadow: 0 12px 25px rgba(0,0,0,0.6);
+}
+
+.autocomplete-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    color: #f1f5f9;               /* brighter text */
+    font-size: 14px;
+    border-bottom: 1px solid #1f2937;
+    background: #111827;
+    transition: all 0.15s ease;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+/* Hover effect */
+.autocomplete-item:hover {
+    background: #1e293b;
+    color: #ffffff;
+}
+
+/* Keyboard selected (arrow key) */
+.autocomplete-item.active {
+    background: #2563eb;          /* blue highlight */
+    color: #ffffff;
+}
+
 </style>
 
 <div class="master-wrap">
@@ -1748,35 +1791,20 @@ SELECT
           <?php endforeach; ?>
         </select>
 
-        <div class="job-filter-wrapper">
+    <div style="position:relative;min-width:240px;">
+    <input type="text"
+        id="jobSearch"
+        class="inp"
+        placeholder="Search Preferred Job Position"
+        autocomplete="off">
 
-          <!-- Dropdown Toggle -->
-          <div class="job-dropdown-toggle" id="jobDropdownToggle">
-            Select Job Positions ▼
-          </div>
+    <input type="hidden" name="job_position_ids[]" id="jobHidden">
 
-          <!-- Dropdown List -->
-          <div class="job-dropdown" id="jobDropdown">
-            <?php foreach ($job_positions_opts as $jp):
-              $id = (int)$jp['id'];
-              $checked = in_array($id, $preferred_job_ids, true);
-            ?>
-              <label class="job-option">
-                <input type="checkbox"
-                  value="<?= $id ?>"
-                  <?= $checked ? 'checked' : '' ?>>
-                <?= h($jp['name']) ?>
-              </label>
-            <?php endforeach; ?>
-          </div>
-
-          <!-- Selected Chips Box -->
-          <div class="selected-jobs" id="selectedJobs"></div>
-
-        </div>
+    <div id="jobSuggestions" class="autocomplete-box"></div>
+</div>
 
         <!-- referrer filters -->
-        <input class="inp" type="text" name="referrer_q" value="<?= h($referrer_q) ?>" placeholder="Search Referrer: name/mobile" style="min-width:220px">
+        <!-- <input class="inp" type="text" name="referrer_q" value="<?= h($referrer_q) ?>" placeholder="Search Referrer: name/mobile" style="min-width:220px"> -->
 
         <select class="inp" name="sort">
           <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest first</option>
@@ -1951,6 +1979,144 @@ SELECT
       btn.innerText = 'Show Filters';
     }
   }
+
+
+
+
+
+
+
+    const jobPositions = <?= json_encode($job_positions_opts) ?>;
+const preSelected = <?= json_encode($preferred_job_ids) ?>;
+
+const searchInput = document.getElementById('jobSearch');
+const suggestionsBox = document.getElementById('jobSuggestions');
+const hiddenInput = document.getElementById('jobHidden');
+
+let currentFocus = -1;
+let currentList = [];
+
+// Pre-fill if filter already selected
+if (preSelected.length > 0) {
+    const job = jobPositions.find(j => parseInt(j.id) === parseInt(preSelected[0]));
+    if (job) {
+        searchInput.value = job.name;
+        hiddenInput.value = job.id;
+    }
+}
+
+function closeDropdown() {
+    suggestionsBox.style.display = 'none';
+    suggestionsBox.innerHTML = '';
+    currentFocus = -1;
+}
+
+function setActive(items) {
+    if (!items || items.length === 0) return;
+
+    items = Array.from(items); // convert to array safely
+
+    items.forEach(item => item.classList.remove("active"));
+
+    // If first time pressing ↓
+    if (currentFocus === -1) {
+        currentFocus = 0;
+    }
+
+    if (currentFocus >= items.length) currentFocus = 0;
+    if (currentFocus < 0) currentFocus = items.length - 1;
+
+    items[currentFocus].classList.add("active");
+    items[currentFocus].scrollIntoView({ block: "nearest" });
+}
+
+searchInput.addEventListener("input", function () {
+    const value = this.value.toLowerCase();
+    hiddenInput.value = '';
+    suggestionsBox.innerHTML = '';
+    currentFocus = -1;
+
+    if (!value) {
+        closeDropdown();
+        return;
+    }
+
+    currentList = jobPositions.filter(j =>
+        j.name.toLowerCase().includes(value)
+    );
+
+    if (currentList.length === 0) {
+        closeDropdown();
+        return;
+    }
+
+    currentList.forEach((job, index) => {
+        const div = document.createElement("div");
+        div.classList.add("autocomplete-item");
+        div.textContent = job.name;
+
+        div.addEventListener("click", function () {
+            searchInput.value = job.name;
+            hiddenInput.value = job.id;
+            closeDropdown();
+        });
+
+        suggestionsBox.appendChild(div);
+    });
+
+    suggestionsBox.style.display = "block";
+});
+
+searchInput.addEventListener("keydown", function (e) {
+
+    let items = suggestionsBox.querySelectorAll(".autocomplete-item");
+
+    if (suggestionsBox.style.display !== "block" || items.length === 0) {
+        return;
+    }
+
+    if (e.key === "ArrowDown") {
+        e.preventDefault();
+        currentFocus++;
+        setActive(items);
+    }
+
+    else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        currentFocus--;
+        setActive(items);
+    }
+
+    else if (e.key === "Enter") {
+        e.preventDefault();
+        if (currentFocus > -1 && items[currentFocus]) {
+            items[currentFocus].click();
+        }
+        closeDropdown();
+    }
+
+    else if (e.key === "Escape") {
+        closeDropdown();
+    }
+});
+
+// Close when clicking outside
+document.addEventListener("click", function (e) {
+if (!e.target.closest("#jobSearch") && !e.target.closest("#jobSuggestions")) {        closeDropdown();
+    }
+});
+searchInput.addEventListener("focus", function () {
+    if (this.value.length > 0) {
+        this.dispatchEvent(new Event('input'));
+    }
+});
+
+
+
+
+
+
+
   document.addEventListener('DOMContentLoaded', function() {
 
     const toggle = document.getElementById('jobDropdownToggle');

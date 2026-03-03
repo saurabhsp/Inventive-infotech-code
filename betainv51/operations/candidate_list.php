@@ -244,7 +244,7 @@ if ($mode === 'candidate') {
       $apps_count = (int)$r['c'];
     }
   }
-  /* ---------------- Candidate Applications ---------------- */
+  /* ---------------- Jobseeker Applications ---------------- */
 
   $app_rows = [];
 
@@ -319,7 +319,7 @@ if ($mode === 'candidate') {
   $C = stmt_fetch_one_assoc($st);
   $st->close();
   if (!$C) {
-    die('Candidate profile not found');
+    die('Jobseeker profile not found');
   }
 
   // job positions
@@ -388,7 +388,7 @@ if ($mode === 'candidate') {
 
   <head>
     <meta charset="utf-8" />
-    <title>Candidate Profile</title>
+    <title>Jobseeker Profile</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/adminconsole/assets/ui.css">
     <style>
@@ -453,7 +453,7 @@ if ($mode === 'candidate') {
   <body>
     <div class="master-wrap">
       <div class="headbar" style="display:flex;align-items:center;gap:12px">
-        <h2>Candidate Profile</h2>
+        <h2>Jobseeker Profile</h2>
         <div style="margin-left:auto;display:flex;gap:8px">
           <?php if ($apps_count > 0) { ?>
             <a class="btn secondary" href="<?= h($apps_url) ?>">View Applications</a>
@@ -472,7 +472,7 @@ if ($mode === 'candidate') {
             <img src="<?= h($photo_url) ?>" alt="photo" style="height:100%;width:100%;object-fit:cover">
           </div>
           <div>
-            <div style="font-size:18px;font-weight:700;color:#fff"><?= h($C['candidate_name'] ?: 'Candidate') ?></div>
+            <div style="font-size:18px;font-weight:700;color:#fff"><?= h($C['candidate_name'] ?: 'Jobseeker') ?></div>
             <div class="muted">
               <?= h($C['email'] ?: '') ?><?= ($C['email'] && $C['mobile_no']) ? ' • ' : '' ?><?= h($C['mobile_no'] ?: '') ?>
             </div>
@@ -666,7 +666,7 @@ if ($mode === 'cand_apps') {
     die('Invalid userid');
   }
 
-  // Candidate basic info
+  // Jobseeker basic info
   $c_sql = "SELECT candidate_name, mobile_no, email, city_id FROM jos_app_candidate_profile WHERE userid=? LIMIT 1";
   $st = $con->prepare($c_sql);
   $st->bind_param('i', $userid);
@@ -674,7 +674,7 @@ if ($mode === 'cand_apps') {
   $C = stmt_fetch_one_assoc($st);
   $st->close();
   if (!$C) {
-    die('Candidate not found');
+    die('Jobseeker not found');
   }
 
   // Status options for labels
@@ -734,7 +734,7 @@ if ($mode === 'cand_apps') {
 
   <head>
     <meta charset="utf-8" />
-    <title>Applications – Candidate</title>
+    <title>Applications – Jobseeker</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/adminconsole/assets/ui.css">
     <style>
@@ -794,7 +794,7 @@ if ($mode === 'cand_apps') {
       <div class="headbar">
         <div style="display:flex;align-items:center;gap:12px">
           <div>
-            <h2 style="margin:0">Applications – Candidate</h2>
+            <h2 style="margin:0">Applications – Jobseeker</h2>
             <div class="muted">
               <?= h($C['candidate_name'] ?: ('User #' . $userid)) ?>
               <?php if ($C['city_id']) { ?> • <?= h($C['city_id']) ?><?php } ?>
@@ -1254,11 +1254,11 @@ if ($mode === 'job') {
 }
 
 /* **********************************************************************
-   DEFAULT MODE: MAIN LIST (ONLY CANDIDATES)
+   DEFAULT MODE: MAIN LIST (ONLY Jobseekers)
    ********************************************************************** */
 
 /* -------- page config -------- */
-$page_title = 'Users – Candidate-wise List';
+$page_title = 'Users – Jobseeker-wise List';
 ob_start();
 ?>
 <link rel="stylesheet" href="/adminconsole/assets/ui.css">
@@ -1410,8 +1410,8 @@ ob_start();
     }
 
     /* ---- filters (GET) ---- */
-    /* profile_type forced to candidate */
-    $profile_type_id     = 2;                     // ONLY candidates
+    /* profile_type forced to jobseeker */
+    $profile_type_id     = 2;                     // ONLY Jobseekers
     $q                   = get_str('q', '');       // main search
     $referrer_q          = get_str('referrer_q', ''); // referrer name/mobile
     $city_id             = get_str('city_id', '');
@@ -1485,7 +1485,7 @@ LEFT JOIN (
     $types = '';
     $params = [];
 
-    /* only candidates */
+    /* only Jobseekers */
     $where[] = "u.profile_type_id=2";
 
     if ($q !== '') {
@@ -1831,7 +1831,7 @@ SELECT
           <?php
           $sr = ($view === 'all') ? 1 : ($offset + 1);
           while ($row = $res->fetch_assoc()):
-            // Only candidates are loaded here
+            // Only Jobseekers are loaded here
             $display = $row['candidate_name'] ?: $row['mobile_no'];
             $profile_summary = 'Gender: ' . h($row['gender_name'] ?? '');
             $apps_count = (int)$row['apps_count'];
