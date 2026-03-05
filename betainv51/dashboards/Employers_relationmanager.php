@@ -247,16 +247,10 @@ if ($range === 'lifetime') {
     );
 }
 
-/* 6️⃣ Total Applications */
-
-
 
 $applicationsTbl = 'jos_app_applications';
-
 /* 6️⃣ Total Applications (Premium + Standard split) */
-
 if ($range === 'lifetime') {
-
     $stmt = $con->prepare("
         SELECT 
             COUNT(A.id) AS total_applications,            

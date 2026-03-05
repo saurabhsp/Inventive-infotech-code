@@ -610,6 +610,21 @@ padding-top:100px;
     padding: 10px;
     background: #0f1a2e;
   }
+  td .btn {
+  margin-right: 8px;
+  margin-bottom: 6px;
+}
+
+td form {
+  display: inline-block;
+  margin-right: 8px;
+}
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
 </style>
 <script>
   window.PACIFIC_PLANS = <?= json_encode($plansByType, JSON_UNESCAPED_UNICODE) ?>;
@@ -807,9 +822,9 @@ padding-top:100px;
             </td>
             <td><?= h($assName) ?></td>
             <td><?= h(fmt_dt($r['updated_at'] ?? null)) ?></td>
-            <td>
+            <!-- <td>
 
-              <button class="btn secondary"
+              <button class="btn secondary" style=""
                 onclick='openStatusModal(<?= (int)$r["id"] ?>,
 <?= json_encode($r, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
                 Update Status
@@ -833,6 +848,30 @@ padding-top:100px;
                 </button>
               </form>
 
+            </td> -->
+            <td>
+              <div class="action-buttons">
+                <button class="btn secondary"
+                  onclick='openStatusModal(<?= (int)$r["id"] ?>,
+      <?= json_encode($r, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
+                  Update Status
+                </button>
+
+                <a class="btn secondary"
+                  href="lead.php?edit=<?= (int)$r['id'] ?>"
+                  onclick="sessionStorage.setItem('lead_back', window.location.href)">
+                  Edit
+                </a>
+
+                <form method="post">
+                  <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
+                  <input type="hidden" name="id" value="<?= h($r['id']) ?>">
+                  <button type="submit" name="delete" class="btn red"
+                    onclick="return confirmDelete();">
+                    Delete
+                  </button>
+                </form>
+              </div>
             </td>
           </tr>
         <?php endforeach; ?>
@@ -895,18 +934,18 @@ padding-top:100px;
 </div>
 <script>
   // hide/show filter panel (remember)
-function toggleFilterBox() {
-  var box = document.getElementById('filterPanel');
-  var btn = document.getElementById('toggleFilterBtn');
+  function toggleFilterBox() {
+    var box = document.getElementById('filterPanel');
+    var btn = document.getElementById('toggleFilterBtn');
 
-  if (box.classList.contains('hide')) {
-    box.classList.remove('hide');
-    btn.innerText = "Hide Filters";
-  } else {
-    box.classList.add('hide');
-    btn.innerText = "Show Filters";
+    if (box.classList.contains('hide')) {
+      box.classList.remove('hide');
+      btn.innerText = "Hide Filters";
+    } else {
+      box.classList.add('hide');
+      btn.innerText = "Show Filters";
+    }
   }
-}
 
   // click status card => set status filter and submit
   (function() {

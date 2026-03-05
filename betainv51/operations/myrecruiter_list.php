@@ -85,6 +85,7 @@ if (!defined('DOMAIN_URL')) {
 /* -------- Logged in admin id (Account Manager) -------- */
 $u = function_exists('current_user') ? current_user() : [];
 $logged_admin_id = (int)($u['id'] ?? 0);
+$logged_admin_role_id = (int)($u['role_id'] ?? 0);
 
 /* ============================================================
    DASHBOARD POST SUPPORT (Assigned Recruiters)
@@ -827,7 +828,7 @@ ob_start();
     $sort = isset($_GET['sort']) ? trim((string)$_GET['sort']) : 'newest';
     $view = isset($_GET['view']) ? trim((string)$_GET['view']) : 'last50';
     $page = max(1, isset($_GET['page']) ? (int)$_GET['page'] : 1);
-    $per_page = ($view === 'all') ? 1000 : 50;
+    $per_page = ($view === 'all') ? 10000 : 50;
     $offset = ($page - 1) * $per_page;
 
     /* ---- Plan card filter ---- */
@@ -973,7 +974,7 @@ LEFT JOIN jos_app_kycstatus ks ON ks.id = kyc.status
       $types_common .= 's';
       $params_common[] = $created_to;
     }
-    /* ===== Image Filter ===== */
+    /* ===== Logo Filter ===== */
     if ($image_filter === 'available') {
       $where_common[] = "rp.company_logo IS NOT NULL AND rp.company_logo <> ''";
     } elseif ($image_filter === 'not_available') {
@@ -1232,7 +1233,7 @@ SELECT
         </div> -->
 
         <div class="filter-group">
-          <label>Image Filter</label>
+          <label>Logo Filter</label>
           <select class="inp" name="image_filter">
             <option value="">All</option>
             <option value="available" <?= $image_filter === 'available' ? 'selected' : '' ?>>Available</option>
@@ -1283,7 +1284,7 @@ SELECT
             <th style="width:60px">SR No</th>
             <th>Reg Date</th>
             <th>Name / Profile</th>
-            <th>Image</th>
+            <th>Logo</th>
             <th>Contact Info</th>
             <th>Mobile</th>
             <th>Referred By</th>
@@ -1521,11 +1522,13 @@ SELECT
                   <?= $standardJobsCount ?>
                 <?php } ?>
               </td>
+             
               <td><a class="btn secondary" href="<?= h($profileUrl) ?>">View</a>
-                <a class="btn primary" style="margin:2px; white-space:nowrap;" href="<?= h(keep_params(['show_logs_user_id' => $row['id'], 'page' => null])) ?>">
-                  Assign History
-                </a>
-              </td>
+               <?php if ($logged_admin_role_id == 1) {?><a class="btn primary" style="margin:2px; white-space:nowrap;" href="<?= h(keep_params(['show_logs_user_id' => $row['id'], 'page' => null])) ?>">
+                Assign History
+              </a><?php } ?>
+            </td>
+            
             </tr>
           <?php endwhile;
           $stmt->close(); ?>

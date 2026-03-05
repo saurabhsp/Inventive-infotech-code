@@ -443,8 +443,6 @@ ORDER BY A.application_date DESC
       .muted {
         color: #9aa0a6;
       }
-
-     
     </style>
   </head>
 
@@ -1173,10 +1171,12 @@ ORDER BY a.application_date DESC
 
 /* detect dashboard POST */
 $is_from_dashboard = false;
+$dashboard_admin_id = 0;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_id']))
 {
     $is_from_dashboard = true;
+    $dashboard_admin_id = (int)$_POST['admin_id'];
 
     $date_from = $_POST['from'] ?? '';
     $date_to   = $_POST['to'] ?? '';
@@ -1185,6 +1185,31 @@ else
 {
     $date_from = get_str('from', '');
     $date_to   = get_str('to', '');
+}
+
+$dashboard_company_names = [];
+if ($dashboard_admin_id > 0) {
+
+    $sqlCompanies = "
+        SELECT DISTINCT rp.organization_name
+        FROM jos_app_users u
+        JOIN jos_app_recruiter_profile rp ON rp.id = u.id
+        WHERE u.ac_manager_id = ?
+        AND u.profile_type_id = 1
+        AND rp.organization_name IS NOT NULL
+        AND rp.organization_name != ''
+    ";
+
+    $stmtComp = $con->prepare($sqlCompanies);
+    $stmtComp->bind_param("i", $dashboard_admin_id);
+    $stmtComp->execute();
+    $resComp = $stmtComp->get_result();
+
+    while ($rowComp = $resComp->fetch_assoc()) {
+        $dashboard_company_names[] = $rowComp['organization_name'];
+    }
+
+    $stmtComp->close();
 }
 
 
@@ -1219,8 +1244,15 @@ $listing_type = get_int('lt', 0);         // 0=All, 1=Premium (walk-in), 2=Stand
 $status_id    = get_int('status_id', 0);  // jos_app_applicationstatus.id
 $candidate_name = get_str('candidate_name', '');
 $company_name = get_str('company_name', '');
-$view_all     = get_int('all', 0);        // 1=View All
-$limit        = $view_all ? 1000 : 50;
+
+/* If coming from dashboard → force View All */
+if ($is_from_dashboard) {
+    $view_all = 1;
+} else {
+    $view_all = get_int('all', 0);
+}
+
+$limit        = $view_all ? 100000 : 50;
 
 
 /* ----------------- status options ----------------- */
@@ -1290,6 +1322,27 @@ if ($company_name !== '') {
 
   for ($i = 0; $i < 4; $i++)
     $params_cards[] = "%" . $company_name . "%";
+}
+
+// 🔹 Dashboard company filter (AC Manager filter)
+// 🔹 Dashboard company filter (AC Manager filter)
+if ($dashboard_admin_id > 0 && !empty($dashboard_company_names)) {
+
+    $placeholders = implode(',', array_fill(0, count($dashboard_company_names), '?'));
+
+    $sql_cards .= " AND (
+        JW.company_name IN ($placeholders)
+        OR JV.company_name IN ($placeholders)
+        OR RP1.organization_name IN ($placeholders)
+        OR RP2.organization_name IN ($placeholders)
+    )";
+
+    $types_cards .= str_repeat('s', count($dashboard_company_names) * 4);
+
+    foreach ($dashboard_company_names as $c) $params_cards[] = $c;
+    foreach ($dashboard_company_names as $c) $params_cards[] = $c;
+    foreach ($dashboard_company_names as $c) $params_cards[] = $c;
+    foreach ($dashboard_company_names as $c) $params_cards[] = $c;
 }
 
 $sql_cards .= " GROUP BY A.status_id";
@@ -1399,6 +1452,26 @@ if ($company_name !== '') {
   $binds[] = "%" . $company_name . "%";
 }
 
+// 🔹 Dashboard company filter (Main list)
+if ($dashboard_admin_id > 0 && !empty($dashboard_company_names)) {
+
+    $placeholders = implode(',', array_fill(0, count($dashboard_company_names), '?'));
+
+    $sql[] = "AND (
+        JW.company_name IN ($placeholders)
+        OR JV.company_name IN ($placeholders)
+        OR RP1.organization_name IN ($placeholders)
+        OR RP2.organization_name IN ($placeholders)
+    )";
+
+    $types .= str_repeat('s', count($dashboard_company_names) * 4);
+
+    foreach ($dashboard_company_names as $c) $binds[] = $c;
+    foreach ($dashboard_company_names as $c) $binds[] = $c;
+    foreach ($dashboard_company_names as $c) $binds[] = $c;
+    foreach ($dashboard_company_names as $c) $binds[] = $c;
+}
+
 
 $sql[] = "ORDER BY A.application_date DESC, A.id DESC";
 $sql[] = "LIMIT " . (int)$limit;
@@ -1471,9 +1544,7 @@ ob_start(); ?>
       min-width: 160px;
     }
 
-    .table-wrap {
-      overflow: auto;
-    }
+
 
     .table thead th {
       position: static !important;
@@ -1505,18 +1576,19 @@ ob_start(); ?>
       white-space: nowrap;
     }
 
-
-
     .cards-row {
       display: flex;
       gap: 12px;
-      overflow: auto;
       padding: 6px 2px 10px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .stat-card {
-      display: block;
-      min-width: 180px;
+      flex: 1 1 0;
+      /* auto shrink evenly */
+      min-width: 0;
+      /* allow shrinking */
       padding: 14px;
       border: 1px solid #233045;
       border-radius: 14px;
@@ -1542,8 +1614,50 @@ ob_start(); ?>
       font-size: 26px;
       font-weight: 700;
     }
+
     .hide {
-  display: none !important;
+      display: none !important;
+    }
+
+    .stat-card {
+      flex: 1 1 180px;
+      /* responsive */
+      /* max-width: 100%;
+    min-width: 160px; */
+    }
+
+    .stat-num {
+      font-size: clamp(18px, 2vw, 26px);
+      font-weight: 700;
+    }
+
+    .stat-title {
+      font-size: clamp(10px, 1vw, 12px);
+    }
+
+    .master-wrap .card {
+      overflow: hidden;
+    }
+
+    .master-wrap .card .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .master-wrap .card .table-wrap .table {
+      width: 100%;
+    }
+
+    /* .table th,
+    .table td {
+      word-break: break-word;
+    } */
+      .table td {
+    word-break: break-word;
+}
+
+.table th {
+    white-space: nowrap;
 }
   </style>
 </head>
@@ -1657,95 +1771,100 @@ ob_start(); ?>
       </form>
     </div>
 
-    <div class="card table-wrap">
-      <table class="table">
-        <thead>
-          <tr>
-            <th style="width:60px;">SR</th>
-            <th>Applied On</th>
-            <th>Jobseeker</th>
-            <th>Job</th>
-            <th>Company</th>
-            <th>Listing</th>
-            <th>Status</th>
-            <th style="width:280px;">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php if (empty($rows)): ?>
+    <div class="card" style="padding:0;">
+
+      <div class="table-wrap">
+
+        <table class="table">
+          <thead>
             <tr>
-              <td colspan="8" style="text-align:center;padding:18px;">No records found</td>
+              <th style="width:60px;">SR</th>
+              <th>Applied On</th>
+              <th>Jobseeker</th>
+              <th>Job</th>
+              <th>Company</th>
+              <th>Listing</th>
+              <th>Status</th>
+              <th style="width:280px;">Actions</th>
             </tr>
-            <?php else: $sr = 1;
-            foreach ($rows as $r):
-              $lt_text = ((int)$r['job_lt'] === 1) ? 'Premium' : 'Standard';
-              $pill_cls = ((int)$r['job_lt'] === 1) ? 'pill-premium' : 'pill-standard';
-              $status = $r['status_name'] ?: ($status_name_by_id[(int)$r['status_id']] ?? '—');
-              $jobHref = h(keep_params(['mode' => 'job', 'lt' => (int)$r['job_lt'], 'id' => (int)$r['job_id']]));
-              $profileHref = h(keep_params(['mode' => 'candidate', 'userid' => (int)$r['candidate_userid']]));
-            ?>
+          </thead>
+          <tbody>
+            <?php if (empty($rows)): ?>
               <tr>
-                <td><?= $sr++ ?></td>
-                <td>
-                  <div class="nowrap"><?= h(fmt_date($r['application_date'])) ?></div>
-                  <div class="muted"><?= h(date('h:i A', strtotime($r['application_date']))) ?></div>
-                </td>
-                <td>
-                  <?= h($r['candidate_name'] ?: ('User #' . (int)$r['candidate_userid'])) ?>
-                  <?php if (!empty($r['candidate_city'])): ?>
-                    <div class="muted" style="font-size:12px;"><?= h($r['candidate_city']) ?></div>
-                  <?php endif; ?>
-                  <div class="muted" style="font-size:12px">
-                    <?= h($r['mobile_no'] ?: '') ?><?= ($r['mobile_no'] && $r['email']) ? ' • ' : '' ?><?= h($r['email'] ?: '') ?>
-                  </div>
-                </td>
-                <td><?= h($r['job_position'] ?: '—') ?></td>
-                <td><?= h($r['company_name'] ?: '—') ?></td>
-                <td><span class="pill <?= $pill_cls ?>"><?= h($lt_text) ?></span></td>
-                <td><span class="badge"><?= h($status) ?></span></td>
-                <td>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap">
-                    <a class="btn secondary" href="<?= $jobHref ?>" target="_blank" rel="noopener">View Job</a>
-                    <a class="btn secondary" href="<?= $profileHref ?>" target="_blank" rel="noopener">View Profile</a>
-                  </div>
-                </td>
+                <td colspan="8" style="text-align:center;padding:18px;">No records found</td>
               </tr>
-          <?php endforeach;
-          endif; ?>
-        </tbody>
-      </table>
+              <?php else: $sr = 1;
+              foreach ($rows as $r):
+                $lt_text = ((int)$r['job_lt'] === 1) ? 'Premium' : 'Standard';
+                $pill_cls = ((int)$r['job_lt'] === 1) ? 'pill-premium' : 'pill-standard';
+                $status = $r['status_name'] ?: ($status_name_by_id[(int)$r['status_id']] ?? '—');
+                $jobHref = h(keep_params(['mode' => 'job', 'lt' => (int)$r['job_lt'], 'id' => (int)$r['job_id']]));
+                $profileHref = h(keep_params(['mode' => 'candidate', 'userid' => (int)$r['candidate_userid']]));
+              ?>
+                <tr>
+                  <td><?= $sr++ ?></td>
+                  <td>
+                    <div class="nowrap"><?= h(fmt_date($r['application_date'])) ?></div>
+                    <div class="muted"><?= h(date('h:i A', strtotime($r['application_date']))) ?></div>
+                  </td>
+                  <td>
+                    <?= h($r['candidate_name'] ?: ('User #' . (int)$r['candidate_userid'])) ?>
+                    <?php if (!empty($r['candidate_city'])): ?>
+                      <div class="muted" style="font-size:12px;"><?= h($r['candidate_city']) ?></div>
+                    <?php endif; ?>
+                    <div class="muted" style="font-size:12px">
+                      <?= h($r['mobile_no'] ?: '') ?><?= ($r['mobile_no'] && $r['email']) ? ' • ' : '' ?><?= h($r['email'] ?: '') ?>
+                    </div>
+                  </td>
+                  <td><?= h($r['job_position'] ?: '—') ?></td>
+                  <td><?= h($r['company_name'] ?: '—') ?></td>
+                  <td style="text-align:center; white-space:nowrap;">
+                    <span class="pill <?= $pill_cls ?>">
+                      <?= h($lt_text) ?>
+                    </span>
+                  </td>
+                  <td style="text-align:center; white-space:nowrap;"><span class="badge"><?= h($status) ?></span></td>
+                  <td>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                      <a class="btn secondary" href="<?= $jobHref ?>" target="_blank" rel="noopener">View Job</a>
+                      <a class="btn secondary" href="<?= $profileHref ?>" target="_blank" rel="noopener">View Profile</a>
+                    </div>
+                  </td>
+                </tr>
+            <?php endforeach;
+            endif; ?>
+          </tbody>
+        </table>
+
+      </div>
+
     </div>
-  </div>
-  <script>
-function toggleFilterBox()
-{
-  var box = document.getElementById('filterPanel');
-  var btn = document.getElementById('toggleFilterBtn');
+    <script>
+      function toggleFilterBox() {
+        var box = document.getElementById('filterPanel');
+        var btn = document.getElementById('toggleFilterBtn');
 
-  if (!box || !btn) return;
+        if (!box || !btn) return;
 
-  if (box.classList.contains('hide'))
-  {
-    box.classList.remove('hide');
-    btn.innerText = 'Hide Filters';
-  }
-  else
-  {
-    box.classList.add('hide');
-    btn.innerText = 'Show Filters';
-  }
-}
+        if (box.classList.contains('hide')) {
+          box.classList.remove('hide');
+          btn.innerText = 'Hide Filters';
+        } else {
+          box.classList.add('hide');
+          btn.innerText = 'Show Filters';
+        }
+      }
 
 
-    document.addEventListener("DOMContentLoaded", function() {
-      flatpickr(".datepicker", {
-        altInput: true,
-        altFormat: "d-m-Y",
-        dateFormat: "Y-m-d",
-        allowInput: false
+      document.addEventListener("DOMContentLoaded", function() {
+        flatpickr(".datepicker", {
+          altInput: true,
+          altFormat: "d-m-Y",
+          dateFormat: "Y-m-d",
+          allowInput: false
+        });
       });
-    });
-  </script>
+    </script>
 
 </body>
 
