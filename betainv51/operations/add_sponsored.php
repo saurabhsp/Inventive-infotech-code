@@ -8,8 +8,94 @@ require_login();
 global $con;
 $page_title = "Add Sponsorship";
 
+$mode = isset($_GET['add_new']) ? 'form' : 'list';
+$view_mode = $_GET['mode'] ?? '';
+$sponsored_id = isset($_GET['sponsored_id']) ? (int)$_GET['sponsored_id'] : 0;
 // database tables
 $SPONSERSHIP = 'jos_app_sponsorship';
+$REGION_SPONSERSHIP = 'jos_app_sponsorship_region';
+$IMG_SPONSERSHIP = 'jos_app_sponsorship_images';
+
+
+//----------------------Helpers ------------------------
+
+/* ---------- permission wrapper ---------- */
+function has_cap($cap)
+{
+    if (function_exists('current_user_can')) return (bool) current_user_can($cap);
+    if (!empty($_SESSION['user']) && is_array($_SESSION['user'])) {
+        if (!empty($_SESSION['user']['caps']) && is_array($_SESSION['user']['caps'])) {
+            if (in_array($cap, $_SESSION['user']['caps'], true)) return true;
+        }
+        if (!empty($_SESSION['user']['permissions']) && is_array($_SESSION['user']['permissions'])) {
+            if (in_array($cap, $_SESSION['user']['permissions'], true)) return true;
+        }
+        if (!empty($_SESSION['user']['permissions_map']) && is_array($_SESSION['user']['permissions_map'])) {
+            if (!empty($_SESSION['user']['permissions_map'][$cap])) return true;
+        }
+    }
+    return true; // permissive fallback (change to false to deny by default)
+}
+
+/* ---------- auto title from jos_admin_menus ---------- */
+try {
+    $script_name = basename($_SERVER['PHP_SELF']);
+    $sqls = [
+        "SELECT menu_name FROM jos_admin_menus WHERE menu_link = ? LIMIT 1",
+        "SELECT menu_name FROM jos_admin_menus WHERE url = ? LIMIT 1",
+        "SELECT menu_name FROM jos_admin_menus WHERE menu_link LIKE CONCAT('%', ?, '%') LIMIT 1",
+        "SELECT menu_name FROM jos_admin_menus WHERE url LIKE CONCAT('%', ?, '%') LIMIT 1"
+    ];
+    foreach ($sqls as $s) {
+        if ($st = @$con->prepare($s)) {
+            $st->bind_param('s', $script_name);
+            $st->execute();
+            $res = $st->get_result();
+            if ($row = $res->fetch_assoc()) {
+                if (!empty($row['menu_name'])) {
+                    $page_title = $row['menu_name'];
+                }
+            }
+            $st->close();
+
+            if ($page_title !== 'Add Sponsorship') break;
+        }
+    }
+} catch (Exception $e) {
+    // silent fallback
+}
+
+
+
+/* ---------- upload paths ---------- */
+$UPLOAD_DIR_FS = realpath(__DIR__ . '/../../webservices/uploads/sponsorship');
+
+if (!$UPLOAD_DIR_FS) {
+    $UPLOAD_DIR_FS = __DIR__ . '/../../webservices/uploads/sponsorship';
+}
+$UPLOAD_URL_REL = 'uploads/sponsorship/';
+
+
+function full_img_for_display($dbPath)
+{
+    if (!$dbPath) return '';
+    if (defined('DOMAIN_URL') && DOMAIN_URL) {
+        $base = rtrim(DOMAIN_URL, '/') . '/';
+    } else {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $base   = $scheme . '://' . $host . '/';
+    }
+    if (preg_match('~^https?://~i', $dbPath)) return $dbPath;
+    $p = ltrim($dbPath, '/');
+    if (stripos($p, 'webservices/') === 0) return $base . $p;
+    if (stripos($p, 'uploads/slider/') === 0) return $base . 'webservices/' . $p;
+    return $base . 'webservices/' . $p;
+}
+
+
+
+
 
 /* logged user */
 $me  = $_SESSION['admin_user'] ?? [];
@@ -17,6 +103,10 @@ $uid = (int)($me['id'] ?? 0);
 
 /* save form */
 $msg = "";
+if (isset($_GET['ok'])) {
+    $msg = "Sponsorship added successfully!";
+}
+
 $sponsorship_id = 0;
 
 if (isset($_POST['save'])) {
@@ -46,14 +136,10 @@ if (isset($_POST['save'])) {
     );
 
     if ($stmt->execute()) {
-
         $sponsorship_id = $stmt->insert_id;
-        $msg = "Sponsorship added successfully!";
     } else {
-
         $msg = "Error saving record";
     }
-
     $stmt->close();
 }
 
@@ -69,7 +155,7 @@ if ($sponsorship_id > 0 && !empty($_POST['location'])) {
         $city     = $loc['city'];
         $locality = $loc['locality'];
 
-        $stmt2 = $con->prepare("INSERT INTO jos_app_sponsorship_region
+        $stmt2 = $con->prepare("INSERT INTO $REGION_SPONSERSHIP
         (sponsorship_id,country,state,district,city,locality)
         VALUES (?,?,?,?,?,?)");
 
@@ -84,8 +170,196 @@ if ($sponsorship_id > 0 && !empty($_POST['location'])) {
         );
 
         $stmt2->execute();
+        $stmt2->close();
     }
 }
+
+// Save Images
+if ($sponsorship_id > 0 && !empty($_FILES['images']['name'][0])) {
+
+
+    foreach ($_FILES['images']['name'] as $key => $name) {
+
+        $tmp = $_FILES['images']['tmp_name'][$key];
+        $order = $_POST['image'][$key]['order_no'];
+        $status = $_POST['image'][$key]['status'];
+
+        $size = $_FILES['images']['size'][$key];
+        $type = $_FILES['images']['type'][$key];
+
+        /* size validation */
+        if ($size > 2 * 1024 * 1024) {
+            echo "Image must be under 2MB<br>";
+            continue;
+        }
+
+        /* type validation */
+        $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+
+        if (!in_array($type, $allowed)) {
+            echo "Invalid image type<br>";
+            continue;
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+        $filename = time() . '_' . $key . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $name);
+
+        $target = $UPLOAD_DIR_FS . '/' . $filename;
+
+        if (move_uploaded_file($tmp, $target)) {
+
+            $stmt3 = $con->prepare("
+            INSERT INTO $IMG_SPONSERSHIP
+            (sponsorship_id,image_path,order_no,status)
+            VALUES (?,?,?,?)");
+
+            $img_path = $UPLOAD_URL_REL . $filename;
+
+            $stmt3->bind_param("isii", $sponsorship_id, $img_path, $order, $status);
+            $stmt3->execute();
+            $stmt3->close();
+        } else {
+
+            echo "UPLOAD FAILED<br>";
+            echo "TMP: " . $tmp . "<br>";
+            echo "TARGET: " . $target . "<br>";
+            print_r(error_get_last());
+        }
+    }
+}
+
+if ($sponsorship_id > 0) {
+    header("Location: add_sponsored.php?ok=1");
+    exit;
+}
+
+
+
+
+
+$filter_name   = $_GET['sponsor_name'] ?? '';
+$filter_status = $_GET['status'] ?? '';
+$from_date     = $_GET['from_date'] ?? '';
+$to_date       = $_GET['to_date'] ?? '';
+
+$where = "WHERE 1=1";
+$params = [];
+$types  = "";
+
+/* Sponsor Name Filter */
+if ($filter_name != '') {
+    $where .= " AND s.sponsor_name LIKE ?";
+    $params[] = "%$filter_name%";
+    $types .= "s";
+}
+
+/* Status Filter */
+if ($filter_status !== '') {
+    $where .= " AND s.status = ?";
+    $params[] = $filter_status;
+    $types .= "i";
+}
+
+/* Date Filter */
+if ($from_date != '' && $to_date != '') {
+    $where .= " AND DATE(s.created_at) BETWEEN ? AND ?";
+    $params[] = $from_date;
+    $params[] = $to_date;
+    $types .= "ss";
+}
+
+/* Final Query */
+$sql = "
+SELECT 
+s.id,
+s.sponsor_name,
+s.amount,
+s.valid_from,
+s.valid_to,
+s.status
+FROM $SPONSERSHIP s
+$where
+ORDER BY s.id DESC
+";
+
+$stmt = $con->prepare($sql);
+
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+
+$stmt->execute();
+$list = $stmt->get_result();
+
+
+
+
+
+
+//Region data
+$regions = [];
+$images = [];
+
+
+if ($view_mode == 'region' && $sponsored_id > 0) {
+
+    $stmt = $con->prepare("
+        SELECT country,state,district,city,locality
+        FROM $REGION_SPONSERSHIP
+        WHERE sponsorship_id = ?
+    ");
+    $stmt->bind_param("i", $sponsored_id);
+    $stmt->execute();
+    $regions = $stmt->get_result();
+}
+
+if ($view_mode == 'images' && $sponsored_id > 0) {
+
+    $stmt = $con->prepare("
+        SELECT image_path,order_no,status
+        FROM $IMG_SPONSERSHIP
+        WHERE sponsorship_id = ?
+        ORDER BY order_no ASC
+    ");
+    $stmt->bind_param("i", $sponsored_id);
+    $stmt->execute();
+    $images = $stmt->get_result();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ?>
 
 <link rel="stylesheet" href="/adminconsole/assets/ui.css">
@@ -117,7 +391,7 @@ if ($sponsorship_id > 0 && !empty($_POST['location'])) {
         border: 1px solid #ccc;
     }
 
-    .btn.primary {
+    /* .btn.primary {
         background: #2563eb;
         color: #fff;
         border: none;
@@ -128,7 +402,7 @@ if ($sponsorship_id > 0 && !empty($_POST['location'])) {
 
     .btn.primary:hover {
         opacity: .9;
-    }
+    } */
 
     /* modal css */
     .modal {
@@ -177,117 +451,614 @@ if ($sponsorship_id > 0 && !empty($_POST['location'])) {
     .pac-item:hover {
         background: #f1f5ff;
     }
+
+    /* Big Center Save Button */
+    .save-sponsorship-wrap {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 30px 0;
+    }
+
+    .save-sponsorship-btn {
+        font-size: 18px;
+        padding: 14px 40px;
+        border-radius: 10px;
+        font-weight: 700;
+        /* min-width: 260px; */
+    }
+
+
+
+
+    /* MAIN FORM ONLY - 3 inputs per row */
+    .main-form-grid {
+        grid-template-columns: repeat(3, 1fr);
+        max-width: 1100px;
+    }
+
+    /* Smaller input height */
+    .main-form-grid input,
+    .main-form-grid select,
+    .main-form-grid textarea {
+        padding: 8px;
+        font-size: 13px;
+    }
+
+    /* Address full width */
+    .main-form-grid textarea {
+        grid-column: span 3;
+    }
+
+    /* Responsive for small screens */
+    @media (max-width: 900px) {
+        .main-form-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 500px) {
+        .main-form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* limit page content width */
+    .master-wrap {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 0 20px;
+    }
+
+
+    /* table container */
+    .master-wrap {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 0 20px;
+    }
+
+    /* //filter hide show */
+    .hide {
+        display: none !important;
+    }
+
+    /* FILTER PANEL */
+    .toolbar {
+        padding: 16px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+    }
+
+    /* row layout */
+    .toolbar .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: end;
+    }
+
+    /* each filter group */
+    .toolbar .group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        min-width: 180px;
+    }
+
+    /* label */
+    .toolbar label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #cbd5e1;
+    }
+
+    /* input + select */
+    .toolbar input,
+    .toolbar select {
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid #334155;
+        background: #020617;
+        color: #fff;
+        min-width: 160px;
+    }
+
+    /* date inputs */
+    .toolbar input[type="date"] {
+        min-width: 150px;
+    }
+
+    /* filter buttons container */
+    .toolbar .actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
 </style>
 
 <div class="master-wrap">
+    <div class="headbar">
+        <div class="headbar-left">
+            <h2 style="margin:0"><?php echo htmlspecialchars($page_title); ?></h2>
+        </div>
+        <div class="headbar-right"></div>
+    </div>
 
     <div class="card" style="margin-top:20px">
 
-        <div class="headbar">
-            <div style="font-size:16px;font-weight:700">
-                Add Sponsorship
-            </div>
-        </div>
+
 
         <?php if ($msg): ?>
-            <div style="padding:10px;color:green;font-weight:600;">
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin:10px;">
                 <?= htmlspecialchars($msg) ?>
             </div>
         <?php endif; ?>
 
-        <form method="post">
-
-            <div class="form-grid">
-
-                <div class="form-group">
-                    <label>Sponsor Name</label>
-                    <input type="text" name="sponsor_name" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Contact Number</label>
-                    <input type="text" name="contact_no" maxlength="10">
-                </div>
-
-                <div class="form-group">
-                    <label>Valid From</label>
-                    <input type="text" placeholder="DD-MM-YYYY" name="valid_from" id="valid_from" required>
-                </div>
 
 
 
-                <div class="form-group">
-                    <label>Duration (Months)</label>
-                    <select name="months" id="months">
-                        <option value="">Select Months</option>
 
-                        <?php for ($i = 1; $i <= 12; $i++): ?>
-                            <option value="<?= $i ?>"><?= $i ?> Month<?= $i > 1 ? 's' : '' ?></option>
-                        <?php endfor; ?>
 
-                    </select>
-                </div>
 
-                <div class="form-group">
-                    <label>Valid To</label>
-                    <input type="text" placeholder="DD-MM-YYYY" name="valid_to" id="valid_to" readonly required>
-                </div>
 
-                <div class="form-group">
-                    <label>Amount</label>
-                    <input type="number" step="0.01" name="amount" required>
-                </div>
 
-                <div class="form-group">
-                    <label>Status</label>
-                    <select name="status">
-                        <option value="1">Active</option>
-                        <option value="0">Inactive</option>
-                    </select>
-                </div>
+        <!-- RIGHT: Add New (alone, green) -->
+        <?php if ($mode == 'list' && $view_mode == ''): ?>
 
-                <div class="form-group" style="grid-column:1/-1">
-                    <label>Address</label>
-                    <textarea name="address" rows="3"></textarea>
-                </div>
+            <!-- Show/Hide Filter Button -->
+
+
+
+
+            <div id="filterPanel" class="card toolbar hide">
+
+                <form method="GET">
+
+                    <div class="row">
+
+                        <div class="group">
+                            <label>Sponsor Name</label>
+                            <input type="text"
+                                name="sponsor_name"
+                                placeholder="Sponsor Name"
+                                value="<?= htmlspecialchars($_GET['sponsor_name'] ?? '') ?>">
+                        </div>
+
+                        <div class="group">
+                            <label>Status</label>
+                            <select name="status">
+                                <option value="">All Status</option>
+                                <option value="1" <?= (($_GET['status'] ?? '') === '1') ? 'selected' : '' ?>>Active</option>
+                                <option value="0" <?= (($_GET['status'] ?? '') === '0') ? 'selected' : '' ?>>Inactive</option>
+                            </select>
+                        </div>
+
+                        <div class="group">
+                            <label>From</label>
+                            <input
+                                class="inp datepicker"
+                                type="text"
+                                name="from_date"
+                                id="from_date_filter"
+                                value="<?= htmlspecialchars($from_date ?? '') ?>"
+                                placeholder="DD-MM-YYYY">
+                        </div>
+
+
+                        <div class="group">
+                            <label>To</label>
+                            <input
+                                class="inp datepicker"
+                                type="text"
+                                name="to_date"
+                                id="to_date_filter"
+                                value="<?= htmlspecialchars($to_date ?? '') ?>"
+                                placeholder="DD-MM-YYYY">
+                        </div>
+
+                        <div class="actions">
+                            <button type="submit" class=" btn green">Filter</button>
+                            <a href="add_sponsored.php" class="btn secondary">Reset</a>
+                        </div>
+
+                    </div>
+
+                </form>
+
             </div>
 
-            <div style="padding:0 20px 20px 20px">
 
-                <button type="button" id="openLocationModal" class="btn primary">
-                    + Add Location
-                </button>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin:10px;">
+
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <button type="button"
+                        id="toggleFilterBtn"
+                        class="btn secondary"
+                        onclick="toggleFilterBox(); return false;">
+                        Show Filters
+                    </button>
+                </div>
+
+                <a href="?add_new=1" class=" btn green">+ Add Sponsorship</a>
 
             </div>
-            <div style="padding:0 20px 20px 20px">
 
-                <table border="1" width="100%" id="locationTable">
+        <?php endif; ?>
+
+
+
+
+
+
+
+        <?php if ($mode == 'form'): ?>
+
+            <div style="margin-bottom:15px">
+                <a href="add_sponsored.php" class="btn gray">← Back to List</a>
+            </div>
+
+
+            <form method="post" enctype="multipart/form-data" id="sponsorshipForm">
+                <div class="form-grid main-form-grid">
+
+                    <div class="form-group">
+                        <label>Sponsor Name</label>
+                        <input type="text" name="sponsor_name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Contact Number</label>
+                        <input type="text" name="contact_no" maxlength="10">
+                    </div>
+                    <div class="form-group">
+                        <label>Amount</label>
+                        <input type="number" step="0.01" name="amount" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Valid From</label>
+                        <input type="text" placeholder="DD-MM-YYYY" name="valid_from" id="valid_from" required>
+                    </div>
+
+
+
+                    <div class="form-group">
+                        <label>Duration (Months)</label>
+                        <select name="months" id="months">
+                            <option value="">Select Months</option>
+
+                            <?php for ($i = 1; $i <= 12; $i++): ?>
+                                <option value="<?= $i ?>"><?= $i ?> Month<?= $i > 1 ? 's' : '' ?></option>
+                            <?php endfor; ?>
+
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Valid To</label>
+                        <input type="text" placeholder="DD-MM-YYYY" name="valid_to" id="valid_to" readonly required>
+                    </div>
+
+
+
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status">
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="grid-column:1/-1">
+                        <label>Address</label>
+                        <textarea name="address" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div style="padding:0 20px 20px 20px; margin-top:8px;">
+                    <button type="button" id="openLocationModal" class=" btn green">
+                        + Add Location
+                    </button>
+
+                </div>
+
+
+
+                <!-- Location Modal -->
+
+                <div style="padding:0 20px 20px 20px; display:none;" id="locationTableWrap">
+                    <table border="1" width="100%" id="locationTable" style="margin-top:8px;">
+                        <thead>
+                            <tr>
+                                <th>Country</th>
+                                <th>State</th>
+                                <th>District</th>
+                                <th>City</th>
+                                <th>Locality</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody></tbody>
+
+                    </table>
+                </div>
+                <div id="locationInputs"></div>
+                <!-- Location Modal END -->
+
+
+                <div style="padding:0 20px 20px 20px; margin-top:8px;">
+                    <button type="button" id="openImageModal" class=" btn green">
+                        + Add Image
+                    </button>
+                </div>
+                <!-- Image Modal -->
+                <div style="padding:0 20px 20px 20px; display:none;" id="imageTableWrap">
+                    <table border="1" width="100%" id="imageTable">
+                        <thead>
+                            <tr>
+                                <th>Preview</th>
+                                <th>Order</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody></tbody>
+
+                    </table>
+
+                </div>
+
+                <div id="imageInputs"></div>
+                <!-- Image Modal END-->
+
+
+                <div class="save-sponsorship-wrap">
+                    <button type="submit" name="save" class="btn green save-sponsorship-btn">
+                        Save Sponsorship
+                    </button>
+                </div>
+
+            </form>
+        <?php endif; ?>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        <!-- Region Section -->
+
+        <?php if ($view_mode == 'region'):
+            $srnum = 1; ?>
+
+            <div class="table-wrap" style="margin: 8px;">
+
+                <h3>Region List</h3>
+
+                <a href="add_sponsored.php" class="btn gray">← Back</a>
+
+                <table border="1" width="100%" style="margin-top: 50px;">
                     <thead>
                         <tr>
+                            <th>Sr No.</th>
                             <th>Country</th>
                             <th>State</th>
                             <th>District</th>
                             <th>City</th>
                             <th>Locality</th>
-                            <th>Action</th>
                         </tr>
                     </thead>
 
-                    <tbody></tbody>
+                    <tbody>
 
+                        <?php while ($r = $regions->fetch_assoc()): ?>
+
+                            <tr>
+                                <td><?= $srnum++ ?></td>
+                                <td><?= htmlspecialchars($r['country']) ?></td>
+                                <td><?= htmlspecialchars($r['state']) ?></td>
+                                <td><?= htmlspecialchars($r['district']) ?></td>
+                                <td><?= htmlspecialchars($r['city']) ?></td>
+                                <td><?= htmlspecialchars($r['locality']) ?></td>
+                            </tr>
+
+                        <?php endwhile; ?>
+
+                    </tbody>
                 </table>
 
             </div>
-            <div id="locationInputs"></div>
-            <div style="padding:20px">
-                <button type="submit" name="save" class="btn primary">
-                    Save Sponsorship
-                </button>
+
+        <?php endif; ?>
+
+
+
+
+
+
+
+
+
+
+
+        <!-- Image section  -->
+        <?php if ($view_mode == 'images'): $srnum = 1; ?>
+
+            <div class="table-wrap">
+
+                <h3>Image List</h3>
+
+                <a href="add_sponsored.php" class="btn gray">← Back</a>
+
+                <table border="1" width="100%" style="margin-top: 50px;">
+                    <thead>
+                        <tr>
+                            <th>Sr No.</th>
+                            <th>Preview</th>
+                            <th>Order</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        <?php while ($img = $images->fetch_assoc()): ?>
+
+                            <tr>
+                                <td><?= $srnum++ ?></td>
+                                <td>
+                                    <img src="<?= htmlspecialchars(full_img_for_display($img['image_path'])) ?>"
+                                        style="width:80px;height:80px;object-fit:cover">
+                                </td>
+
+                                <td><?= $img['order_no'] ?></td>
+
+                                <td><?= $img['status'] ? 'Active' : 'Inactive' ?></td>
+
+                            </tr>
+
+                        <?php endwhile; ?>
+
+                    </tbody>
+                </table>
+
             </div>
 
-        </form>
+        <?php endif; ?>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        <!-- //MAIN LIST  code -->
+
+        <?php if ($mode == 'list' && $view_mode == ''): ?>
+            <div class="table-wrap">
+                <table style="margin-top:10px;">
+                    <thead>
+                        <tr>
+                            <th>Sr No</th>
+                            <th>Sponsor Name</th>
+                            <th>Amount</th>
+                            <th>Valid From</th>
+                            <th>Valid To</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <?php
+                        $sr = 1;
+
+                        while ($row = $list->fetch_assoc()) { ?>
+
+                            <tr>
+
+                                <td><?= $sr++ ?></td>
+
+                                <td><?= htmlspecialchars($row['sponsor_name']) ?></td>
+
+                                <td><?= $row['amount'] ?></td>
+
+                                <td><?= $row['valid_from'] ?></td>
+
+                                <td><?= $row['valid_to'] ?></td>
+
+                                <!-- <td>
+                                    <?php if (!empty($row['image_path'])): ?>
+                                        <img src="<?php echo htmlspecialchars(full_img_for_display($row['image_path'])); ?>"
+                                            alt="" style="width:50px;height:50x;object-fit:cover;border-radius:8px">
+                                    <?php endif; ?>
+                                </td> -->
+
+                                <td><?= $row['status'] ? 'Active' : 'Inactive' ?></td>
+
+                                <td>
+
+                                    <a class="btn secondary"
+                                        href="add_sponsored.php?mode=region&sponsored_id=<?= $row['id'] ?>">
+                                        View Region
+                                    </a>
+
+                                    <a style="margin:2px;" class="btn secondary"
+                                        href="add_sponsored.php?mode=images&sponsored_id=<?= $row['id'] ?>">
+                                        View Images
+                                    </a>
+
+                                </td>
+                            </tr>
+
+                        <?php } ?>
+
+                    </tbody>
+                </table>
+            </div>
+
+        <?php endif; ?>
+
     </div>
 </div>
+
+
 <!-- //modal start -->
 <div id="locationModal" class="modal">
 
@@ -338,11 +1109,11 @@ if ($sponsorship_id > 0 && !empty($_POST['location'])) {
 
         <div style="margin-top:15px">
 
-            <button type="button" id="saveLocation" class="btn primary">
+            <button type="button" id="saveLocation" class=" btn green">
                 Save Location
             </button>
 
-            <button type="button" id="closeLocationModal">
+            <button class="btn secondary" type="button" id="closeLocationModal">
                 Cancel
             </button>
 
@@ -351,12 +1122,69 @@ if ($sponsorship_id > 0 && !empty($_POST['location'])) {
     </div>
 
 </div>
-<!-- //modal end -->
+<!-- //location modal end -->
+
+
+
+
+
+
+
+<!-- IMAGE MODAL START -->
+<div id="imageModal" class="modal">
+
+    <div class="modal-content">
+
+        <h3>Add Image</h3>
+
+        <div class="form-grid">
+
+            <div class="form-group">
+                <label>Upload Image</label>
+                <input type="file" id="img_file" name="images[]" multiple accept="image/*">
+            </div>
+
+            <div class="form-group">
+                <label>Order No</label>
+                <input type="number" id="img_order" value="1">
+            </div>
+
+            <div class="form-group">
+                <label>Status</label>
+                <select id="img_status">
+                    <option value="1">Active</option>
+                    <option value="0">Inactive</option>
+                </select>
+            </div>
+
+        </div>
+
+        <div style="margin-top:15px">
+
+            <button type="button" id="saveImage" class=" btn green">
+                Save Image
+            </button>
+
+            <button class="btn secondary" type="button" id="closeImageModal">
+                Cancel
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+<!-- IMAGE MODAL END -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-
+<link rel="stylesheet" href="/adminconsole/assets/ui.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
+    $('#openFormBtn').click(function() {
+
+        $('#sponsorshipForm').slideToggle();
+
+    });
     let cityAutocomplete;
 
     function initCityAutocomplete() {
@@ -453,23 +1281,18 @@ if ($sponsorship_id > 0 && !empty($_POST['location'])) {
 
     //modal js of location multiple
     let locationIndex = 0;
-
+    let editingLocationRow = null;
     /* Open modal */
-
     $('#openLocationModal').click(function() {
         $('#locationModal').addClass('active');
     });
     /* Close modal */
-
     $('#closeLocationModal').click(function() {
+        editingLocationRow = null;
         $('#locationModal').removeClass('active');
     });
-
-
     /* Save location */
-
     $('#saveLocation').click(function() {
-
         let country = $('#loc_country').val();
         let state = $('#loc_state').val();
         let city = $('#loc_city').val();
@@ -481,15 +1304,25 @@ if ($sponsorship_id > 0 && !empty($_POST['location'])) {
         }
 
         let row = `<tr>
-        <td>${country}</td>
-        <td>${state}</td>
-        <td>-</td>
-        <td>${city}</td>
-        <td>${locality}</td>
-        <td><button type="button" class="removeRow">Remove</button></td>
-        </tr>`;
+<td>${country}</td>
+<td>${state}</td>
+<td>-</td>
+<td>${city}</td>
+<td>${locality}</td>
+<td>
+<button type="button" class="editRow btn primary">Edit</button>
+<button type="button" class="removeRow btn red">Remove</button>
+</td>
+</tr>`;
 
-        $('#locationTable tbody').append(row);
+        $('#locationTableWrap').show();
+
+        if (editingLocationRow) {
+            editingLocationRow.replaceWith(row);
+            editingLocationRow = null;
+        } else {
+            $('#locationTable tbody').append(row);
+        }
 
         $('#locationInputs').append(`
         <input type="hidden" name="location[${locationIndex}][country]" value="${country}">
@@ -511,10 +1344,32 @@ if ($sponsorship_id > 0 && !empty($_POST['location'])) {
     /* remove row */
 
     $(document).on('click', '.removeRow', function() {
-        let rowIndex = $(this).closest('tr').index();
+
         $(this).closest('tr').remove();
-        $('#locationInputs input').slice(rowIndex * 5, rowIndex * 5 + 5).remove();
+
+        if ($('#locationTable tbody tr').length == 0) {
+            $('#locationTableWrap').hide();
+        }
+
     });
+    $(document).on('click', '.editRow', function() {
+
+        editingLocationRow = $(this).closest('tr');
+
+        let country = editingLocationRow.find('td:eq(0)').text();
+        let state = editingLocationRow.find('td:eq(1)').text();
+        let city = editingLocationRow.find('td:eq(3)').text();
+        let locality = editingLocationRow.find('td:eq(4)').text();
+
+        $('#loc_country').val(country);
+        $('#loc_state').val(state);
+        $('#loc_city').val(city);
+        $('#loc_locality').val(locality);
+
+        $('#locationModal').addClass('active');
+
+    });
+
 
     $(window).click(function(e) {
         if ($(e.target).is('#locationModal')) {
@@ -523,8 +1378,192 @@ if ($sponsorship_id > 0 && !empty($_POST['location'])) {
     });
     $(document).keydown(function(e) {
         if (e.key === "Escape") {
+            editingLocationRow = null;
             $('#locationModal').removeClass('active');
         }
+    });
+
+    //Image modal code
+    let imageIndex = 0;
+    let editingImageRow = null;
+
+    /* open modal */
+
+    $('#openImageModal').click(function() {
+        $('#imageModal').addClass('active');
+    });
+
+    /* close modal */
+
+    $('#closeImageModal').click(function() {
+        editingImageRow = null;
+        $('#imageModal').removeClass('active');
+    });
+
+    /* save image */
+    $('#saveImage').click(function() {
+
+        let fileInput = $('#img_file')[0];
+        let file = fileInput.files[0];
+        let order = $('#img_order').val();
+        let status = $('#img_status').val();
+
+
+        if (!file) {
+            alert("Please select image");
+            return;
+        }
+
+        /* size validation (2MB) */
+        if (file.size > 2 * 1024 * 1024) {
+            alert("Image must be under 2 MB");
+            $('#img_file').val('');
+            return;
+        }
+
+        /* type validation */
+        const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+
+        if (!allowed.includes(file.type)) {
+            alert("Only JPG, PNG, WEBP images allowed");
+            $('#img_file').val('');
+            return;
+        }
+
+        let reader = new FileReader();
+
+        reader.onload = function(e) {
+
+            let preview = e.target.result;
+
+            let row = `<tr>
+            <td><img src="${preview}" width="80"></td>
+            <td>${order}</td>
+            <td>${status==1?'Active':'Inactive'}</td>
+            <td>
+            <button type="button" class="editImage btn primary">Edit</button>
+            <button type="button" class="removeImage btn red">Remove</button>
+            </td>
+        </tr>`;
+
+            $('#imageTableWrap').show();
+            if (editingImageRow) {
+                editingImageRow.replaceWith(row);
+                editingImageRow = null;
+            } else {
+                $('#imageTable tbody').append(row);
+            }
+            // create hidden file input for form submission
+            let newInput = document.createElement("input");
+            newInput.type = "file";
+            newInput.name = "images[]";
+            newInput.style.display = "none";
+            let dt = new DataTransfer();
+            dt.items.add(file);
+            newInput.files = dt.files;
+            document.getElementById("imageInputs").appendChild(newInput);
+
+            // order + status
+            $('#imageInputs').append(`
+            <input type="hidden" name="image[${imageIndex}][order_no]" value="${order}">
+            <input type="hidden" name="image[${imageIndex}][status]" value="${status}">
+        `);
+
+            imageIndex++;
+        };
+
+        reader.readAsDataURL(file);
+
+        $('#img_file').val('');
+        $('#img_order').val('');
+
+        $('#imageModal').removeClass('active');
+    });
+
+    /* remove */
+
+    $(document).on('click', '.removeImage', function() {
+        $(this).closest('tr').remove();
+        if ($('#imageTable tbody tr').length == 0) {
+            $('#imageTableWrap').hide();
+        }
+    });
+    $(document).on('click', '.editImage', function() {
+
+        editingImageRow = $(this).closest('tr');
+
+        let order = editingImageRow.find('td:eq(1)').text();
+        let status = editingImageRow.find('td:eq(2)').text().trim() === 'Active' ? 1 : 0;
+
+        $('#img_order').val(order);
+        $('#img_status').val(status);
+
+        $('#imageModal').addClass('active');
+
+    });
+    $(window).click(function(e) {
+        if ($(e.target).is('#imageModal')) {
+            $('#imageModal').removeClass('active');
+        }
+    });
+
+    $(document).keydown(function(e) {
+        if (e.key === "Escape") {
+            editingImageRow = null;
+            $('#imageModal').removeClass('active');
+        }
+    });
+
+    // Filter Hide Show
+    function toggleFilterBox() {
+        var box = document.getElementById('filterPanel');
+        var btn = document.getElementById('toggleFilterBtn');
+
+        if (!box || !btn) return;
+
+        if (box.classList.contains('hide')) {
+            box.classList.remove('hide');
+            btn.innerText = 'Hide Filters';
+        } else {
+            box.classList.add('hide');
+            btn.innerText = 'Show Filters';
+        }
+    }
+    window.onload = function() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('sponsor_name') || params.has('status') || params.has('from_date')) {
+            document.getElementById('filterPanel').classList.remove('hide');
+            document.getElementById('toggleFilterBtn').innerText = 'Hide Filters';
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        flatpickr(".datepicker", {
+            altInput: true,
+            altFormat: "d-m-Y",
+            dateFormat: "Y-m-d",
+            allowInput: false
+        });
+    });
+
+    /* Form Validation */
+    $('#sponsorshipForm').on('submit', function(e) {
+
+        let locationCount = $('#locationTable tbody tr').length;
+        let imageCount = $('#imageTable tbody tr').length;
+
+        if (locationCount === 0) {
+            alert("Please add at least one Location.");
+            e.preventDefault();
+            return false;
+        }
+
+        if (imageCount === 0) {
+            alert("Please add at least one Image.");
+            e.preventDefault();
+            return false;
+        }
+
     });
 </script>
 <script
