@@ -286,8 +286,12 @@ s.sponsor_name,
 s.amount,
 s.valid_from,
 s.valid_to,
-s.status
+s.status,
+s.created_by,
+s.created_at,
+u.name AS created_by_name
 FROM $SPONSERSHIP s
+LEFT JOIN jos_admin_users u ON u.id = s.created_by
 $where
 ORDER BY s.id DESC
 ";
@@ -614,8 +618,7 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
 
 
 
-            <div id="filterPanel" class="card toolbar hide">
-
+            <div id="filterPanel" class="card toolbar">
                 <form method="GET">
 
                     <div class="row">
@@ -687,20 +690,16 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
 
 
             <div style="display:flex;justify-content:space-between;align-items:center;margin:10px;">
-
                 <div style="display:flex;gap:10px;align-items:center;">
                     <button type="button"
                         id="toggleFilterBtn"
                         class="btn secondary"
                         onclick="toggleFilterBox(); return false;">
-                        Show Filters
+                        Hide Filters
                     </button>
                 </div>
-
                 <a href="?add_new=1" class=" btn green">+ Add Sponsorship</a>
-
             </div>
-
         <?php endif; ?>
 
 
@@ -1001,6 +1000,7 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
                             <th>Valid From</th>
                             <th>Valid To</th>
                             <th>Status</th>
+                            <th>Created By / Date</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -1019,9 +1019,8 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
 
                                 <td><?= $row['amount'] ?></td>
 
-                                <td><?= $row['valid_from'] ?></td>
-
-                                <td><?= $row['valid_to'] ?></td>
+                                <td><?= date('d-m-Y', strtotime($row['valid_from'])) ?></td>
+                                <td><?= date('d-m-Y', strtotime($row['valid_to'])) ?></td>
 
                                 <!-- <td>
                                     <?php if (!empty($row['image_path'])): ?>
@@ -1031,6 +1030,11 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
                                 </td> -->
 
                                 <td><?= $row['status'] ? 'Active' : 'Inactive' ?></td>
+
+                                <td>
+                                    <?= htmlspecialchars($row['created_by_name'] ?? '-') ?><br>
+                                    <small><?= !empty($row['created_at']) ? date('d-m-Y H:i', strtotime($row['created_at'])) : '' ?></small>
+                                </td>
 
                                 <td>
 
@@ -1189,14 +1193,85 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
 
     function initCityAutocomplete() {
 
-        const input = document.getElementById("loc_city");
+        /* COUNTRY AUTOCOMPLETE */
+        const countryInput = document.getElementById("loc_country");
 
-        cityAutocomplete = new google.maps.places.Autocomplete(input, {
-            types: ["(cities)"],
+        const countryAutocomplete = new google.maps.places.Autocomplete(countryInput, {
+            types: ["(regions)"],
+            fields: ["address_components", "name"]
+        });
+
+        countryAutocomplete.addListener("place_changed", function() {
+
+            const place = countryAutocomplete.getPlace();
+
+            place.address_components.forEach(function(comp) {
+
+                if (comp.types.includes("country")) {
+                    $("#loc_country").val(comp.long_name);
+                }
+
+            });
+
+        });
+
+
+        /* STATE AUTOCOMPLETE */
+        const stateInput = document.getElementById("loc_state");
+
+        const stateAutocomplete = new google.maps.places.Autocomplete(stateInput, {
+            types: ["(regions)"],
             componentRestrictions: {
                 country: "in"
             },
-            fields: ["address_components", "geometry", "name", "place_id"]
+            fields: ["address_components", "name"]
+        });
+
+        stateAutocomplete.addListener("place_changed", function() {
+
+            const place = stateAutocomplete.getPlace();
+
+            place.address_components.forEach(function(comp) {
+
+                if (comp.types.includes("administrative_area_level_1")) {
+                    $("#loc_state").val(comp.long_name);
+                }
+
+            });
+
+        });
+
+        /* DISTRICT AUTOCOMPLETE */
+        const districtInput = document.getElementById("loc_district");
+
+        const districtAutocomplete = new google.maps.places.Autocomplete(districtInput, {
+            types: ["(regions)"],
+            componentRestrictions: {
+                country: "in"
+            },
+            fields: ["address_components", "name"]
+        });
+
+        districtAutocomplete.addListener("place_changed", function() {
+
+            const place = districtAutocomplete.getPlace();
+
+            let district = place.name;
+
+            $("#loc_district").val(district);
+
+        });
+
+
+        /* CITY AUTOCOMPLETE */
+        const cityInput = document.getElementById("loc_city");
+
+        const cityAutocomplete = new google.maps.places.Autocomplete(cityInput, {
+            types: ["geocode"],
+            componentRestrictions: {
+                country: "in"
+            },
+            fields: ["address_components", "name"]
         });
 
         cityAutocomplete.addListener("place_changed", function() {
@@ -1220,8 +1295,9 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
             });
 
             $("#loc_city").val(city);
-            $("#loc_state").val(state);
-            $("#loc_country").val(country);
+
+            if (state) $("#loc_state").val(state);
+            if (country) $("#loc_country").val(country);
 
         });
 
@@ -1295,6 +1371,7 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
     $('#saveLocation').click(function() {
         let country = $('#loc_country').val();
         let state = $('#loc_state').val();
+        let district = $('#loc_district').val();
         let city = $('#loc_city').val();
         let locality = $('#loc_locality').val();
 
@@ -1306,7 +1383,7 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
         let row = `<tr>
 <td>${country}</td>
 <td>${state}</td>
-<td>-</td>
+<td>${district}</td>
 <td>${city}</td>
 <td>${locality}</td>
 <td>
@@ -1327,7 +1404,7 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
         $('#locationInputs').append(`
         <input type="hidden" name="location[${locationIndex}][country]" value="${country}">
         <input type="hidden" name="location[${locationIndex}][state]" value="${state}">
-        <input type="hidden" name="location[${locationIndex}][district]" value="">
+        <input type="hidden" name="location[${locationIndex}][district]" value="${district}">
         <input type="hidden" name="location[${locationIndex}][city]" value="${city}">
         <input type="hidden" name="location[${locationIndex}][locality]" value="${locality}">
         `);
@@ -1516,26 +1593,24 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
 
     // Filter Hide Show
     function toggleFilterBox() {
+
         var box = document.getElementById('filterPanel');
         var btn = document.getElementById('toggleFilterBtn');
 
-        if (!box || !btn) return;
-
         if (box.classList.contains('hide')) {
+
             box.classList.remove('hide');
             btn.innerText = 'Hide Filters';
+
         } else {
+
             box.classList.add('hide');
             btn.innerText = 'Show Filters';
+
         }
+
     }
-    window.onload = function() {
-        const params = new URLSearchParams(window.location.search);
-        if (params.has('sponsor_name') || params.has('status') || params.has('from_date')) {
-            document.getElementById('filterPanel').classList.remove('hide');
-            document.getElementById('toggleFilterBtn').innerText = 'Hide Filters';
-        }
-    }
+
 
     document.addEventListener("DOMContentLoaded", function() {
         flatpickr(".datepicker", {
