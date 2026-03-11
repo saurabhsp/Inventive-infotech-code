@@ -746,7 +746,7 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
                 <tr>
                   <th>SR No.</th>
                   <th>Application ID</th>
-                  <th>Employer</th>
+                  <th>Candidate</th>
                   <th>Contact</th>
                   <th>Applied On</th>
                   <th>Status</th>
@@ -788,7 +788,7 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
                         href="<?= $viewCandUrl ?>"
                         target="_blank"
                         rel="noopener">
-                        View Employer
+                        View Candidate
                       </a>
                     </td>
                   </tr>
