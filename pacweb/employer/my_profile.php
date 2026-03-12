@@ -1,8 +1,49 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 session_start();
+
+
 
 $user = $_SESSION['user'] ?? null;
 $userid = $user['id'] ?? 0;
+$userid =166;
+
+
+
+
+if (isset($_POST['update_profile'])) {
+
+    $api_url = "https://beta.inv51.in/webservices/updateRecruiter_profile.php";
+
+    $post_data = [
+        "id" => $userid,
+        "contact_person_name" => $_POST['contact_person_name'],
+        "designation" => $_POST['designation'],
+        "mobile_no" => $_POST['mobile_no'],
+        "email" => $_POST['email']
+    ];
+
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, $api_url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Content-Type: application/json"
+    ]);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_data));
+
+    $response = curl_exec($ch);
+
+    curl_close($ch);
+
+    header("Location: my_profile.php");
+    exit;
+}
+
+
 
 
 
@@ -15,6 +56,7 @@ if (isset($_FILES['company_logo'])) {
 
     if ($_FILES['company_logo']['size'] > 2 * 1024 * 1024) {
         echo "<script>alert('Max image size 2MB');</script>";
+        exit;
     }
 
     $file = $_FILES['company_logo']['tmp_name'];
@@ -49,7 +91,7 @@ if (isset($_FILES['company_logo'])) {
     imagedestroy($src);
     imagedestroy($dst);
 
-    $api_url = "https://pacweb.inv11.in/webservices/addRecruiter_logo.php";
+    $api_url = "https://beta.inv51.in/webservices/addRecruiter_logo.php";
 
     $cfile = new CURLFile($temp_file, 'image/png', 'logo.png');
 
@@ -67,8 +109,7 @@ if (isset($_FILES['company_logo'])) {
 
     $response = curl_exec($ch);
 
-    print_r($response);
-    exit;
+   
     curl_close($ch);
 
     unlink($temp_file);
@@ -93,8 +134,7 @@ if (isset($_FILES['company_logo'])) {
 
 
 
-$api_url = "https://pacweb.inv11.in/web_api/getRecruiter_profile.php";
-$userid = 166;
+$api_url = "https://beta.inv51.in/webservices/getRecruiter_profile.php";
 $data = [
     "id" => $userid
 ];
@@ -133,7 +173,85 @@ $subscription_plan_name = $subscription['plan_name'] ?? '';
 $subscription_valid_to = $subscription['valid_to'] ?? '';
 
 
+
+
+
+
+
+/* =========================
+   GET KYC DOCUMENT STATUS
+========================= */
+
+$kyc_api = "https://beta.inv51.in/webservices/getRecruiterkyclog.php";
+
+$kycData = [
+    "recruiter_id" => $userid
+];
+
+$ch = curl_init($kyc_api);
+
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json"
+]);
+
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($kycData));
+
+$kycResponse = curl_exec($ch);
+
+if (curl_errno($ch)) {
+    echo curl_error($ch);
+}
+
+curl_close($ch);
+
+$kycResult = json_decode($kycResponse, true);
+
+$kycList = $kycResult['data'] ?? [];
 ?>
+
+
+<!-- Update recruiter profile section  -->
+// <?php
+// if (isset($_POST['update_profile'])) {
+
+//     $api_url = "https://beta.inv51.in/webservices/updateRecruiter_profile.php";
+
+//     $post_data = [
+//         "id" => $userid,
+//         "contact_person_name" => $_POST['contact_person_name'],
+//         "designation" => $_POST['designation'],
+//         "mobile_no" => $_POST['mobile_no'],
+//         "email" => $_POST['email']
+//     ];
+
+//     $ch = curl_init();
+
+//     curl_setopt($ch, CURLOPT_URL, $api_url);
+//     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+//     curl_setopt($ch, CURLOPT_POST, true);
+//     curl_setopt($ch, CURLOPT_HTTPHEADER, [
+//         "Content-Type: application/json"
+//     ]);
+//     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_data));
+
+//     $response = curl_exec($ch);
+
+//     if(curl_errno($ch)){
+//         echo curl_error($ch);
+//         exit;
+//     }
+
+//     curl_close($ch);
+
+//     $result = json_decode($response, true);
+
+//     // header("Location: my_profile.php");
+//         header("Location: my_profile.php");
+//     exit;
+// }
+// ?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -1039,7 +1157,9 @@ $subscription_valid_to = $subscription['valid_to'] ?? '';
 
 <body>
 
-    <?php include "includes/header.php"; ?>
+    <?php
+    include "includes/header.php"; 
+    ?>
 
     <div class="mobile-header">
         <i class="fas fa-arrow-left mobile-back"></i>
@@ -1059,7 +1179,7 @@ $subscription_valid_to = $subscription['valid_to'] ?? '';
                         <a href="#" class="section-edit" style="position: absolute; top: 20px; right: 25px;">Edit</a>
                         <div class="profile-top-row" style="margin-bottom: 0;">
                             <div class="avatar-container">
-                                <img src="<?= htmlspecialchars($logo) ?>" class="user-avatar-img">
+                                <img src="<?= !empty($logo) ? htmlspecialchars($logo) : '/assets/default-logo.png' ?>" class="user-avatar-img">
                                 <input type="file" name="company_logo" id="logoUpload" accept="image/png,image/jpeg" hidden onchange="this.form.submit()">
                                 <div class="camera-badge" onclick="document.getElementById('logoUpload').click()"> <i class="fas fa-camera"></i>
                                 </div>
@@ -1145,7 +1265,7 @@ $subscription_valid_to = $subscription['valid_to'] ?? '';
                 <div class="card card-kyc">
                     <div class="section-header">
                         <span class="section-title">KYC Status</span>
-                        <a href="#" class="section-edit">Edit Documents</a>
+                        <a href="kyc_upload.php" class="section-edit">Edit Documents</a>
                     </div>
 
                     <p class="kyc-note">
@@ -1153,55 +1273,41 @@ $subscription_valid_to = $subscription['valid_to'] ?? '';
                     </p>
 
                     <ul class="kyc-list">
-                        <li class="kyc-item">
-                            <div class="doc-info">
-                                <i class="fas fa-file-alt doc-icon"></i>
-                                <span>Company/Proprietorship/<br>Partnership Registration Certificate</span>
-                            </div>
-                            <div class="status-badge status-review">
-                                <span class="dot"></span> In Review
-                            </div>
-                        </li>
 
-                        <li class="kyc-item">
-                            <div class="doc-info">
-                                <i class="fas fa-file-alt doc-icon"></i>
-                                <span>GST Certificate</span>
-                            </div>
-                            <div class="status-badge status-review">
-                                <span class="dot"></span> In Review
-                            </div>
-                        </li>
+                        <?php foreach ($kycList as $kyc) {
 
-                        <li class="kyc-item">
-                            <div class="doc-info">
-                                <i class="fas fa-file-alt doc-icon"></i>
-                                <span>Udyam Aadhar</span>
-                            </div>
-                            <div class="status-badge status-review">
-                                <span class="dot"></span> In Review
-                            </div>
-                        </li>
+                            $docName = $kyc['kycdoctype_name'] ?? '';
+                            $statusName = $kyc['kycstatus_name'] ?? '';
+                            $statusColor = $kyc['kycstatus_color'] ?? '#999';
+                            $docUrl = $kyc['docurl'] ?? '';
 
-                        <li class="kyc-item">
-                            <div class="doc-info">
-                                <i class="fas fa-file-alt doc-icon"></i>
-                                <span>Pan Card</span>
-                            </div>
-                            <div class="status-badge status-review">
-                                <span class="dot"></span> In Review
-                            </div>
-                        </li>
+                        ?>
 
-                        <li class="kyc-item">
-                            <div class="doc-info">
-                                <i class="fas fa-file-alt doc-icon"></i>
-                                <span>TAN Certificate</span>
-                            </div>
-                            <div class="status-badge status-review">
-                                <span class="dot"></span> In Review
-                            </div>
-                        </li>
+                            <li class="kyc-item">
+
+                                <div class="doc-info">
+                                    <i class="fas fa-file-alt doc-icon"></i>
+                                    <span><?= htmlspecialchars($docName) ?></span>
+                                </div>
+
+                                <div class="status-badge" style="border-color:<?= $statusColor ?>">
+
+                                    <span class="dot" style="background:<?= $statusColor ?>;border-color:<?= $statusColor ?>"></span>
+
+                                    <?php if (!empty($docUrl)) { ?>
+                                        <a href="<?= htmlspecialchars($docUrl) ?>" target="_blank" style="text-decoration:none;color:inherit;">
+                                            <?= htmlspecialchars($statusName) ?>
+                                        </a>
+                                    <?php } else { ?>
+                                        <?= htmlspecialchars($statusName) ?>
+                                    <?php } ?>
+
+                                </div>
+
+                            </li>
+
+                        <?php } ?>
+
                     </ul>
                 </div>
 
@@ -1239,30 +1345,35 @@ $subscription_valid_to = $subscription['valid_to'] ?? '';
             <div class="modal-header">
                 <h3>Edit Company Info</h3>
             </div>
+            <form method="POST">
+                <input type="hidden" name="id" value="<?= $userid ?>">
 
+                <div class="input-group">
+                    <label class="input-label">Owner Name</label>
+                    <input type="text" name="contact_person_name" class="modal-input" value="<?= htmlspecialchars($owner_name) ?>">
+                </div>
 
+                <div class="input-group">
+                    <label class="input-label">Designation</label>
+                    <input type="text" name="designation" class="modal-input" value="<?= htmlspecialchars($designation) ?>">
+                </div>
 
+                <div class="input-group">
+                    <label class="input-label">Phone Number</label>
+                    <input type="text" name="mobile_no" class="modal-input" value="<?= htmlspecialchars($mobile) ?>">
+                </div>
 
-            <div class="input-group">
-                <label class="input-label">Owner Name</label>
-                <input type="text" class="modal-input" value="<?= htmlspecialchars($owner_name) ?>">
-            </div>
-            <div class="input-group">
-                <label class="input-label">Designation</label>
-                <input type="text" class="modal-input" value="<?= htmlspecialchars($designation) ?>">
-            </div>
-            <div class="input-group">
-                <label class="input-label">Phone Number</label>
-                <input type="text" class="modal-input" value="<?= htmlspecialchars($mobile) ?>">
-            </div>
-            <div class="input-group">
-                <label class="input-label">Email Address</label>
-                <input type="email" class="modal-input" value="<?= htmlspecialchars($email) ?>">
-            </div>
-            <div class="modal-btn-row">
-                <button class="btn-modal-cancel" onclick="closeModal('editOwnerModal')">Cancel</button>
-                <button class="btn-modal-save" onclick="closeModal('editOwnerModal')">Save Changes</button>
-            </div>
+                <div class="input-group">
+                    <label class="input-label">Email Address</label>
+                    <input type="email" name="email" class="modal-input" value="<?= htmlspecialchars($email) ?>">
+                </div>
+
+                <div class="modal-btn-row">
+                    <button type="button" class="btn-modal-cancel" onclick="closeModal('editOwnerModal')">Cancel</button>
+                    <button type="submit" name="update_profile" class="btn-modal-save">Save Changes</button>
+                </div>
+
+            </form>
         </div>
     </div>
 
