@@ -61,7 +61,6 @@ if (!$api_error && $loggedinUserResponse) {
 
 
 
-/* ====================1. Get Job positions for dropdown========================== */
 
 /* ====================2. Get Job positions for dropdown========================== */
 
@@ -342,6 +341,167 @@ if (!$api_error && $languageResponse) {
         $languages = $result['data'];
     }
 }
+
+
+/* ====================10. Get Job positions for dropdown========================== */
+
+$work_equip = [];
+$curl = curl_init();
+curl_setopt_array($curl, array(
+    CURLOPT_URL => "https://beta.inv51.in/webservices/getWorkequipments.php",
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT => 30,
+    CURLOPT_POST => true,
+));
+
+$work_equipments = curl_exec($curl);
+
+if (curl_errno($curl)) {
+    $api_error = "Unable to fetch job positions.";
+}
+
+curl_close($curl);
+
+if (!$api_error && $work_equipments) {
+    $result = json_decode($work_equipments, true);
+    if (isset($result['status']) && $result['status'] == "success") {
+        $work_equip = $result['data'];    // store equipment name
+    }
+}
+
+
+/* ====================11. Get Work Shifts========================== */
+
+$work_shifts = [];
+
+$curl = curl_init();
+
+curl_setopt_array($curl, array(
+    CURLOPT_URL => "https://beta.inv51.in/webservices/getWorkshift.php",
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT => 30,
+));
+
+$getWorkShifts = curl_exec($curl);
+
+if (curl_errno($curl)) {
+    $api_error = "Unable to fetch work models.";
+}
+
+curl_close($curl);
+
+if (!$api_error && $getWorkShifts) {
+
+    $result = json_decode($getWorkShifts, true);
+
+    if (isset($result['status']) && $result['status'] == "success") {
+        $work_shifts = $result['data'];   // store work shifts
+    } else {
+        $api_error = "Work models not found.";
+    }
+}
+
+/* ====================12. Get Gender List========================== */
+
+$genders = [];
+
+$curl = curl_init();
+
+curl_setopt_array($curl, array(
+    CURLOPT_URL => "https://beta.inv51.in/webservices/getGender.php",
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT => 30,
+));
+
+$getGender = curl_exec($curl);
+
+if (curl_errno($curl)) {
+    $api_error = "Unable to fetch genders.";
+}
+
+curl_close($curl);
+
+if (!$api_error && $getGender) {
+
+    $result = json_decode($getGender, true);
+
+    if (isset($result['status']) && $result['status'] == "success") {
+        $genders = $result['data'];
+    } else {
+        $api_error = "Gender list not found.";
+    }
+}
+
+
+/* ==================== 13. SUBMIT ALL DATA ========================== */
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+
+    $postData = [
+        "recruiter_id" => $user,
+        "company_name" => $company_name,
+        "job_position_id" => $_POST['job_position'] ?? "",
+        "state" => $_POST['state'] ?? "",
+        "country" => $_POST['country'] ?? "",
+        "city_id" => $_POST['city'] ?? "",
+        "locality_id" => $_POST['locality'] ?? "",
+        "number_of_openings" => $_POST['number_of_openings'] ?? "",
+        "job_type" => $_POST['job_type'] ?? "",
+        "work_model" => $_POST['work_model'] ?? "",
+        "field_work" => $_POST['fieldwork'] ?? "",
+        "work_shift" => "Morning",
+        "gender" => $_POST['gender'] ?? "",
+        "qualification" => $_POST['qualification'] ?? "",
+        "experience_from" => $_POST['experience_from'] ?? "",
+        "experience_to" => $_POST['experience_to'] ?? "",
+        "salary_from" => $_POST['salary_from'] ?? "",
+        "salary_to" => $_POST['salary_to'] ?? "",
+        "job_description" => $_POST['job_description'] ?? "",
+        "skills_required" => $_POST['skills_required'] ?? [],
+        "languages_required" => $_POST['languages_required'] ?? [],
+        "work_equipment" => $_POST['work_equipment'] ?? [],
+        "contact_person_name" => $_POST['contact_person_name'] ?? "",
+        "contact_no" => $_POST['contact_no'] ?? "",
+        "interview_address" => $_POST['interview_address'] ?? "",
+        "validity_apply" => 1,
+        "valid_till_date" => $_POST['valid_till_date'] ?? "",
+        "job_status_id" => 1,
+        "lat" => "18.5204",
+        "lon" => "73.8567"
+    ];
+
+    $jsonData = json_encode($postData);
+    // print_r($_POST['gender']);
+    // exit;
+
+    $curl = curl_init();
+
+    curl_setopt_array($curl, [
+        CURLOPT_URL => "https://beta.inv51.in/webservices/addWalkininterview.php",
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $jsonData,
+        CURLOPT_HTTPHEADER => [
+            "Content-Type: application/json"
+        ]
+    ]);
+
+    $response = curl_exec($curl);
+    curl_close($curl);
+
+    $apiResult = json_decode($response, true);
+
+    if ($apiResult['status'] == 1) {
+
+        $_SESSION['success_message'] = $apiResult['message'];
+    } else {
+
+        $_SESSION['error_message'] = $apiResult['message'] ?? "Something went wrong";
+    }
+
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit;
+}
 ?>
 
 
@@ -529,6 +689,7 @@ if (!$api_error && $languageResponse) {
         }
 
         /* --- 2. MAIN CONTENT AREA (FORM) --- */
+
         .main-wrapper {
             flex: 1;
             display: flex;
@@ -1164,6 +1325,238 @@ if (!$api_error && $languageResponse) {
         .suggestion-item:hover {
             background: #f1f5ff;
         }
+
+        /* --- 2. SUCCESS SCREEN CONTENT --- */
+
+
+        .success-card {
+            background: var(--white);
+            width: 100%;
+            max-width: 500px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-light);
+            padding: 50px 30px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Animated Checkmark Icon */
+        .success-icon-wrap {
+            width: 120px;
+            height: 120px;
+            background-color: var(--success-green);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
+            animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .success-icon-wrap i {
+            color: var(--white);
+            font-size: 4rem;
+            animation: checkFade 0.5s 0.3s forwards;
+            opacity: 0;
+        }
+
+        @keyframes scaleIn {
+            0% {
+                transform: scale(0);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes checkFade {
+            0% {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .success-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--success-dark);
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        .success-subtitle {
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: var(--text-dark);
+            margin-bottom: 40px;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+            /* Makes buttons equal width */
+            max-width: 200px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-outline {
+            background: var(--white);
+            color: var(--blue-btn);
+            border: 2px solid var(--blue-btn);
+        }
+
+        .btn-outline:hover {
+            background: #eff6ff;
+        }
+
+        .btn-primary {
+            background: var(--blue-btn);
+            color: var(--white);
+            border: 2px solid var(--blue-btn);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+
+        .btn-primary:hover {
+            background: var(--blue-hover);
+            border-color: var(--blue-hover);
+        }
+
+        /* --- 3. MOBILE HEADER & NAV --- */
+        .bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: white;
+            height: 70px;
+            border-top: 1px solid #eee;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+            padding-bottom: 5px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
+        }
+
+        .nav-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #888;
+            font-size: 0.75rem;
+            gap: 5px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .nav-icon i {
+            font-size: 1.3rem;
+        }
+
+        .nav-icon.active {
+            color: var(--primary);
+        }
+
+        .nav-icon.active .icon-wrap {
+            background: var(--primary-light);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+
+        .mobile-header {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            height: 60px;
+            background: white;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid #eee;
+        }
+
+        .mobile-header-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .mobile-back {
+            position: absolute;
+            left: 20px;
+            font-size: 1.2rem;
+            color: #333;
+            cursor: pointer;
+        }
+
+        /* --- 4. RESPONSIVE SETTINGS --- */
+        @media (max-width: 900px) {
+            header {
+                display: none;
+            }
+
+            .mobile-header {
+                display: none;
+            }
+
+            /* Hide top header on success screen for clean look */
+            .bottom-nav {
+                display: flex;
+            }
+
+            body {
+                background: var(--white);
+                /* White background on mobile like native app */
+                padding-bottom: 70px;
+                /* Space for bottom nav */
+            }
+
+            .main-wrapper {
+                padding: 20px;
+            }
+
+            .success-card {
+                padding: 40px 20px;
+                border: none;
+                box-shadow: none;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .btn {
+                max-width: 100%;
+                /* Full width buttons on mobile */
+                padding: 16px;
+                /* Slightly taller for touch */
+            }
+        }
     </style>
 </head>
 
@@ -1172,7 +1565,47 @@ if (!$api_error && $languageResponse) {
 
     <?php // include "includes/header.php"; 
     ?>
+    <?php if (!empty($_SESSION['success_message'])): ?>
+        <div class="modal-full-overlay active" id="successModal">
+            <div class="success-card">
+                <h1 class="success-title">Success!</h1>
+                <p class="success-subtitle">
+                    <?php echo $_SESSION['success_message']; ?>
+                </p>
+                <div class="success-icon-wrap">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-outline"
+                        onclick="closeSuccessModal()">
+                        Close
+                    </button>
+                    <button class="btn btn-primary"
+                        onclick="window.location.href='view-job.php'">
+                        View Job Post
+                    </button>
+                </div>
+            </div>
+        </div>
+        <?php unset($_SESSION['success_message']); ?>
+    <?php endif; ?>
 
+
+    <?php if (!empty($_SESSION['error_message'])): ?>
+        <div class="modal-full-overlay active" id="errorModal">
+            <div class="modal-map-card" style="max-width:400px;height:auto;padding:30px;text-align:center;">
+                <h3 style="margin-bottom:15px;color:#e53935;">Error</h3>
+                <p><?php echo $_SESSION['error_message']; ?></p>
+                <button onclick="closeErrorModal()"
+                    style="margin-top:20px;padding:10px 20px;background:#2563eb;color:white;border-radius:6px;border:none;">
+                    OK
+                </button>
+            </div>
+        </div>
+        <?php unset($_SESSION['error_message']); ?>
+    <?php endif; ?>
+
+    <!-- Error for all api message -->
     <?php if (!empty($api_error)): ?>
         <div class="modal-full-overlay active" id="apiErrorModal">
             <div class="modal-map-card" style="max-width:400px;height:auto;padding:30px;text-align:center;">
@@ -1196,12 +1629,12 @@ if (!$api_error && $languageResponse) {
         <div class="form-card">
             <h1 class="desktop-page-title"><i class="fas fa-star premium-star"></i> Post Premium Job</h1>
 
-            <form action="#" method="POST">
+            <form method="POST">
 
                 <div class="form-grid">
                     <div class="form-group">
                         <label class="form-label">Company Name</label>
-                        <input type="text" class="form-control"
+                        <input type="text" class="form-control" name="company_name"
                             value="<?php echo htmlspecialchars($company_name); ?>" readonly>
                     </div>
 
@@ -1221,19 +1654,22 @@ if (!$api_error && $languageResponse) {
 
                     <div class="form-group">
                         <label class="form-label">District / Tehsil / City</label>
-                        <input type="text" id="cityInput" class="form-control" autocomplete="off">
+                        <input type="text" name="city" id="cityInput" class="form-control" autocomplete="off">
+                        <!-- hidden fields -->
+                        <input type="hidden" id="stateInput" name="state">
+                        <input type="hidden" id="countryInput" name="country">
                         <div id="citySuggestions" class="suggestion-box"></div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Area / Locality / Village</label>
-                        <input type="text" id="localityInput" class="form-control" autocomplete="off">
+                        <input type="text" id="localityInput" name="locality" class="form-control" autocomplete="off">
                         <div id="localitySuggestions" class="suggestion-box"></div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Number of Openings</label>
-                        <input type="text" class="form-control" placeholder="Eg :- 3, 5, 10" >
+                        <input type="text" name="number_of_openings" class="form-control" placeholder="Eg :- 3, 5, 10">
                     </div>
 
                     <div class="form-group" style="display: flex; flex-direction: column; gap: 15px;">
@@ -1243,7 +1679,7 @@ if (!$api_error && $languageResponse) {
                                 <input type="hidden" name="fieldwork" id="fieldworkInput" value="Yes">
                                 <button
                                     type="button"
-                                    class="btn-toggle active"
+                                    class="btn-toggle"
                                     data-value="Yes"
                                     onclick="toggleGroup(this, 'fieldworkToggle')">
                                     Yes
@@ -1263,42 +1699,34 @@ if (!$api_error && $languageResponse) {
                     <div class="form-group">
                         <label class="form-label">Job Type</label>
                         <div class="toggle-container" id="jobTypeToggle">
-
+                            <input type="hidden" name="job_type" id="jobTypeInput">
                             <?php if (!empty($job_types)) { ?>
                                 <?php foreach ($job_types as $index => $type) { ?>
-                                    <input type="hidden" name="job_type" id="jobTypeInput">
                                     <button
                                         type="button"
-                                        class="btn-toggle <?php echo $index == 0 ? 'active' : ''; ?>"
+                                        class="btn-toggle"
                                         onclick="toggleGroup(this, 'jobTypeToggle')"
-                                        data-id="<?php echo $type['id']; ?>">
+                                        data-name="<?php echo $type['name']; ?>">
                                         <?php echo htmlspecialchars($type['name']); ?>
                                     </button>
                                 <?php } ?>
                             <?php } ?>
-
                         </div>
                     </div>
 
                     <div class="form-group">
                         <div class="form-group">
                             <label class="form-label">Work Model</label>
-
                             <div class="toggle-container" id="workModelToggle">
-
                                 <?php if (!empty($work_models)) { ?>
                                     <?php foreach ($work_models as $index => $model) { ?>
-
                                         <button
                                             type="button"
-                                            class="btn-toggle <?php echo $index == 0 ? 'active' : ''; ?>"
-                                            data-id="<?php echo $model['id']; ?>"
+                                            class="btn-toggle"
+                                            data-name="<?php echo $model['name']; ?>"
                                             onclick="toggleGroup(this,'workModelToggle')">
-
                                             <?php echo htmlspecialchars($model['name']); ?>
-
                                         </button>
-
                                     <?php } ?>
                                 <?php } ?>
 
@@ -1309,12 +1737,54 @@ if (!$api_error && $languageResponse) {
                         </div>
                     </div>
 
+
+
+                    <div class="form-group">
+                        <div class="form-group">
+                            <label class="form-label">Work Shift</label>
+                            <div class="toggle-container" id="workShiftToggle">
+                                <?php if (!empty($work_shifts)) { ?>
+                                    <?php foreach ($work_shifts as $index => $shift) { ?>
+                                        <button
+                                            type="button"
+                                            class="btn-toggle"
+                                            data-name="<?php echo $shift['shift_name']; ?>"
+                                            onclick="toggleGroup(this,'workShiftToggle')">
+                                            <?php echo htmlspecialchars($shift['shift_name']); ?>
+                                        </button>
+                                    <?php } ?>
+                                <?php } ?>
+                            </div>
+                            <input type="hidden" name="work_shift" id="workShiftInput">
+                        </div>
+                    </div>
+
+
+
+
                     <div class="form-group">
                         <label class="form-label">Gender</label>
+
                         <div class="toggle-container" id="genderToggle">
-                            <button type="button" class="btn-toggle" onclick="toggleGroup(this, 'genderToggle')">Male</button>
-                            <button type="button" class="btn-toggle" onclick="toggleGroup(this, 'genderToggle')">Female</button>
-                            <button type="button" class="btn-toggle active" onclick="toggleGroup(this, 'genderToggle')">Male / Female</button>
+
+                            <input type="hidden" name="gender" id="genderInput">
+
+                            <?php if (!empty($genders)) { ?>
+                                <?php foreach ($genders as $gender) { ?>
+
+                                    <button
+                                        type="button"
+                                        class="btn-toggle"
+                                        data-name="<?php echo $gender['name']; ?>"
+                                        onclick="toggleGroup(this,'genderToggle')">
+
+                                        <?php echo htmlspecialchars($gender['name']); ?>
+
+                                    </button>
+
+                                <?php } ?>
+                            <?php } ?>
+
                         </div>
                     </div>
 
@@ -1453,46 +1923,83 @@ if (!$api_error && $languageResponse) {
                         </div>
                     </div>
 
+
+                    <div class="form-group">
+                        <label class="form-label">Work Equipment Needed</label>
+
+                        <div class="multi-select">
+
+                            <div class="select-box" id="equipmentSelectBox" onclick="toggleEquipmentDropdown()">
+                                Select Work Equipment
+                            </div>
+
+                            <div class="checkbox-container" id="equipmentDropdown">
+
+                                <?php if (!empty($work_equip)) { ?>
+                                    <?php foreach ($work_equip as $equipments) { ?>
+
+                                        <label class="checkbox-item">
+                                            <input
+                                                type="checkbox"
+                                                name="work_equipment[]"
+                                                value="<?php echo htmlspecialchars($equipments['name']); ?>"
+                                                onchange="updateSelectedEquipment()">
+                                            <?php echo htmlspecialchars($equipments['name']); ?>
+                                        </label>
+
+                                    <?php } ?>
+                                <?php } ?>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; height: 100%;">
+                        <label class="form-label">Job Description : (Optional)</label>
+                        <textarea class="form-control" name="job_description" placeholder="Enter Job Description" style="flex:1; min-height: 80px;"></textarea>
+                    </div>
+
                     <div class="form-group">
                         <label class="form-label">Contact Details</label>
                         <div class="form-row">
                             <div class="form-col"><input type="text" class="form-control"
                                     value="<?php echo htmlspecialchars($contact_person); ?>"
-                                    placeholder="HR Name"></div>
-                            <div class="form-col"><input type="tel" class="form-control" value="<?php echo htmlspecialchars($contact_mobile); ?>" placeholder="Mobile No"></div>
+                                    placeholder="Contact Person Name" name="contact_person_name"></div>
+                            <div class="form-col"><input type="tel" class="form-control" name="contact_no" value="<?php echo htmlspecialchars($contact_mobile); ?>" placeholder="Mobile No"></div>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Interview Location</label>
                         <div class="map-input-container" onclick="openMapModal()">
-                            <input type="text" class="form-control" id="mainLocationInput" placeholder="Choose map location" readonly>
+                            <input type="text" class="form-control" id="mainLocationInput" name="interview_location" placeholder="Choose map location" readonly>
                             <i class="fas fa-map-marker-alt map-icon"></i>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Interview Address</label>
-                        <textarea class="form-control" id="mainAddressTextarea" placeholder="Address will auto-fill based on map location..."><?php echo htmlspecialchars($interview_address); ?></textarea>
+                        <textarea class="form-control" id="mainAddressTextarea" name="interview_address" placeholder="Address will auto-fill based on map location..."><?php echo htmlspecialchars($interview_address); ?></textarea>
                     </div>
 
-                    <div class="form-group full-width" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
-                        <div>
-                            <label class="form-label">Does this Job have a deadline?</label>
-                            <div class="toggle-container" id="deadlineToggle">
-                                <button type="button" class="btn-toggle" onclick="handleDeadlineToggle(true, this)">Yes</button>
-                                <button type="button" class="btn-toggle active" onclick="handleDeadlineToggle(false, this)">No</button>
-                            </div>
-                            <div class="deadline-date-wrapper" id="deadlineDateGroup">
-                                <input type="date" class="form-control" placeholder="Select Date">
-                            </div>
+                    <!-- <div class="form-group full-width" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;"> -->
+                    <div>
+                        <label class="form-label">Does this Job have a deadline?</label>
+                        <div class="toggle-container" id="deadlineToggle">
+                            <button type="button" class="btn-toggle" onclick="handleDeadlineToggle(true, this)">Yes</button>
+                            <button type="button" class="btn-toggle active" onclick="handleDeadlineToggle(false, this)">No</button>
                         </div>
-
-                        <div style="display:flex; flex-direction:column; height: 100%;">
-                            <label class="form-label">Job Description : (Optional)</label>
-                            <textarea class="form-control" placeholder="Enter Job Description" style="flex:1; min-height: 80px;"></textarea>
+                        <div class="deadline-date-wrapper" id="deadlineDateGroup">
+                            <input type="date" name="valid_till_date" class="form-control" placeholder="Select Date">
                         </div>
                     </div>
+
+                    <!-- <div style="display:flex; flex-direction:column; height: 100%;">
+                        <label class="form-label">Job Description : (Optional)</label>
+                        <textarea class="form-control" name="job_description" placeholder="Enter Job Description" style="flex:1; min-height: 80px;"></textarea>
+                    </div> -->
+                    <!-- </div> -->
                 </div>
 
                 <div class="submit-container">
@@ -1662,13 +2169,23 @@ if (!$api_error && $languageResponse) {
             // Job Type value
             if (groupId === "jobTypeToggle") {
                 document.getElementById("jobTypeInput").value =
-                    clickedBtn.getAttribute("data-id");
+                    clickedBtn.getAttribute("data-name");
             }
 
             // Work Model value
             if (groupId === "workModelToggle") {
                 document.getElementById("workModelInput").value =
-                    clickedBtn.getAttribute("data-id");
+                    clickedBtn.getAttribute("data-name");
+            }
+            // Work Shift value
+            if (groupId === "workShiftToggle") {
+                document.getElementById("workShiftInput").value =
+                    clickedBtn.getAttribute("data-name");
+            }
+            // Gender value
+            if (groupId === "genderToggle") {
+                document.getElementById("genderInput").value =
+                    clickedBtn.getAttribute("data-name");
             }
         }
 
@@ -1727,6 +2244,91 @@ if (!$api_error && $languageResponse) {
             }
 
         }
+
+        // Equipments
+        function toggleEquipmentDropdown() {
+
+            let dropdown = document.getElementById("equipmentDropdown");
+
+            if (dropdown.style.display === "block") {
+                dropdown.style.display = "none";
+            } else {
+                dropdown.style.display = "block";
+            }
+
+        }
+
+        function updateSelectedEquipment() {
+
+            let checkboxes = document.querySelectorAll('#equipmentDropdown input[type="checkbox"]:checked');
+            let selectBox = document.getElementById("equipmentSelectBox");
+
+            let selected = [];
+
+            checkboxes.forEach(cb => {
+                selected.push(cb.value);
+            });
+
+            if (selected.length === 0) {
+                selectBox.innerText = "Select Work Equipment";
+            } else if (selected.length <= 2) {
+                selectBox.innerText = selected.join(", ");
+            } else {
+                selectBox.innerText = selected.length + " Equipment Selected";
+            }
+
+        }
+
+
+        // Close the Multiselect Dropdwon
+        document.addEventListener("click", function(e) {
+
+            const skillBox = document.querySelector(".multi-select");
+            const skillDropdown = document.getElementById("skillDropdown");
+
+            const languageBox = document.querySelector("#languageDropdown").parentElement;
+            const equipmentBox = document.querySelector("#equipmentDropdown").parentElement;
+
+            // Skills
+            if (!e.target.closest("#skillSelectBox") && !e.target.closest("#skillDropdown")) {
+                skillDropdown.style.display = "none";
+            }
+
+            // Languages
+            if (!e.target.closest("#languageSelectBox") && !e.target.closest("#languageDropdown")) {
+                document.getElementById("languageDropdown").style.display = "none";
+            }
+
+            // Equipment
+            if (!e.target.closest("#equipmentSelectBox") && !e.target.closest("#equipmentDropdown")) {
+                document.getElementById("equipmentDropdown").style.display = "none";
+            }
+
+        });
+
+
+
+        function closeSuccessModal() {
+            const modal = document.getElementById("successModal");
+            if (modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        function closeErrorModal() {
+            const modal = document.getElementById("errorModal");
+            if (modal) {
+                modal.style.display = "none";
+            }
+        }
+
+
+
+
+
+
+
+
 
         // Fetching city and locality through google api
         let service;
@@ -1886,8 +2488,9 @@ if (!$api_error && $languageResponse) {
                 });
 
                 document.getElementById("cityInput").value = city;
+                document.getElementById("stateInput").value = state;
+                document.getElementById("countryInput").value = country;
                 selectedCity = city;
-
             });
 
         }
@@ -1913,10 +2516,8 @@ if (!$api_error && $languageResponse) {
 
         });
     </script>
-    <script
-        src="https://maps.googleapis.com/maps/api/js?key=
-    AIzaSyCokcdTmQxRaopu75ourz-nNmZNie1wQkY&libraries=places&callback=initCityAutocomplete"
-        async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCokcdTmQxRaopu75ourz-nNmZNie1wQkY&libraries=places&callback=initCityAutocomplete" async defer></script>
+
 </body>
 
 </html>

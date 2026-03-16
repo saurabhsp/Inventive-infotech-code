@@ -1162,7 +1162,7 @@ $valid_to = $user['valid_to'] ?? '';
             </div>
 
             <nav class="desktop-nav">
-                <a href="dashboard.php" class="nav-link active">Dashboard</a>
+                <a href="index.php" class="nav-link active">Dashboard</a>
                 <a href="post-jobs.php" class="nav-link">Post Jobs</a>
                 <a href="applications.php" class="nav-link">Applications</a>
             </nav>
@@ -1192,7 +1192,7 @@ $valid_to = $user['valid_to'] ?? '';
                             <i class="fas fa-wallet"></i> Billing & Wallet
                         </a>
 
-                        <a href="logout.php" class="dropdown-item">
+                        <a href="../logout.php" class="dropdown-item">
                             <i class="fas fa-sign-out-alt"></i> Logout
                         </a>
                     </div>
@@ -1214,31 +1214,31 @@ $valid_to = $user['valid_to'] ?? '';
 
             <div class="input-group">
                 <label class="input-label">Where are you currently staying?</label>
-                <input type="text" id="cityInput" class="modal-input" autocomplete="off">
+                <input type="text" id="headerCityInput" class="modal-input" autocomplete="off">
 
                 <!-- hidden fields -->
-                <input type="hidden" id="stateInput">
-                <input type="hidden" id="countryInput">
+                <input type="hidden" id="headerStateInput">
+                <input type="hidden" id="headerCountryInput">
 
                 <!-- suggestion box -->
-                <div id="citySuggestions" class="suggestion-box"></div>
+                <div id="headerCitySuggestions" class="suggestion-box"></div>
             </div>
 
             <div class="input-group">
                 <label class="input-label">Select Locality</label>
 
                 <input type="text"
-                    id="localityInput"
+                    id="headerLocalityInput"
                     class="modal-input"
                     autocomplete="off"
                     placeholder="Enter locality">
 
-                <div id="localitySuggestions" class="suggestion-box"></div>
+                <div id="headerLocalitySuggestions" class="suggestion-box"></div>
             </div>
 
             <div class="input-group">
                 <label class="input-label">Pin Code</label>
-                <input type="text" id="pincodeInput" class="modal-input" placeholder="Enter Pin Code">
+                <input type="text" id="headerPincodeInput" class="modal-input" placeholder="Enter Pin Code">
             </div>
 
             <div class="modal-btn-row">
@@ -1263,7 +1263,7 @@ $valid_to = $user['valid_to'] ?? '';
         service = new google.maps.places.AutocompleteService();
         placeService = new google.maps.places.PlacesService(document.createElement('div'));
 
-        const input = document.getElementById("cityInput");
+        const input = document.getElementById("headerCityInput");
 
         input.addEventListener("keyup", function() {
 
@@ -1290,7 +1290,7 @@ $valid_to = $user['valid_to'] ?? '';
 
     function showLocalitySuggestions(list, query) {
 
-        let box = document.getElementById("localitySuggestions");
+        let box = document.getElementById("headerLocalitySuggestions");
         box.innerHTML = "";
 
         if (list.length === 0) {
@@ -1329,7 +1329,7 @@ $valid_to = $user['valid_to'] ?? '';
                             cleaned.push(p);
                         }
 
-                        document.getElementById("localityInput").value = cleaned.join(", ");
+                        document.getElementById("headerLocalityInput").value = cleaned.join(", ");
 
                         box.innerHTML = "";
 
@@ -1347,7 +1347,7 @@ $valid_to = $user['valid_to'] ?? '';
 
     function showCitySuggestions(list) {
 
-        let box = document.getElementById("citySuggestions");
+        let box = document.getElementById("headerCitySuggestions");
         box.innerHTML = "";
 
         if (list.length === 0) {
@@ -1408,16 +1408,16 @@ $valid_to = $user['valid_to'] ?? '';
 
             });
 
-            document.getElementById("cityInput").value = city;
-            document.getElementById("stateInput").value = state;
-            document.getElementById("countryInput").value = country;
+            document.getElementById("headerCityInput").value = city;
+            document.getElementById("headerStateInput").value = state;
+            document.getElementById("headerCountryInput").value = country;
             selectedCity = city;
 
         });
 
     }
 
-    document.getElementById("localityInput").addEventListener("keyup", function() {
+    document.getElementById("headerLocalityInput").addEventListener("keyup", function() {
 
         let query = this.value;
 
@@ -1481,8 +1481,8 @@ $valid_to = $user['valid_to'] ?? '';
 
                 if (data.status === "success") {
 
-                    document.getElementById("cityInput").value = data.data.city_name ?? "";
-                    document.getElementById("localityInput").value = data.data.locality_name ?? "";
+                    document.getElementById("headerCityInput").value = data.data.city_name ?? "";
+                    document.getElementById("headerLocalityInput").value = data.data.locality_name ?? "";
 
                 } else {
                     console.log(data.message);
@@ -1501,11 +1501,11 @@ $valid_to = $user['valid_to'] ?? '';
 
     function updateLocation() {
 
-        const city = document.getElementById("cityInput").value.trim();
-        const locality = document.getElementById("localityInput").value.trim();
-        const state = document.getElementById("stateInput").value;
-        const country = document.getElementById("countryInput").value;
-        const pincode = document.getElementById("pincodeInput").value;
+        const city = document.getElementById("headerCityInput").value.trim();
+        const locality = document.getElementById("headerLocalityInput").value.trim();
+        const state = document.getElementById("headerStateInput").value;
+        const country = document.getElementById("headerCountryInput").value;
+        const pincode = document.getElementById("headerPincodeInput").value;
         const userid = <?php echo (int)$user['id']; ?>;
 
         if (city === "") {

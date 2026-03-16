@@ -124,7 +124,48 @@ if ($kyc_data && $kyc_data['status'] === false) {
     $show_kyc_modal = true;
     $kyc_message = $kyc_data['message'] ?? "KYC Pending";
 }
+
+
+
+
+
+
+/* ================= JOB STATUS LIST ================= */
+
+$status_api = "https://pacweb.inv11.in/webservices/getJobstatus.php";
+
+$status_post = [
+    "display_status" => 1
+];
+
+$status_ch = curl_init($status_api);
+
+curl_setopt($status_ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($status_ch, CURLOPT_POST, true);
+curl_setopt($status_ch, CURLOPT_POSTFIELDS, json_encode($status_post));
+
+curl_setopt($status_ch, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json",
+    "Content-Length: " . strlen(json_encode($status_post))
+]);
+
+curl_setopt($status_ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($status_ch, CURLOPT_SSL_VERIFYHOST, false);
+
+$status_response = curl_exec($status_ch);
+
+curl_close($status_ch);
+
+$status_data = json_decode($status_response, true);
+
+$job_status_list = [];
+
+if ($status_data && $status_data['status'] == "success") {
+    $job_status_list = $status_data['data'];
+}
 ?>
+
+
 
 
 
@@ -689,9 +730,12 @@ justify-content:center;">
                 <label class="input-label">Select New Status</label>
 
                 <select id="jobStatusSelect" class="status-select">
-                    <option value="1">Active (Visible to candidates)</option>
-                    <option value="2">Paused (Temporarily hidden)</option>
-                    <option value="3">Closed (Hiring completed)</option>
+                    <?php foreach ($job_status_list as $status) { ?>
+                        <option value="<?= $status['id'] ?>">
+                            <?= htmlspecialchars($status['name']) ?>
+                        </option>
+                    <?php } ?>
+
                 </select>
 
             </div>
@@ -719,9 +763,12 @@ justify-content:center;">
                 <label class="input-label">Select New Status</label>
 
                 <select id="standardJobStatusSelect" class="status-select">
-                    <option value="1">Active (Visible to candidates)</option>
-                    <option value="2">Paused (Temporarily hidden)</option>
-                    <option value="3">Closed (Hiring completed)</option>
+                    <?php foreach ($job_status_list as $status) { ?>
+                        <option value="<?= $status['id'] ?>">
+                            <?= htmlspecialchars($status['name']) ?>
+                        </option>
+                    <?php } ?>
+
                 </select>
 
             </div>

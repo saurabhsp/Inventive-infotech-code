@@ -8,14 +8,14 @@ session_start();
 
 $user = $_SESSION['user'] ?? null;
 $userid = $user['id'] ?? 0;
-$userid =166;
+$userid = 166;
 
 
 
 
 if (isset($_POST['update_profile'])) {
 
-    $api_url = "https://beta.inv51.in/webservices/updateRecruiter_profile.php";
+    $api_url = "https://pacweb.inv11.in/web_api/updateRecruiter_profile.php";
 
     $post_data = [
         "id" => $userid,
@@ -49,50 +49,62 @@ if (isset($_POST['update_profile'])) {
 
 
 
-if (isset($_FILES['company_logo'])) {
-    if ($_FILES['company_logo']['error'] != 0) {
-        echo "<script>alert('Upload Error');</script>";
-    }
-
-    if ($_FILES['company_logo']['size'] > 2 * 1024 * 1024) {
-        echo "<script>alert('Max image size 2MB');</script>";
-        exit;
-    }
+if (isset($_FILES['company_logo']) && $_FILES['company_logo']['error'] == 0) {
 
     $file = $_FILES['company_logo']['tmp_name'];
 
-    $info = getimagesize($file);
+    // if (!$file || !file_exists($file)) {
+    //     die("Invalid file upload");
+    // }
 
-    if ($info == false) {
-        echo "<script>alert('Invalid image');</script>";
-    }
+    // $info = getimagesize($file);
+
+    // if ($info === false) {
+    //     die("Invalid image");
+    // }
 
     $width = $info[0];
     $height = $info[1];
     $mime = $info['mime'];
 
+    // Create image source
     if ($mime == "image/jpeg") {
         $src = imagecreatefromjpeg($file);
     } elseif ($mime == "image/png") {
         $src = imagecreatefrompng($file);
     } else {
-        echo "<script>alert('Only JPG and PNG allowed');</script>";
-        exit;
+        die("Only JPG and PNG allowed");
     }
+
+    // Crop square from center
+    $size = min($width, $height);
+    $src_x = ($width - $size) / 2;
+    $src_y = ($height - $size) / 2;
 
     $dst = imagecreatetruecolor(512, 512);
 
-    imagecopyresampled($dst, $src, 0, 0, 0, 0, 512, 512, $width, $height);
+    imagecopyresampled(
+        $dst,
+        $src,
+        0,
+        0,
+        $src_x,
+        $src_y,
+        512,
+        512,
+        $size,
+        $size
+    );
 
-    $temp_file = "temp_logo.png";
+    // Save temp image
+    $temp_file = sys_get_temp_dir() . "/logo_" . time() . ".png";
 
     imagepng($dst, $temp_file);
 
     imagedestroy($src);
     imagedestroy($dst);
 
-    $api_url = "https://beta.inv51.in/webservices/addRecruiter_logo.php";
-
+    // Prepare CURL upload
     $cfile = new CURLFile($temp_file, 'image/png', 'logo.png');
 
     $post_data = [
@@ -100,21 +112,29 @@ if (isset($_FILES['company_logo'])) {
         "company_logo" => $cfile
     ];
 
-    $ch = curl_init();
+    print_r( $post_data);
+    exit;
 
-    curl_setopt($ch, CURLOPT_URL, $api_url);
+    $ch = curl_init("https://pacweb.inv11.in/web_api/addRecruiter_logo.php");
+
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
 
     $response = curl_exec($ch);
 
-   
+    print_r( $response);
+    exit;
+
+    if (curl_errno($ch)) {
+        echo curl_error($ch);
+    }
+
     curl_close($ch);
 
     unlink($temp_file);
 
-    echo "<script>alert('Logo Uploaded Successfully');window.location.href=window.location.href;</script>";
+    echo "<script>alert('Logo Uploaded Successfully');window.location.reload();</script>";
 }
 
 
@@ -132,9 +152,7 @@ if (isset($_FILES['company_logo'])) {
 
 
 
-
-
-$api_url = "https://beta.inv51.in/webservices/getRecruiter_profile.php";
+$api_url = "https://pacweb.inv11.in/web_api/getRecruiter_profile.php";
 $data = [
     "id" => $userid
 ];
@@ -182,7 +200,7 @@ $subscription_valid_to = $subscription['valid_to'] ?? '';
    GET KYC DOCUMENT STATUS
 ========================= */
 
-$kyc_api = "https://beta.inv51.in/webservices/getRecruiterkyclog.php";
+$kyc_api = "https://pacweb.inv11.in/web_api/getRecruiterkyclog.php";
 
 $kycData = [
     "recruiter_id" => $userid
@@ -213,45 +231,46 @@ $kycList = $kycResult['data'] ?? [];
 
 
 <!-- Update recruiter profile section  -->
-// <?php
-// if (isset($_POST['update_profile'])) {
+ <?php
+    // if (isset($_POST['update_profile'])) {
 
-//     $api_url = "https://beta.inv51.in/webservices/updateRecruiter_profile.php";
+    //     $api_url = "https://pacweb.inv11.in/web_api/updateRecruiter_profile.php";
 
-//     $post_data = [
-//         "id" => $userid,
-//         "contact_person_name" => $_POST['contact_person_name'],
-//         "designation" => $_POST['designation'],
-//         "mobile_no" => $_POST['mobile_no'],
-//         "email" => $_POST['email']
-//     ];
+    //     $post_data = [
+    //         "id" => $userid,
+    //         "contact_person_name" => $_POST['contact_person_name'],
+    //         "designation" => $_POST['designation'],
+    //         "mobile_no" => $_POST['mobile_no'],
+    //         "email" => $_POST['email']
+    //     ];
 
-//     $ch = curl_init();
+    //     $ch = curl_init();
 
-//     curl_setopt($ch, CURLOPT_URL, $api_url);
-//     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-//     curl_setopt($ch, CURLOPT_POST, true);
-//     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-//         "Content-Type: application/json"
-//     ]);
-//     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_data));
+    //     curl_setopt($ch, CURLOPT_URL, $api_url);
+    //     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    //     curl_setopt($ch, CURLOPT_POST, true);
+    //     curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    //         "Content-Type: application/json"
+    //     ]);
+    //     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_data));
 
-//     $response = curl_exec($ch);
+    //     $response = curl_exec($ch);
 
-//     if(curl_errno($ch)){
-//         echo curl_error($ch);
-//         exit;
-//     }
+    //     if(curl_errno($ch)){
+    //         echo curl_error($ch);
+    //         exit;
+    //     }
 
-//     curl_close($ch);
+    //     curl_close($ch);
 
-//     $result = json_decode($response, true);
+    //     $result = json_decode($response, true);
 
-//     // header("Location: my_profile.php");
-//         header("Location: my_profile.php");
-//     exit;
-// }
-// ?>
+    //     // header("Location: my_profile.php");
+    //         header("Location: my_profile.php");
+    //     exit;
+    // }
+    // 
+    ?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -260,6 +279,8 @@ $kycList = $kycResult['data'] ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employer Profile | Pacific iConnect</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <style>
         :root {
             /* Theme Colors (Pacific iConnect) */
@@ -1152,14 +1173,54 @@ $kycList = $kycResult['data'] ?? [];
                 transform: translateY(20px);
             }
         }
+
+        /* //croper code */
+        .cropper-view-box,
+.cropper-face {
+    border-radius: 50%;
+}
+
+.cropper-view-box {
+    outline: 2000px solid rgba(0,0,0,0.5);
+}
+        .user-avatar-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
     </style>
 </head>
 
 <body>
 
     <?php
-    include "includes/header.php"; 
+    include "includes/header.php";
     ?>
+
+
+<!-- modal for upload image -->
+ <div id="cropModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; padding:20px; border-radius:12px; width:400px; text-align:center;">
+        <h3>Crop Logo</h3>
+        <div style="width:350px;height:350px;margin:auto;">
+    <img id="cropImage" style="max-width:100%;">
+</div>
+        <br>
+        <button id="cropUpload" style="padding:10px 20px;background:#2563eb;color:white;border:none;border-radius:6px;">
+            Crop & Upload
+        </button>
+        <button onclick="closeCrop()" style="padding:10px 20px;margin-left:10px;">
+            Cancel
+        </button>
+    </div>
+</div>
+
+
+
+
+
+
 
     <div class="mobile-header">
         <i class="fas fa-arrow-left mobile-back"></i>
@@ -1179,10 +1240,15 @@ $kycList = $kycResult['data'] ?? [];
                         <a href="#" class="section-edit" style="position: absolute; top: 20px; right: 25px;">Edit</a>
                         <div class="profile-top-row" style="margin-bottom: 0;">
                             <div class="avatar-container">
-                                <img src="<?= !empty($logo) ? htmlspecialchars($logo) : '/assets/default-logo.png' ?>" class="user-avatar-img">
-                                <input type="file" name="company_logo" id="logoUpload" accept="image/png,image/jpeg" hidden onchange="this.form.submit()">
-                                <div class="camera-badge" onclick="document.getElementById('logoUpload').click()"> <i class="fas fa-camera"></i>
+
+                                <img src="<?= !empty($logo) ? htmlspecialchars($logo) : '/assets/default-logo.png' ?>"
+                                    class="user-avatar-img">
+
+                                <input type="file" id="logoUpload" accept="image/png,image/jpeg" hidden>
+                                <div class="camera-badge" onclick="document.getElementById('logoUpload').click()">
+                                    <i class="fas fa-camera"></i>
                                 </div>
+
                             </div>
                             <div class="company-info">
                                 <h5><?= htmlspecialchars($company_name) ?></h5>
@@ -1398,6 +1464,72 @@ $kycList = $kycResult['data'] ?? [];
     </div>
 
     <script>
+
+let cropper;
+let selectedFile;
+
+document.getElementById("logoUpload").addEventListener("change", function(e){
+
+    const file = e.target.files[0];
+
+    if(!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(event){
+
+        const image = document.getElementById("cropImage");
+        image.src = event.target.result;
+
+        document.getElementById("cropModal").style.display = "flex";
+
+        if(cropper) cropper.destroy();
+
+        cropper = new Cropper(image,{
+    aspectRatio: 1,
+    viewMode: 1,
+    dragMode: "move",
+    cropBoxResizable: false,
+    cropBoxMovable: false,
+    guides:false,
+    center:false,
+    highlight:false
+});
+
+    }
+
+    reader.readAsDataURL(file);
+
+});
+
+
+document.getElementById("cropUpload").addEventListener("click", function(){
+
+    const canvas = cropper.getCroppedCanvas({
+        width:512,
+        height:512
+    });
+
+    canvas.toBlob(function(blob){
+
+        let formData = new FormData();
+        formData.append("company_logo", blob, "logo.png");
+
+        fetch(window.location.href,{
+            method:"POST",
+            body:formData
+        })
+        .then(res=>location.reload());
+
+    });
+
+});
+
+
+function closeCrop(){
+    document.getElementById("cropModal").style.display="none";
+}
+
         function openModal(modalId) {
             document.getElementById(modalId).classList.add('active');
         }
