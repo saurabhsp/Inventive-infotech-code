@@ -1557,6 +1557,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 /* Slightly taller for touch */
             }
         }
+
+        input[readonly],
+textarea[readonly] {
+    background-color: #f1f3f5;
+    color: #555;
+    cursor: not-allowed;
+}
     </style>
 </head>
 

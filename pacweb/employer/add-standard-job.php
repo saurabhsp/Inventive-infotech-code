@@ -1065,7 +1065,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
 <body>
 
-    <?php // include "includes/header.php"; 
+    <?php  include "includes/header.php"; 
     ?>
     <?php if (!empty($_SESSION['success_message'])): ?>
         <div class="modal-full-overlay active" id="successModal">
@@ -1328,6 +1328,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
     </div>
 
     <script>
+        alert("Hii");
         // Logic for Yes/No Deadline toggle
         function toggleDeadline(isYes) {
             const btnYes = document.getElementById('btnYes');

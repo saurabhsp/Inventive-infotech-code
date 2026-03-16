@@ -1,0 +1,691 @@
+text/html premium_jobs_list.html ( HTML document, UTF-8 Unicode text, with CRLF
+line terminators )
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Premium Jobs | Pacific iConnect</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        /* Theme Colors */
+        --primary: #483ea8;
+        --bg-body: #f4f6f9;
+        --white: #ffffff;
+        --text-dark: #1a1a1a;
+        --text-grey: #666666;
+        --green: #25d366; /* Badge Colors */
+        --gold: #ffc107;
+        --silver: #9e9e9e;
+        --bronze: #a16b49;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      body {
+        background-color: var(--bg-body);
+        color: var(--text-dark);
+        font-size: 14.5px;
+        line-height: 1.5;
+      }
+      a {
+        text-decoration: none;
+        transition: 0.3s;
+        color: inherit;
+      }
+      ul {
+        list-style: none;
+      }
+      button {
+        cursor: pointer;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 15px;
+      } /* --- HEADER --- */
+      header {
+        background: var(--white);
+        height: 70px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      }
+      .nav-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 100%;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--primary);
+        font-weight: 800;
+        font-size: 1.3rem;
+      }
+      .nav-menu {
+        display: flex;
+        gap: 25px;
+      }
+      .nav-item {
+        font-weight: 600;
+        color: #555;
+        font-size: 1rem;
+      }
+      .nav-item:hover {
+        color: var(--primary);
+      }
+      .nav-right {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+      }
+      .login-link {
+        font-weight: 700;
+        color: var(--primary);
+      }
+      .btn-header-cta {
+        background: var(--primary);
+        color: white;
+        padding: 8px 22px;
+        border-radius: 30px;
+        font-weight: 600;
+        border: none;
+      } /* --- PAGE LAYOUT --- */
+      .page-wrapper {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 25px;
+        padding: 30px 0;
+        align-items: start;
+      }
+      .page-title {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: var(--text-dark);
+        margin-bottom: 20px;
+        border-left: 4px solid var(--primary);
+        padding-left: 12px;
+      } /* --- SIDEBAR --- */
+      .filter-sidebar {
+        background: var(--white);
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #eee;
+        position: sticky;
+        top: 90px;
+        max-height: 80vh;
+        overflow-y: auto;
+      } /* Slim Scrollbar */
+      .filter-sidebar::-webkit-scrollbar {
+        width: 5px;
+      }
+      .filter-sidebar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+      .filter-sidebar::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+      }
+      .filter-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+      .filter-header h3 {
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      .clear-btn {
+        color: var(--primary);
+        font-size: 0.85rem;
+        font-weight: 600;
+        background: none;
+        border: none;
+      }
+      .filter-group {
+        margin-bottom: 20px;
+        border-bottom: 1px solid #f5f5f5;
+        padding-bottom: 15px;
+      }
+      .filter-group:last-child {
+        border: none;
+        margin: 0;
+        padding: 0;
+      }
+      .filter-label {
+        font-weight: 700;
+        margin-bottom: 10px;
+        display: block;
+        font-size: 0.9rem;
+      }
+      .filter-search {
+        position: relative;
+        margin-bottom: 10px;
+      }
+      .filter-search input {
+        width: 100%;
+        padding: 8px 10px 8px 30px;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        outline: none;
+        background: #fdfdfd;
+      }
+      .filter-search i {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #aaa;
+        font-size: 0.8rem;
+      }
+      .checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        color: #555;
+        cursor: pointer;
+      }
+      .checkbox-item input {
+        accent-color: var(--primary);
+        width: 15px;
+        height: 15px;
+      }
+      .hidden-options {
+        display: none;
+      }
+      .show-more-btn {
+        color: var(--primary);
+        font-size: 0.85rem;
+        font-weight: 600;
+        background: none;
+        border: none;
+        padding: 0;
+        margin-top: 5px;
+        cursor: pointer;
+      } /* --- JOB GRID (2 Columns) --- */
+      .job-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      } /* --- CARD DESIGN (Adjusted for Badge Fit) --- */
+      .job-card {
+        background: var(--white);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.03);
+        border: 1px solid #f0f0f0;
+        transition: 0.2s;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+      }
+      .job-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        border-color: rgba(72, 62, 168, 0.15);
+      } /* Header Grid: Widened first column to 80px to hold badge comfortably */
+      .card-header-grid {
+        display: grid;
+        grid-template-columns: 80px 1fr;
+        gap: 10px;
+        margin-bottom: 25px; /* Extra space for badge hanging down */
+      } /* Logo Section */
+      .logo-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        position: relative;
+      }
+      .logo-ring-container {
+        width: 60px;
+        height: 60px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1;
+      }
+      .shiny-ring {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        padding: 3px;
+        -webkit-mask:
+          linear-gradient(#fff 0 0) content-box,
+          linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+      }
+      .ring-gold {
+        background: var(--gold);
+      }
+      .ring-silver {
+        background: var(--silver);
+      }
+      .ring-bronze {
+        background: var(--bronze);
+      }
+      .company-img {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        object-fit: contain;
+        border: 2px solid white;
+        background: #fff;
+      } /* Badge: Positioned inside the column, overlapping logo bottom */
+      .member-badge {
+        position: absolute;
+        top: 50px; /* Moves badge down to overlap bottom of ring */
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.5rem;
+        font-weight: 800;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 10px;
+        text-transform: uppercase;
+        white-space: nowrap;
+        z-index: 5;
+        border: 1px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15); /* Ensure it fits visually */
+        width: auto;
+        min-width: 70px;
+        text-align: center;
+      }
+      .badge-gold {
+        background: var(--gold);
+      }
+      .badge-silver {
+        background: var(--silver);
+      }
+      .badge-bronze {
+        background: var(--bronze);
+      } /* Job Details */
+      .job-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .job-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: var(--text-dark);
+        margin-bottom: 2px;
+        line-height: 1.2;
+      }
+      .job-company {
+        font-size: 0.9rem;
+        color: #444;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+      .job-meta {
+        font-size: 0.85rem;
+        color: #666;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-bottom: 2px;
+      }
+      .job-meta i {
+        font-size: 0.85rem;
+        color: #888;
+        width: 14px;
+      }
+      .job-salary {
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: var(--text-dark);
+        margin-top: 4px;
+      } /* Tags */
+      .tags-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 15px;
+        margin-top: auto;
+      }
+      .tag-pill {
+        font-size: 0.75rem;
+        color: #555;
+        background: #fff;
+        border: 1px solid #ddd;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-weight: 500;
+      } /* Footer */
+      .card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+        padding-top: 12px;
+        border-top: 1px solid #f7f7f7;
+      }
+      .kyc-verified {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--green);
+        border: 1px solid var(--green);
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 3px 12px;
+        border-radius: 20px;
+      }
+      .btn-arrow {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 1px solid #3b82f6;
+        color: #3b82f6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        transition: 0.2s;
+        background: white;
+      }
+      .btn-arrow:hover {
+        background: #3b82f6;
+        color: white;
+      } /* Mobile FAB */
+      .mobile-filter-fab {
+        display: none;
+        position: fixed;
+        bottom: 30px;
+        right: 20px;
+        background: var(--primary);
+        color: white;
+        padding: 12px 25px;
+        border-radius: 30px;
+        font-weight: 600;
+        box-shadow: 0 5px 20px rgba(72, 62, 168, 0.4);
+        align-items: center;
+        gap: 8px;
+        z-index: 2000;
+        border: none;
+      }
+      @media (max-width: 900px) {
+        .nav-menu {
+          display: none;
+        }
+        .page-wrapper {
+          grid-template-columns: 1fr;
+          padding: 20px 0;
+          gap: 0;
+        }
+        .filter-sidebar {
+          display: none;
+        }
+        .job-grid {
+          grid-template-columns: 1fr;
+          gap: 15px;
+        }
+        .mobile-filter-fab {
+          display: flex;
+        }
+        .job-card {
+          padding: 15px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="container nav-wrapper">
+        <div class="brand">
+          <i class="fas fa-user-tie"></i> PACIFIC iCONNECT
+        </div>
+        <nav class="nav-menu">
+          <a href="#" class="nav-item">Find Jobs</a>
+          <a href="#" class="nav-item">Companies</a>
+          <a href="#" class="nav-item">For Employers</a>
+        </nav>
+        <div class="nav-right">
+          <a href="#" class="login-link">Login</a>
+          <button class="btn-header-cta">Register Free</button>
+        </div>
+      </div>
+    </header>
+    <div class="container">
+      <div class="page-wrapper">
+        <aside class="filter-sidebar">
+          <div class="filter-header">
+            <h3>All Filters</h3>
+            <button class="clear-btn">Clear All</button>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">City</label>
+            <div class="filter-search">
+              <i class="fas fa-search"></i
+              ><input type="text" placeholder="Search City..." />
+            </div>
+            <label class="checkbox-item"><input type="checkbox" /> Pune</label>
+            <label class="checkbox-item"
+              ><input type="checkbox" /> Mumbai</label
+            >
+            <label class="checkbox-item"
+              ><input type="checkbox" /> Bangalore</label
+            >
+            <div id="more-cities" class="hidden-options">
+              <label class="checkbox-item"
+                ><input type="checkbox" /> Delhi</label
+              >
+            </div>
+            <button
+              class="show-more-btn"
+              onclick="toggleMore('more-cities', this)"
+            >
+              + Show More
+            </button>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Job Role</label>
+            <div class="filter-search">
+              <i class="fas fa-search"></i
+              ><input type="text" placeholder="Search Role..." />
+            </div>
+            <label class="checkbox-item"
+              ><input type="checkbox" /> Telecaller</label
+            >
+            <label class="checkbox-item"
+              ><input type="checkbox" /> Sales Manager</label
+            >
+            <label class="checkbox-item"
+              ><input type="checkbox" /> Software Developer</label
+            >
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Salary</label>
+            <label class="checkbox-item"
+              ><input type="checkbox" /> 10k - 20k</label
+            >
+            <label class="checkbox-item"
+              ><input type="checkbox" /> 20k - 40k</label
+            >
+            <label class="checkbox-item"><input type="checkbox" /> 40k+</label>
+          </div>
+        </aside>
+        <main>
+          <h2 class="page-title">Premium Jobs</h2>
+          <div class="job-grid">
+            <div class="job-card">
+              <div class="card-header-grid">
+                <div class="logo-col">
+                  <div class="logo-ring-container">
+                    <div class="shiny-ring ring-bronze"></div>
+                    <img
+                      src="https://via.placeholder.com/60?text=S"
+                      class="company-img"
+                    />
+                  </div>
+                  <div class="member-badge badge-bronze">BRONZE MEMBER</div>
+                </div>
+                <div class="job-info">
+                  <div class="job-title">Software Developer</div>
+                  <div class="job-company">INVENTIVE INFOTECH</div>
+                  <div class="job-meta">
+                    <i class="fas fa-map-marker-alt"></i> Hinjewadi, Pune
+                  </div>
+                  <div class="job-salary">₹5000 - 15000 /Month</div>
+                </div>
+              </div>
+              <div class="tags-row">
+                <span class="tag-pill">Full-time</span>
+                <span class="tag-pill">Work from Office</span>
+                <span class="tag-pill">Day Shift</span>
+              </div>
+              <div class="card-footer">
+                <div class="kyc-verified">
+                  <i class="fas fa-check-circle"></i> KYC Verified
+                </div>
+                <a href="#" class="btn-arrow"
+                  ><i class="fas fa-arrow-right"></i
+                ></a>
+              </div>
+            </div>
+            <div class="job-card">
+              <div class="card-header-grid">
+                <div class="logo-col">
+                  <div class="logo-ring-container">
+                    <div class="shiny-ring ring-gold"></div>
+                    <img
+                      src="https://via.placeholder.com/60?text=F"
+                      class="company-img"
+                    />
+                  </div>
+                  <div class="member-badge badge-gold">GOLD MEMBER</div>
+                </div>
+                <div class="job-info">
+                  <div class="job-title">Fire Fighter</div>
+                  <div class="job-company">Test Recruiter</div>
+                  <div class="job-meta">
+                    <i class="fas fa-map-marker-alt"></i> Baner, Pune
+                  </div>
+                  <div class="job-salary">₹5000 - 30000 /Month</div>
+                </div>
+              </div>
+              <div class="tags-row">
+                <span class="tag-pill">Full-time</span>
+                <span class="tag-pill">Work from Office</span>
+                <span class="tag-pill">Day Shift</span>
+              </div>
+              <div class="card-footer">
+                <div class="kyc-verified">
+                  <i class="fas fa-check-circle"></i> KYC Verified
+                </div>
+                <a href="#" class="btn-arrow"
+                  ><i class="fas fa-arrow-right"></i
+                ></a>
+              </div>
+            </div>
+            <div class="job-card">
+              <div class="card-header-grid">
+                <div class="logo-col">
+                  <div class="logo-ring-container">
+                    <div class="shiny-ring ring-silver"></div>
+                    <img
+                      src="https://via.placeholder.com/60?text=O"
+                      class="company-img"
+                    />
+                  </div>
+                  <div class="member-badge badge-silver">SILVER MEMBER</div>
+                </div>
+                <div class="job-info">
+                  <div class="job-title">Office Assistant</div>
+                  <div class="job-company">Ideal Institute</div>
+                  <div class="job-meta">
+                    <i class="fas fa-map-marker-alt"></i> Chinchwad, Pune
+                  </div>
+                  <div class="job-salary">₹15000 - 25000 /Month</div>
+                </div>
+              </div>
+              <div class="tags-row">
+                <span class="tag-pill">Full-time</span>
+                <span class="tag-pill">Admin</span>
+              </div>
+              <div class="card-footer">
+                <div class="kyc-verified">
+                  <i class="fas fa-check-circle"></i> KYC Verified
+                </div>
+                <a href="#" class="btn-arrow"
+                  ><i class="fas fa-arrow-right"></i
+                ></a>
+              </div>
+            </div>
+            <div class="job-card">
+              <div class="card-header-grid">
+                <div class="logo-col">
+                  <div class="logo-ring-container">
+                    <div class="shiny-ring ring-gold"></div>
+                    <img
+                      src="https://via.placeholder.com/60?text=S"
+                      class="company-img"
+                    />
+                  </div>
+                  <div class="member-badge badge-gold">GOLD MEMBER</div>
+                </div>
+                <div class="job-info">
+                  <div class="job-title">Store Manager</div>
+                  <div class="job-company">Super Mart Ltd</div>
+                  <div class="job-meta">
+                    <i class="fas fa-map-marker-alt"></i> Viman Nagar, Pune
+                  </div>
+                  <div class="job-salary">₹20000 - 30000 /Month</div>
+                </div>
+              </div>
+              <div class="tags-row">
+                <span class="tag-pill">Retail</span>
+                <span class="tag-pill">Sales</span>
+                <span class="tag-pill">Urgent</span>
+              </div>
+              <div class="card-footer">
+                <div class="kyc-verified">
+                  <i class="fas fa-check-circle"></i> KYC Verified
+                </div>
+                <a href="#" class="btn-arrow"
+                  ><i class="fas fa-arrow-right"></i
+                ></a>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+    <button class="mobile-filter-fab">
+      <i class="fas fa-filter"></i> Filter
+    </button>
+    <script>
+      function toggleMore(id, btn) {
+        const hiddenDiv = document.getElementById(id);
+        if (hiddenDiv.style.display === "block") {
+          hiddenDiv.style.display = "none";
+          btn.innerText = "+ Show More";
+        } else {
+          hiddenDiv.style.display = "block";
+          btn.innerText = "- Show Less";
+        }
+      }
+    </script>
+  </body>
+</html>

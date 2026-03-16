@@ -1251,17 +1251,17 @@ $valid_to = $user['valid_to'] ?? '';
 </body>
 
 <script>
-    let service;
-    let placeService;
+    let headerService;
+    let headerPlaceService;
 
-    let selectedCountry = "";
-    let selectedState = "";
-    let selectedCity = "";
+    let headerSelectedCountry = "";
+    let headerSelectedState = "";
+    let headerSelectedCity = "";
 
-    function initCityAutocomplete() {
+    function initHeaderCityAutocomplete() {
 
-        service = new google.maps.places.AutocompleteService();
-        placeService = new google.maps.places.PlacesService(document.createElement('div'));
+        headerService = new google.maps.places.AutocompleteService();
+        headerPlaceService = new google.maps.places.PlacesService(document.createElement('div'));
 
         const input = document.getElementById("headerCityInput");
 
@@ -1271,7 +1271,7 @@ $valid_to = $user['valid_to'] ?? '';
 
             if (query.length < 2) return;
 
-            service.getPlacePredictions({
+            headerService.getPlacePredictions({
                 input: query,
                 componentRestrictions: {
                     country: "in"
@@ -1280,7 +1280,7 @@ $valid_to = $user['valid_to'] ?? '';
 
                 if (!predictions) return;
 
-                showCitySuggestions(predictions);
+                showHeaderCitySuggestions(predictions);
 
             });
 
@@ -1288,7 +1288,7 @@ $valid_to = $user['valid_to'] ?? '';
 
     }
 
-    function showLocalitySuggestions(list, query) {
+    function showHeaderLocalitySuggestions(list, query) {
 
         let box = document.getElementById("headerLocalitySuggestions");
         box.innerHTML = "";
@@ -1309,7 +1309,7 @@ $valid_to = $user['valid_to'] ?? '';
                 item.types.includes("premise")
             ) {
 
-                if (selectedCity && item.description.toLowerCase().includes(selectedCity.toLowerCase())) {
+                if (headerSelectedCity && item.description.toLowerCase().includes(headerSelectedCity.toLowerCase())) {
 
                     let div = document.createElement("div");
                     div.className = "suggestion-item";
@@ -1324,7 +1324,7 @@ $valid_to = $user['valid_to'] ?? '';
 
                             let p = parts[i].trim();
 
-                            if (p === selectedCity) break;
+                            if (p === headerSelectedCity) break;
 
                             cleaned.push(p);
                         }
@@ -1345,7 +1345,7 @@ $valid_to = $user['valid_to'] ?? '';
 
     }
 
-    function showCitySuggestions(list) {
+    function showHeaderCitySuggestions(list) {
 
         let box = document.getElementById("headerCitySuggestions");
         box.innerHTML = "";
@@ -1367,7 +1367,7 @@ $valid_to = $user['valid_to'] ?? '';
 
             div.onclick = function() {
 
-                getPlaceDetails(item.place_id);
+                getHeaderPlaceDetails(item.place_id);
 
                 box.innerHTML = "";
             }
@@ -1378,9 +1378,9 @@ $valid_to = $user['valid_to'] ?? '';
 
     }
 
-    function getPlaceDetails(placeId) {
+    function getHeaderPlaceDetails(placeId) {
 
-        placeService.getDetails({
+        headerPlaceService.getDetails({
             placeId: placeId,
             fields: ["address_components", "name"]
         }, function(place, status) {
@@ -1411,7 +1411,7 @@ $valid_to = $user['valid_to'] ?? '';
             document.getElementById("headerCityInput").value = city;
             document.getElementById("headerStateInput").value = state;
             document.getElementById("headerCountryInput").value = country;
-            selectedCity = city;
+            headerSelectedCity = city;
 
         });
 
@@ -1423,7 +1423,7 @@ $valid_to = $user['valid_to'] ?? '';
 
         if (query.length < 2) return;
 
-        service.getPlacePredictions({
+        headerService.getPlacePredictions({
             input: query,
             componentRestrictions: {
                 country: "in"
@@ -1432,7 +1432,7 @@ $valid_to = $user['valid_to'] ?? '';
 
             if (!predictions) return;
 
-            showLocalitySuggestions(predictions, query);
+            showHeaderLocalitySuggestions(predictions, query);
 
         });
 
@@ -1562,5 +1562,5 @@ $valid_to = $user['valid_to'] ?? '';
 </script>
 <script
     src="https://maps.googleapis.com/maps/api/js?key=
-    AIzaSyCokcdTmQxRaopu75ourz-nNmZNie1wQkY&libraries=places&callback=initCityAutocomplete"
+    AIzaSyCokcdTmQxRaopu75ourz-nNmZNie1wQkY&libraries=places&callback=initHeaderCityAutocomplete"
     async defer></script>
