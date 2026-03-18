@@ -2,7 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
-
+$active = "post";
 if (!isset($_SESSION['user'])) {
     header("Location: ../login.php");
     exit();
@@ -10,6 +10,8 @@ if (!isset($_SESSION['user'])) {
 
 $user = $_SESSION['user'] ?? null;
 $userid = $user['id'] ?? 0;
+$profile_id = $user['profile_id'];
+
 
 
 
@@ -29,7 +31,7 @@ $post_user_data1 = json_encode([
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getRecuriterdetails.php",
+    CURLOPT_URL => "https://pacweb.inv11.in/web_api/getRecuriterdetails.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
     CURLOPT_POST => true,
@@ -73,7 +75,7 @@ $post_user_data2 = json_encode([
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getPosition.php",
+    CURLOPT_URL => "https://pacweb.inv11.in/web_api/getPosition.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
     CURLOPT_POST => true,
@@ -101,7 +103,7 @@ if (!$api_error && $getJobPositions) {
 $job_types = [];
 $curl = curl_init();
 curl_setopt_array($curl, array(
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getJobtype.php",
+    CURLOPT_URL => "https://pacweb.inv11.in/web_api/getJobtype.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
 ));
@@ -132,7 +134,7 @@ $work_models = [];
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getWorkmodel.php",
+    CURLOPT_URL => "https://pacweb.inv11.in/web_api/getWorkmodel.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
 ));
@@ -172,7 +174,7 @@ $degrees = [];
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getDegrees.php",
+    CURLOPT_URL => "https://pacweb.inv11.in/web_api/getDegrees.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
 ));
@@ -212,7 +214,7 @@ $post_salary = json_encode([
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getSalaryrange.php",
+    CURLOPT_URL => "https://pacweb.inv11.in/web_api/getSalaryrange.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
     CURLOPT_POST => true,
@@ -247,7 +249,7 @@ $experience_list = [];
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getExperience_list.php",
+    CURLOPT_URL => "https://pacweb.inv11.in/web_api/getExperience_list.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
 ));
@@ -283,7 +285,7 @@ $position_post = json_encode([
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getMskill_list.php",
+    CURLOPT_URL => "https://pacweb.inv11.in/web_api/getMskill_list.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
     CURLOPT_POSTFIELDS => $position_post,
@@ -319,7 +321,7 @@ $languages = [];
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getMLanguage_list.php",
+    CURLOPT_URL => "https://pacweb.inv11.in/web_api/getMLanguage_list.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
     CURLOPT_POST => true
@@ -348,7 +350,7 @@ if (!$api_error && $languageResponse) {
 $work_equip = [];
 $curl = curl_init();
 curl_setopt_array($curl, array(
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getWorkequipments.php",
+    CURLOPT_URL => "https://pacweb.inv11.in/web_api/getWorkequipments.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
     CURLOPT_POST => true,
@@ -377,7 +379,7 @@ $work_shifts = [];
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getWorkshift.php",
+    CURLOPT_URL => "https://pacweb.inv11.in/web_api/getWorkshift.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
 ));
@@ -408,7 +410,7 @@ $genders = [];
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getGender.php",
+    CURLOPT_URL => "https://pacweb.inv11.in/web_api/getGender.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
 ));
@@ -438,7 +440,7 @@ if (!$api_error && $getGender) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $postData = [
-        "recruiter_id" => $user,
+        "recruiter_id" => $profile_id,
         "company_name" => $company_name,
         "job_position_id" => $_POST['job_position'] ?? "",
         "state" => $_POST['state'] ?? "",
@@ -466,17 +468,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         "validity_apply" => 1,
         "valid_till_date" => $_POST['valid_till_date'] ?? "",
         "job_status_id" => 1,
-        "lat" => "18.5204",
-        "lon" => "73.8567"
+        "lat" => $_POST['lat'] ?? "",
+        "lon" => $_POST['lon'] ?? "",
     ];
 
     $jsonData = json_encode($postData);
-    // print_r($_POST['gender']);
-    // exit;
+    print_r($jsonData);
+    exit;
 
     $curl = curl_init();
 
     curl_setopt_array($curl, [
+        // CURLOPT_URL => "https://pacweb.inv11.in/web_api/addWalkininterview.php",
         CURLOPT_URL => "https://beta.inv51.in/webservices/addWalkininterview.php",
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
@@ -488,6 +491,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $response = curl_exec($curl);
     curl_close($curl);
+
+    // print_r($response);
+    // exit;
 
     $apiResult = json_decode($response, true);
 
@@ -520,6 +526,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Post Premium Job | Pacific iConnect</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <link rel="stylesheet" href="/style.css">
     <style>
         :root {
@@ -1558,14 +1566,237 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 /* Slightly taller for touch */
             }
         }
+
+
+
+
+
+
+
+
+
+        /* ================= MAP MODAL CLEAN CSS ================= */
+
+        /* Overlay */
+        #mapModal.modal-full-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.3s ease;
+        }
+
+        #mapModal.modal-full-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Card */
+        #mapModal .modal-map-card {
+            width: 100%;
+            max-width: 650px;
+            height: 90vh;
+            background: #fff;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            overflow: visible;
+            /* âœ… allow dropdown to float */
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+            transform: translateY(20px);
+            transition: 0.3s ease;
+        }
+
+        #mapModal.active .modal-map-card {
+            transform: translateY(0);
+        }
+
+        /* Header */
+        #mapModal .map-header {
+            display: flex;
+            align-items: center;
+            padding: 14px 18px;
+            border-bottom: 1px solid #e5e7eb;
+            background: #fff;
+        }
+
+        #mapModal .map-header-title {
+            flex: 1;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        #mapModal .map-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        /* Search bar */
+        #mapModal .map-search-bar {
+            position: relative;
+            padding: 14px;
+            background: #fff;
+            z-index: 1000;
+        }
+
+        #mapModal .map-search-input {
+            width: 100%;
+            padding: 12px 14px 12px 38px;
+            border-radius: 30px;
+            border: 1px solid #cbd5e1;
+            outline: none;
+            font-size: 0.95rem;
+        }
+
+        #mapModal .map-search-icon {
+            position: absolute;
+            left: 26px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+        }
+
+        /* ðŸ”¥ Dropdown FIX */
+        #mapModal .search-results {
+            position: absolute;
+            top: calc(100% - 8px);
+            left: 15px;
+            right: 15px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+            max-height: 260px;
+            overflow-y: auto;
+            display: none;
+            z-index: 9999;
+            /* high enough */
+        }
+
+        #mapModal .search-results.active {
+            display: block;
+        }
+
+        /* Scrollbar */
+        #mapModal .search-results::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #mapModal .search-results::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        /* Items */
+        #mapModal .search-result-item {
+            padding: 12px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+
+        #mapModal .search-result-item:hover {
+            background: #f8fafc;
+        }
+
+        #mapModal .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Map */
+        #mapModal .map-view-area {
+            position: relative;
+            z-index: 1;
+        }
+
+        #mapModal #googleMap {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Footer */
+        #mapModal .map-footer {
+            padding: 16px;
+            border-top: 1px solid #e5e7eb;
+            background: #fff;
+        }
+
+        #mapModal .selected-address-label {
+            font-size: 0.8rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        #mapModal .selected-address-text {
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin: 6px 0;
+        }
+
+        #mapModal .selected-coords {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        #mapModal .btn-confirm-loc {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            background: #2563eb;
+            color: #fff;
+            font-weight: 700;
+            border: none;
+        }
+
+        #mapModal .btn-confirm-loc:hover {
+            background: #1d4ed8;
+        }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            #mapModal .modal-map-card {
+                height: 100vh;
+                border-radius: 0;
+            }
+        }
+
+        .search-result-item {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .search-result-icon {
+            color: #e53935;
+            margin-top: 2px;
+        }
+
+        .search-result-main {
+            font-weight: 700;
+        }
+
+        .search-result-sub {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
     </style>
 </head>
 
 <body>
 
 
-   <?php include "includes/preloader.php"; ?>
-    <?php  include "includes/header.php"; 
+    <?php include "includes/preloader.php"; ?>
+    <?php include "includes/header.php";
     ?>
     <?php if (!empty($_SESSION['success_message'])): ?>
         <div class="modal-full-overlay active" id="successModal">
@@ -1843,11 +2074,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                             <div class="form-col">
                                 <select class="form-control" name="salary_from">
-                                    <option value="">From ₹</option>
+                                    <option value="">From â‚¹</option>
                                     <?php if (!empty($salary_ranges)) { ?>
                                         <?php foreach ($salary_ranges as $salary) { ?>
                                             <option value="<?php echo $salary['id']; ?>">
-                                                ₹<?php echo number_format($salary['name']); ?>
+                                                â‚¹<?php echo number_format($salary['name']); ?>
                                             </option>
                                         <?php } ?>
                                     <?php } ?>
@@ -1857,11 +2088,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                             <div class="form-col">
                                 <select class="form-control" name="salary_to">
-                                    <option value="">To ₹</option>
+                                    <option value="">To â‚¹</option>
                                     <?php if (!empty($salary_ranges)) { ?>
                                         <?php foreach ($salary_ranges as $salary) { ?>
                                             <option value="<?php echo $salary['id']; ?>">
-                                                ₹<?php echo number_format($salary['name']); ?>
+                                                â‚¹<?php echo number_format($salary['name']); ?>
                                             </option>
                                         <?php } ?>
                                     <?php } ?>
@@ -1977,6 +2208,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <div class="map-input-container" onclick="openMapModal()">
                             <input type="text" class="form-control" id="mainLocationInput" name="interview_location" placeholder="Choose map location" readonly>
                             <i class="fas fa-map-marker-alt map-icon"></i>
+                            <input type="hidden" name="lat" id="interview_lat">
+                            <input type="hidden" name="lon" id="interview_lng">
+                            <input type="hidden" name="interview_full_address" id="interview_full_address">
                         </div>
                     </div>
 
@@ -1993,7 +2227,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <button type="button" class="btn-toggle active" onclick="handleDeadlineToggle(false, this)">No</button>
                         </div>
                         <div class="deadline-date-wrapper" id="deadlineDateGroup">
-                            <input type="date" name="valid_till_date" class="form-control" placeholder="Select Date">
+                            <input type="text" placeholder="DD-MM-YYYY" name="valid_till_date" class="form-control datepicker" placeholder="Select Date">
                         </div>
                     </div>
 
@@ -2031,68 +2265,44 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <div class="modal-map-card">
 
             <div class="map-header">
-                <button class="map-close-btn" onclick="closeMapModal()"><i class="fas fa-arrow-left"></i></button>
+                <button class="map-close-btn" onclick="closeMapModal()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
                 <div class="map-header-title">Confirm Interview Location</div>
+                <div style="width:40px;"></div>
             </div>
 
             <div class="map-search-bar">
                 <i class="fas fa-search map-search-icon"></i>
-                <input type="text" class="map-search-input" id="mapSearchInput" placeholder="Enter your city or Locality..." onkeyup="simulateSearch(this.value)">
-
-                <div class="search-suggestions" id="searchSuggestions">
-                    <div class="suggestion-item" onclick="selectSuggestion('Suhela, Chhattisgarh, India')">
-                        <i class="fas fa-map-marker-alt suggestion-icon"></i>
-                        <div class="suggestion-text">
-                            <h4>Suhela</h4>
-                            <p>Suhela, Chhattisgarh, India</p>
-                        </div>
-                    </div>
-                    <div class="suggestion-item" onclick="selectSuggestion('Suhagi, Madhya Pradesh, India')">
-                        <i class="fas fa-map-marker-alt suggestion-icon"></i>
-                        <div class="suggestion-text">
-                            <h4>Suhagi</h4>
-                            <p>Suhagi, Madhya Pradesh, India</p>
-                        </div>
-                    </div>
-                    <div class="suggestion-item" onclick="selectSuggestion('Ravivar Peth, Satara, Maharashtra 415001, India')">
-                        <i class="fas fa-map-marker-alt suggestion-icon"></i>
-                        <div class="suggestion-text">
-                            <h4>Ravivar Peth</h4>
-                            <p>Satara, Maharashtra, India</p>
-                        </div>
-                    </div>
-                </div>
+                <input type="text" class="map-search-input" id="mapSearchInput"
+                    placeholder="Search area, locality, city..." autocomplete="off">
+                <div id="searchResults" class="search-results"></div>
             </div>
 
             <div class="map-view-area">
-                <div class="map-center-pin">
-                    <div class="map-info-tooltip">
-                        <h4>Your interview location will be here</h4>
-                        <p>Move pin to your exact location</p>
-                    </div>
-                    <div class="map-pin-bubble">
-                        <i class="fas fa-map-marker-alt map-pin-icon"></i>
-                    </div>
-                </div>
-
-                <div class="map-controls">
-                    <div class="map-ctrl-btn"><i class="fas fa-plus"></i></div>
-                    <div class="map-ctrl-btn"><i class="fas fa-minus"></i></div>
-                </div>
-
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Google_logo_2015_colors.svg/512px-Google_logo_2015_colors.svg.png" style="position:absolute; bottom:15px; left:15px; height:20px; opacity:0.8;">
+                <div id="googleMap" style="width:100%; height:100%;"></div>
             </div>
 
             <div class="map-footer">
                 <div class="selected-address-label">Selected Address:</div>
-                <div class="selected-address-text" id="modalAddressText">A PANTACHA GOT RAVIVAR PETH, 82, Khalcha Rasta, Ravivar Peth, Satara, Maharashtra 415001, India</div>
-                <button class="btn-confirm-loc" onclick="confirmLocation()">Confirm Location</button>
+                <div class="selected-address-text" id="modalAddressText">Move marker or search</div>
+                <div class="selected-coords" id="modalCoordsText">Lat: -, Lng: -</div>
+
+                <button class="btn-confirm-loc" onclick="confirmLocation()">
+                    Confirm Location
+                </button>
             </div>
 
         </div>
     </div>
+    <?php include "includes/bottom-bar.php"; ?>
+
 
     <script>
+        function initCityAutocomplete() {
+            initCitySearch(); // city suggestion working
+            initMap(); // map working
+        }
         window.onload = () => document.getElementById("global-preloader")?.remove();
         // Generic Toggle Logic for button groups
         function toggleGroup(clickedBtn, groupId) {
@@ -2113,47 +2323,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
 
-        // --- MAP MODAL LOGIC ---
-        const mapModal = document.getElementById('mapModal');
-        const searchInput = document.getElementById('mapSearchInput');
-        const searchSuggestions = document.getElementById('searchSuggestions');
-        const modalAddressText = document.getElementById('modalAddressText');
-
-        function openMapModal() {
-            mapModal.classList.add('active');
-            searchInput.value = '';
-            searchSuggestions.classList.remove('active');
-        }
 
         function closeMapModal() {
             mapModal.classList.remove('active');
         }
 
-        // Simulate typing "suh" to show suggestions
-        function simulateSearch(val) {
-            if (val.length > 1) {
-                searchSuggestions.classList.add('active');
-            } else {
-                searchSuggestions.classList.remove('active');
-            }
-        }
-
-        // Click a suggestion
-        function selectSuggestion(address) {
-            searchInput.value = address.split(',')[0]; // Put title in search
-            modalAddressText.innerText = address; // Update selected text
-            searchSuggestions.classList.remove('active'); // Hide dropdown
-        }
-
-        // Confirm Location and populate main form
-        function confirmLocation() {
-            const finalAddress = modalAddressText.innerText;
-            // Set the read-only input to show we selected a map pin
-            document.getElementById('mainLocationInput').value = "Location Selected on Map";
-            // Auto-fill the address text area
-            document.getElementById('mainAddressTextarea').value = finalAddress;
-            closeMapModal();
-        }
 
         function toggleGroup(clickedBtn, groupId) {
 
@@ -2341,7 +2515,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         let selectedState = "";
         let selectedCity = "";
 
-        function initCityAutocomplete() {
+        function initCitySearch() {
 
             service = new google.maps.places.AutocompleteService();
             placeService = new google.maps.places.PlacesService(document.createElement('div'));
@@ -2519,6 +2693,198 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         });
     </script>
+    <script>
+        let map, marker, geocoder, placesService, autocompleteService;
+
+        const defaultLocation = {
+            lat: 18.5204,
+            lng: 73.8567
+        };
+
+        const mapModal = document.getElementById('mapModal');
+        const searchInput = document.getElementById('mapSearchInput');
+        const searchResults = document.getElementById('searchResults');
+
+        const modalAddressText = document.getElementById('modalAddressText');
+        const modalCoordsText = document.getElementById('modalCoordsText');
+
+        const mainLocationInput = document.getElementById('mainLocationInput');
+        const mainAddressTextarea = document.getElementById('mainAddressTextarea');
+
+        const latInput = document.getElementById('interview_lat');
+        const lngInput = document.getElementById('interview_lng');
+        const fullAddressInput = document.getElementById('interview_full_address');
+
+
+        function renderPredictions(predictions) {
+            let html = "";
+
+            predictions.forEach(function(item) {
+
+                const mainText = item.structured_formatting?.main_text || item.description;
+                const secondaryText = item.structured_formatting?.secondary_text || "";
+
+                html += `
+            <div class="search-result-item"
+                onclick="selectPlace('${item.place_id.replace(/'/g, "\\'")}')">
+
+                <div class="search-result-icon">
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+
+                <div class="search-result-text">
+                    <div class="search-result-main">${mainText}</div>
+                    <div class="search-result-sub">${secondaryText || item.description}</div>
+                </div>
+
+            </div>
+        `;
+            });
+
+            searchResults.innerHTML = html;
+            searchResults.classList.add("active");
+        }
+
+        function initMap() {
+
+            geocoder = new google.maps.Geocoder();
+
+            map = new google.maps.Map(document.getElementById("googleMap"), {
+                center: defaultLocation,
+                zoom: 15
+            });
+
+            marker = new google.maps.Marker({
+                position: defaultLocation,
+                map: map,
+                draggable: true
+            });
+
+            placesService = new google.maps.places.PlacesService(map);
+            autocompleteService = new google.maps.places.AutocompleteService();
+
+            marker.addListener("dragend", function(event) {
+                updateLocation(event.latLng.lat(), event.latLng.lng());
+            });
+
+            map.addListener("click", function(event) {
+                updateLocation(event.latLng.lat(), event.latLng.lng());
+            });
+
+            searchInput.addEventListener("input", function() {
+                let query = this.value;
+                if (query.length < 2) return;
+
+                autocompleteService.getPlacePredictions({
+                    input: query,
+                    componentRestrictions: {
+                        country: "in"
+                    }
+                }, function(predictions) {
+
+                    if (!predictions) return;
+
+                    let html = "";
+
+
+                    renderPredictions(predictions);
+                });
+            });
+        }
+
+        function selectPlace(placeId) {
+
+            placesService.getDetails({
+                placeId: placeId,
+                fields: ["geometry", "formatted_address"]
+            }, function(place) {
+
+                let lat = place.geometry.location.lat();
+                let lng = place.geometry.location.lng();
+
+                map.setCenter({
+                    lat,
+                    lng
+                });
+                marker.setPosition({
+                    lat,
+                    lng
+                });
+
+                updateLocation(lat, lng, place.formatted_address);
+
+                searchResults.classList.remove("active");
+            });
+        }
+
+        function updateLocation(lat, lng, address = "") {
+
+            latInput.value = lat;
+            lngInput.value = lng;
+
+            modalCoordsText.innerText = `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`;
+
+            if (address) {
+                modalAddressText.innerText = address;
+                fullAddressInput.value = address;
+                return;
+            }
+
+            geocoder.geocode({
+                location: {
+                    lat,
+                    lng
+                }
+            }, function(results) {
+                if (results[0]) {
+                    modalAddressText.innerText = results[0].formatted_address;
+                    fullAddressInput.value = results[0].formatted_address;
+                }
+            });
+        }
+
+        function openMapModal() {
+            mapModal.classList.add("active");
+
+            // ðŸ”¥ CLEAR PREVIOUS SEARCH
+            searchInput.value = "";
+            searchResults.innerHTML = "";
+            searchResults.classList.remove("active");
+
+            setTimeout(() => {
+                google.maps.event.trigger(map, "resize");
+                map.setCenter(defaultLocation);
+            }, 300);
+        }
+
+        function closeMapModal() {
+            mapModal.classList.remove("active");
+        }
+
+        function confirmLocation() {
+
+            const address = fullAddressInput.value;
+            const lat = latInput.value;
+            const lng = lngInput.value;
+
+            // ðŸ”¥ interview_location = lat & lon string
+            mainLocationInput.value = `Lat=${lat}, Lng=${lng}`;
+
+            // âœ… interview_address = full address
+            mainAddressTextarea.value = address;
+
+            closeMapModal();
+        }
+        document.addEventListener("DOMContentLoaded", function() {
+            flatpickr(".datepicker", {
+                altInput: true,
+                altFormat: "d-m-Y",
+                dateFormat: "Y-m-d",
+                allowInput: false
+            });
+        });
+    </script>
+
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCokcdTmQxRaopu75ourz-nNmZNie1wQkY&libraries=places&callback=initCityAutocomplete" async defer></script>
 
 </body>
