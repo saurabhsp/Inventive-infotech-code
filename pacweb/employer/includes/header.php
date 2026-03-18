@@ -464,21 +464,21 @@ $valid_to = $user['valid_to'] ?? '';
             background: #1d4ed8;
         }
 
-        /* --- 6. RECRUITER JOB CARD --- */
         .r-job-card {
-            flex: 0 0 360px !important;
-            min-width: 360px;
-            max-width: 360px;
-            scroll-snap-align: start;
-            background: var(--white);
+            background: #fff;
             border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
-            border: 1px solid var(--border-light);
-            position: relative;
-            user-select: none;
-            overflow: visible;
-            /* Prevents dropdown from hiding inside card */
+            padding: 18px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            border: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: 0.25s;
+        }
+
+        .r-job-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
         }
 
         /* 3 DOTS MENU (Dropdown - Removed Delete) */
@@ -888,6 +888,20 @@ $valid_to = $user['valid_to'] ?? '';
                 font-size: 1.6rem;
             }
 
+            .jobs-slider-container::-webkit-scrollbar {
+                display: none;
+            }
+
+            @media(max-width:900px) {
+
+                .r-job-card {
+                    flex: 0 0 85vw;
+                    min-width: 85vw;
+                    max-width: 85vw;
+                }
+
+            }
+
             .mob-profile {
                 font-size: 1.8rem;
                 color: var(--primary);
@@ -1152,7 +1166,7 @@ $valid_to = $user['valid_to'] ?? '';
             <div class="brand-group">
                 <div class="brand">
                     <i class="fas fa-user-tie"></i>
-                    <span>PACIFIC iCONNECT</span>
+                    <span><img src="https://pacweb.inv11.in/assets/pacific_iconnect.png" alt="PACIFIC iCONNECT"></span>
                 </div>
 
                 <div class="location-pin" onclick="openLocationModal()">

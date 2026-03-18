@@ -179,6 +179,13 @@
             border-radius: 50%;
             display: inline-block;
         }
+        .red-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--danger-red);
+            border-radius: 50%;
+            display: inline-block;
+        }
 
         .premium-badge {
             background: var(--premium-badge-bg);
@@ -336,12 +343,12 @@
         <div class="pricing-grid">
             
             <div class="plan-card current-plan">
-                <h2 class="plan-title"><span class="blue-dot"></span> Your Current Plan</h2>
+                <h2 class="plan-title"><span class="red-dot"></span> Your Current Plan</h2>
                 
                 <div class="plan-details">
-                    <p><b>Plan:</b> Bronze</p>
+                    <p><b>Plan:</b> Standard Plan</p>
                     <p><b>Cost:</b> ₹0 (Free)</p>
-                    <p><b>Validity:</b> 18-02-2026</p>
+                    <p><b>Validity:</b> Lifetime</p>
                 </div>
                 
                 <ul class="feature-list blue-checks">

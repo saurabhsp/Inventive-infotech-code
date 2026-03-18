@@ -15,6 +15,7 @@ $user = $_SESSION['user'];
 
 
 $userid = $user['id'];
+$profile_id = $user['profile_id'];
 $jobid = $_POST['id'] ?? '';
 
 
@@ -40,25 +41,19 @@ $job_status_list = $_SESSION['job_status_list'] ?? [];
 
 
 
+$status_id = $_POST['status'] ?? 1; // default = active
+$filterStatus = $status_id;
+$pages = 1;
+$limit = 10;
 
-
-
-
-
-
-
-
-
-
-
-
-$url = "https://pacweb.inv11.in/web_api/getRecruiterdashboard.php";
+$url = "https://pacweb.inv11.in/web_api/getJobvacancylist.php";
+// $url = "pacificconnect2.0.inv51.in/webservices/getJobvacancylist.php";
 
 $payload = json_encode([
-    "userid"       => $userid,
-    "profile_type" => $user['profile_type_id'],
-    "city"         => $user['city_id'] ?? '',
-    "locality"     => ''
+    "job_status_id"       => $filterStatus,
+    "page" => $pages,
+    "limit" => $limit,
+    "recruiter_id"     => $profile_id
 ]);
 
 $ch = curl_init($url);
@@ -76,18 +71,48 @@ curl_close($ch);
 
 $result = json_decode($response, true);
 
-if (!$result || $result['status'] != 'success') {
-    die("Job Not Found");
-}
 
-$jobs = $result['walkin_interviews'] ?? [];
+$jobs = $result['data'] ?? [];
 // print_r($jobs);
+
+
+
+
+
+
+
+//status 
+$status_api = "https://pacweb.inv11.in/web_api/getJobstatus.php";
+$status_request = [
+    "display_status" => 1,
+];
+$ch = curl_init($status_api);
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
+    CURLOPT_POSTFIELDS => json_encode($status_request)
+]);
+$status_response = curl_exec($ch);
+// print_r($status_response);
+// exit;
+curl_close($ch);
+$status_result = json_decode($status_response, true);
+$statuses = $status_result['data'] ?? [];
+
+
+
+
+
 
 
 function safe($v)
 {
     return ($v && trim($v) != "") ? htmlspecialchars($v) : "Not specified";
 }
+
+
+
 
 ?>
 
@@ -103,7 +128,7 @@ function safe($v)
 
 <head>
     <meta charset="UTF-8">
-    <title>Premium Job List – Pacific iConnect</title>
+    <title>Standard Job List – Pacific iConnect</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 
@@ -113,7 +138,7 @@ function safe($v)
 
 
     <!-- ✅ COPY CSS FROM jobdetails.html -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/style.css">
 
     <style>
         :root {
@@ -802,6 +827,90 @@ function safe($v)
             background: #fee2e2;
             color: #dc2626;
         }
+
+
+
+
+
+
+
+        /* Filters */
+        /* ================= FILTER UI (MATCH APPLICATION PAGE) ================= */
+
+        :root {
+            --primary: #483EA8;
+            --primary-light: #eceaf9;
+            --white: #ffffff;
+            --text-muted: #555555;
+            --border-light: #e5e7eb;
+        }
+
+        /* Container */
+        .filters {
+    display: flex;
+    justify-content: flex-start; /* important for scroll */
+    align-items: center;
+    gap: 12px;
+    margin: 20px auto 30px;
+    flex-wrap: nowrap; /* ❌ no wrapping */
+    overflow-x: auto; /* ✅ enable horizontal scroll */
+    max-width: 100%;
+    padding-bottom: 5px;
+}
+
+/* Hide scrollbar (optional clean UI) */
+.filters::-webkit-scrollbar {
+    display: none;
+}
+
+        /* Hide scrollbar */
+        .filters::-webkit-scrollbar {
+            height: 0px;
+        }
+
+        /* Pill button */
+        .filter-pill {
+            padding: 8px 18px;
+            border: 1px solid var(--border-light);
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: var(--white);
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        /* Hover effect */
+        .filter-pill:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        /* Active state */
+        .filter-pill.active {
+            background: var(--blue-btn);
+            color: var(--white);
+            border-color: var(--blue-btn);
+            box-shadow: 0 3px 8px rgba(72, 62, 168, 0.25);
+        }
+
+        .filters-wrapper {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+        .filter-pill {
+    white-space: nowrap; /* prevent text breaking */
+    flex-shrink: 0; /* prevent shrinking */
+}
+@media (max-width: 576px) {
+    .filters {
+        justify-content: flex-start;
+        padding-left: 10px;
+    }
+}
     </style>
 
 
@@ -809,7 +918,33 @@ function safe($v)
 
 <body>
 
+    <?php include "includes/preloader.php"; ?>
     <?php include "includes/header.php"; ?>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     <!-- STATUS MODAL -->
     <div class="status-modal-overlay" id="statusModal">
@@ -831,100 +966,157 @@ function safe($v)
     </div>
 
 
-    <!-- //CARD CODE HERE -->
 
     <div class="container main-content">
+        <form id="statusForm" method="POST">
+            <input type="hidden" name="status" id="statusInput">
+        </form>
+
+        <div class="filters-wrapper">
+
+            <div class="filters">
+                <?php foreach ($statuses as $status): ?>
+                    <button type="button"
+                        class="filter-pill <?= ($status_id == $status['id']) ? 'active' : '' ?>"
+                        onclick="applyFilter(<?= $status['id'] ?>)">
+
+                        <?= htmlspecialchars($status['name']) ?>
+
+                    </button>
+
+                <?php endforeach; ?>
+            </div>
+        </div>
 
         <div class="boxed-container">
+
 
             <?php
             $limit = 3;
             $total = count($jobs);
             ?>
 
-            <?php foreach ($jobs as $index => $job):
+            <?php foreach ($jobs as $index => $job): ?>
 
-                $plan = intval($job['plan_display_status'] ?? 3);
-
-                if ($plan == 1) {
-                    $plan_class = "gold";
-                    $plan_text = "GOLD MEMBER";
-                } elseif ($plan == 2) {
-                    $plan_class = "silver";
-                    $plan_text = "SILVER MEMBER";
-                } else {
-                    $plan_class = "bronze";
-                    $plan_text = "BRONZE MEMBER";
-                }
-
-            ?>
 
                 <div class="r-job-card job-item"
                     style="<?= $index >= $limit ? 'display:none;' : '' ?>">
+
                     <div class="menu-dot-container">
-                        <div class="menu-dot-icon">
+                        <div class="menu-dot-icon" onclick="toggleCardMenu(event,this)">
                             <i class="fas fa-ellipsis-v"></i>
+                        </div>
+
+                        <div class="card-menu-dropdown">
+                            <a href="javascript:void(0)" onclick="checkStandardEdit(<?= $job['id'] ?>)">
+                                <i class="fas fa-edit"></i> Edit Job
+                            </a>
                         </div>
                     </div>
 
+                    <!-- HEADER -->
                     <div class="card-head">
-                        <div class="logo-box">
-                            <div class="shiny-ring <?= $plan_class ?>"></div>
-                            <img src="<?= htmlspecialchars($job['company_logo']) ?>" class="company-logo">
-                            <div class="member-badge <?= $plan_class ?>"><?= $plan_text ?></div>
+                        <div class="logo-box" style="width:65px;height:65px;">
+                            <!-- <img src="<?= htmlspecialchars($job['company_logo']) ?>"
+                                style="width:100%;height:100%;border-radius:50%;object-fit:cover;border:1px solid #eee;"> -->
+                            <?php
+                            $logo = $job['company_logo'] ?? '';
+
+                            if (!$logo || trim($logo) == '') {
+                                $logo = "https://pacificconnect2.0.inv51.in/webservices/uploads/logos/nologo.png";
+                            }
+
+                            $logo = str_replace('http://', 'https://', $logo);
+                            ?>
+
+                            <img src="<?= htmlspecialchars($logo) ?>"
+                                style="width:100%;height:100%;border-radius:50%;object-fit:contain;background:#fff;">
                         </div>
 
                         <div class="job-info">
                             <div class="job-title"><?= htmlspecialchars($job['job_position']) ?></div>
                             <div class="job-meta">Date: <?= htmlspecialchars($job['created_at']) ?></div>
-                            <div class="job-status">Status: <?= htmlspecialchars($job['job_status']) ?></div>
+                            <div class="job-status">
+                                Status: <?= htmlspecialchars($job['job_status']) ?>
+                            </div>
                         </div>
                     </div>
 
+                    <!-- STATS -->
                     <div class="emp-stats-row">
-                        <div class="emp-stat-box">Views: <span><?= intval($job['visit_count'] ?? 0) ?></span></div>
-                        <div class="emp-stat-box">Calls: <span><?= intval($job['call_count'] ?? 0) ?></span></div>
-                        <div class="emp-stat-box">Chats: <span><?= intval($job['whatsapp_count'] ?? 0) ?></span></div>
-                        <div class="emp-stat-box">Locations: <span><?= intval($job['location_count'] ?? 0) ?></span></div>
+                        <div class="emp-stat-box">
+                            Views: <span class="emp-stat-num"><?= intval($job['visit_count'] ?? 0) ?></span>
+                        </div>
+
+                        <div class="emp-stat-box">
+                            Calls: <span class="emp-stat-num"><?= intval($job['call_count'] ?? 0) ?></span>
+                        </div>
+
+                        <div class="emp-stat-box" style="border:none;">
+                            Chats: <span class="emp-stat-num"><?= intval($job['whatsapp_count'] ?? 0) ?></span>
+                        </div>
                     </div>
 
+                    <!-- APPLICATION COUNT -->
                     <div class="apps-count">
-                        Applications <span><?= $job['application_count'] ?></span>
+                        Applications <span class="apps-num"><?= intval($job['application_count'] ?? 0) ?></span>
                     </div>
 
+                    <!-- ACTIONS -->
                     <div class="card-actions">
+
                         <a href="applications.php?job_id=<?= $job['id'] ?>" class="btn-card">
                             View<br>Applications
                         </a>
 
-                        <form action="premium-job-details.php" method="POST" style="flex:1;display:flex;">
+                        <form action="standard-job-details.php" method="POST" style="flex:1;display:flex;">
                             <input type="hidden" name="id" value="<?= $job['id'] ?>">
                             <button type="submit" class="btn-card">View Job</button>
                         </form>
 
-                        <button class="btn-card" onclick="openStatusModal(<?= $job['id'] ?>)">
+                        <button class="btn-card"
+                            onclick="openStatusModal(<?= $job['id'] ?>)">
                             Change Status
                         </button>
+
                     </div>
+
                 </div>
 
             <?php endforeach; ?>
-
-
         </div>
-        <?php if ($total > $limit): ?>
-            <div class="load-more-wrapper">
-                <button id="loadMoreBtn" class="load-more-btn">
-                    Load More..
-                </button>
-            </div>
-        <?php endif; ?>
+
+    </div>
+
+    <?php if (empty($jobs)) { ?>
+
+        <div style="
+        text-align:center;
+        padding:50px 20px;
+        color:#64748b;
+        font-size:16px;
+        font-weight:600;
+    ">
+            No jobs found
+        </div>
+
+    <?php } ?>
+
+
+    <?php if ($total > $limit): ?>
+        <div class="load-more-wrapper">
+            <button id="loadMoreBtn" class="load-more-btn">
+                Load More..
+            </button>
+        </div>
+    <?php endif; ?>
 
     </div>
 
     <script>
+        window.onload = () => document.getElementById("global-preloader")?.remove();
         let visible = 3;
-        const step = 3;
+        const step = 6;
 
         document.getElementById("loadMoreBtn")?.addEventListener("click", function() {
 
@@ -1002,7 +1194,7 @@ function safe($v)
 
             const statusId = document.getElementById("jobStatusSelect").value;
 
-            fetch("/web_api/UpdateWalkininterviewstatus.php", {
+            fetch("/web_api/updateVacancyjobstatus.php", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
@@ -1025,6 +1217,11 @@ function safe($v)
 
                 })
                 .catch(err => console.error(err));
+        }
+
+        function applyFilter(statusId) {
+            document.getElementById("statusInput").value = statusId;
+            document.getElementById("statusForm").submit();
         }
     </script>
 </body>

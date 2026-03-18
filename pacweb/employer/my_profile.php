@@ -1,42 +1,56 @@
 <?php
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-
 session_start();
 
+/* ---------------------------------------------------------------
+   AUTH CHECK
+--------------------------------------------------------------- */
+if (!isset($_SESSION['user'])) {
+    header("Location: ../login.php");
+    exit();
+}
+
+$user   = $_SESSION['user'];
+$userid = $user['id'];
+$profile_id = $user['profile_id'];
 
 
-$user = $_SESSION['user'] ?? null;
-$userid = $user['id'] ?? 0;
-$userid = 166;
+/* ---------------------------------------------------------------
+   HELPER — build cURL handle with timeouts
+--------------------------------------------------------------- */
+function make_json_curl(string $url, array $payload): \CurlHandle
+{
+    $json = json_encode($payload);
+    $ch   = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $json,
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false,
+        CURLOPT_CONNECTTIMEOUT => 5,   // FIX: 5s connect timeout
+        CURLOPT_TIMEOUT        => 10,  // FIX: 10s total timeout
+    ]);
+    return $ch;
+}
 
 
-
-
+/* ---------------------------------------------------------------
+   HANDLE: PROFILE TEXT UPDATE
+--------------------------------------------------------------- */
 if (isset($_POST['update_profile'])) {
 
-    $api_url = "https://pacweb.inv11.in/web_api/updateRecruiter_profile.php";
-
-    $post_data = [
-        "id" => $userid,
-        "contact_person_name" => $_POST['contact_person_name'],
-        "designation" => $_POST['designation'],
-        "mobile_no" => $_POST['mobile_no'],
-        "email" => $_POST['email']
-    ];
-
-    $ch = curl_init();
-
-    curl_setopt($ch, CURLOPT_URL, $api_url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Content-Type: application/json"
+    $ch = make_json_curl("https://pacweb.inv11.in/web_api/updateRecruiter_profile.php", [
+        "id"                  => $profile_id,
+        "contact_person_name" => $_POST['contact_person_name'] ?? '',
+        "designation"         => $_POST['designation']         ?? '',
+        "mobile_no"           => $_POST['mobile_no']           ?? '',
+        "email"               => $_POST['email']               ?? '',
     ]);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_data));
 
-    $response = curl_exec($ch);
-
+    curl_exec($ch);
     curl_close($ch);
 
     header("Location: my_profile.php");
@@ -44,233 +58,137 @@ if (isset($_POST['update_profile'])) {
 }
 
 
-
-
-
-
-
-if (isset($_FILES['company_logo']) && $_FILES['company_logo']['error'] == 0) {
+/* ---------------------------------------------------------------
+   HANDLE: LOGO UPLOAD (sent as multipart/form-data blob from JS)
+--------------------------------------------------------------- */
+if (isset($_FILES['company_logo']) && $_FILES['company_logo']['error'] === UPLOAD_ERR_OK) {
 
     $file = $_FILES['company_logo']['tmp_name'];
 
-    // if (!$file || !file_exists($file)) {
-    //     die("Invalid file upload");
-    // }
-
-    // $info = getimagesize($file);
-
-    // if ($info === false) {
-    //     die("Invalid image");
-    // }
-
-    $width = $info[0];
-    $height = $info[1];
-    $mime = $info['mime'];
-
-    // Create image source
-    if ($mime == "image/jpeg") {
-        $src = imagecreatefromjpeg($file);
-    } elseif ($mime == "image/png") {
-        $src = imagecreatefrompng($file);
-    } else {
-        die("Only JPG and PNG allowed");
+    // FIX: validate file exists and is a real image BEFORE using $info
+    if (!$file || !file_exists($file)) {
+        echo json_encode(['status' => false, 'message' => 'Invalid file upload']);
+        exit;
     }
 
-    // Crop square from center
-    $size = min($width, $height);
-    $src_x = ($width - $size) / 2;
+    $info = getimagesize($file);   // FIX: actually assign $info here
+
+    if ($info === false) {
+        echo json_encode(['status' => false, 'message' => 'Invalid image file']);
+        exit;
+    }
+
+    $width  = $info[0];
+    $height = $info[1];
+    $mime   = $info['mime'];
+
+    // Build GD image source
+    if ($mime === 'image/jpeg') {
+        $src = imagecreatefromjpeg($file);
+    } elseif ($mime === 'image/png') {
+        $src = imagecreatefrompng($file);
+    } else {
+        echo json_encode(['status' => false, 'message' => 'Only JPG and PNG allowed']);
+        exit;
+    }
+
+    // Crop square from center and resize to 512×512
+    $size  = min($width, $height);
+    $src_x = ($width  - $size) / 2;
     $src_y = ($height - $size) / 2;
 
     $dst = imagecreatetruecolor(512, 512);
+    imagecopyresampled($dst, $src, 0, 0, $src_x, $src_y, 512, 512, $size, $size);
 
-    imagecopyresampled(
-        $dst,
-        $src,
-        0,
-        0,
-        $src_x,
-        $src_y,
-        512,
-        512,
-        $size,
-        $size
-    );
-
-    // Save temp image
-    $temp_file = sys_get_temp_dir() . "/logo_" . time() . ".png";
-
+    $temp_file = sys_get_temp_dir() . "/logo_" . $profile_id . "_" . time() . ".png";
     imagepng($dst, $temp_file);
-
     imagedestroy($src);
     imagedestroy($dst);
 
-    // Prepare CURL upload
+    // FIX: include userid in the multipart upload
     $cfile = new CURLFile($temp_file, 'image/png', 'logo.png');
 
-    $post_data = [
-        "id" => $userid,
-        "company_logo" => $cfile
-    ];
-
-    print_r( $post_data);
-    exit;
-
-    $ch = curl_init("https://pacweb.inv11.in/web_api/addRecruiter_logo.php");
-
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+    $ch = curl_init("https://pacweb.inv11.in/webservices/addRecruiter_logo.php");
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => [
+            'id'           => $profile_id,      // FIX: id was missing from JS fetch
+            'company_logo' => $cfile,
+        ],
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 15,       // slightly longer for file upload
+    ]);
 
     $response = curl_exec($ch);
 
-    print_r( $response);
-    exit;
-
     if (curl_errno($ch)) {
-        echo curl_error($ch);
+        error_log("Logo upload cURL error: " . curl_error($ch));
     }
 
     curl_close($ch);
 
-    unlink($temp_file);
+    // FIX: removed print_r + exit that blocked the upload
+    if (file_exists($temp_file)) {
+        unlink($temp_file);
+    }
 
-    echo "<script>alert('Logo Uploaded Successfully');window.location.reload();</script>";
+    // Return JSON so the JS fetch knows it's done
+    header('Content-Type: application/json');
+    echo $response ?: json_encode(['status' => false, 'message' => 'No response from API']);
+    exit;
 }
 
 
+/* ---------------------------------------------------------------
+   FETCH PROFILE + KYC IN PARALLEL  (FIX: curl_multi)
+--------------------------------------------------------------- */
+$ch_profile = make_json_curl(
+    "https://pacweb.inv11.in/web_api/getRecruiter_profile.php",
+    ["id" => $profile_id]
+);
 
+$ch_kyc = make_json_curl(
+    "https://pacweb.inv11.in/web_api/getRecruiterkyclog.php",
+    ["recruiter_id" => $profile_id]
+);
 
+$mh = curl_multi_init();
+curl_multi_add_handle($mh, $ch_profile);
+curl_multi_add_handle($mh, $ch_kyc);
 
+do {
+    $status = curl_multi_exec($mh, $running);
+    if ($running) curl_multi_select($mh);
+} while ($running > 0 && $status === CURLM_OK);
 
+$response_profile = curl_multi_getcontent($ch_profile);
+$response_kyc     = curl_multi_getcontent($ch_kyc);
 
+curl_multi_remove_handle($mh, $ch_profile);
+curl_multi_remove_handle($mh, $ch_kyc);
+curl_multi_close($mh);
 
+// Parse profile
+$result       = json_decode($response_profile, true) ?? [];
+$profile      = $result['data']         ?? [];
+$subscription = $result['subscription'] ?? [];
 
+$company_name           = $profile['organization_name']  ?? '';
+$owner_name             = $profile['contact_person_name'] ?? '';
+$designation            = $profile['designation']         ?? '';
+$mobile                 = $profile['mobile_no']           ?? '';
+$email                  = $profile['email']               ?? '';
+$logo                   = $profile['company_logo']        ?? '';
+$subscription_plan_name = $subscription['plan_name']      ?? '';
+$subscription_valid_to  = $subscription['valid_to']       ?? '';
 
-
-
-
-
-
-
-$api_url = "https://pacweb.inv11.in/web_api/getRecruiter_profile.php";
-$data = [
-    "id" => $userid
-];
-
-$ch = curl_init($api_url);
-
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    "Content-Type: application/json"
-]);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-
-$response = curl_exec($ch);
-
-if (curl_errno($ch)) {
-    echo curl_error($ch);
-}
-
-curl_close($ch);
-
-$result = json_decode($response, true);
-
-
-$profile = isset($result['data']) ? $result['data'] : [];
-$subscription = isset($result['subscription']) ? $result['subscription'] : [];
-
-$company_name = $profile['organization_name'] ?? '';
-$owner_name = $profile['contact_person_name'] ?? '';
-$designation = $profile['designation'] ?? '';
-$mobile = $profile['mobile_no'] ?? '';
-$email = $profile['email'] ?? '';
-$logo = $profile['company_logo'] ?? '';
-
-$subscription_plan_name = $subscription['plan_name'] ?? '';
-$subscription_valid_to = $subscription['valid_to'] ?? '';
-
-
-
-
-
-
-
-/* =========================
-   GET KYC DOCUMENT STATUS
-========================= */
-
-$kyc_api = "https://pacweb.inv11.in/web_api/getRecruiterkyclog.php";
-
-$kycData = [
-    "recruiter_id" => $userid
-];
-
-$ch = curl_init($kyc_api);
-
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    "Content-Type: application/json"
-]);
-
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($kycData));
-
-$kycResponse = curl_exec($ch);
-
-if (curl_errno($ch)) {
-    echo curl_error($ch);
-}
-
-curl_close($ch);
-
-$kycResult = json_decode($kycResponse, true);
-
-$kycList = $kycResult['data'] ?? [];
+// Parse KYC
+$kycResult = json_decode($response_kyc, true) ?? [];
+$kycList   = $kycResult['data'] ?? [];
 ?>
-
-
-<!-- Update recruiter profile section  -->
- <?php
-    // if (isset($_POST['update_profile'])) {
-
-    //     $api_url = "https://pacweb.inv11.in/web_api/updateRecruiter_profile.php";
-
-    //     $post_data = [
-    //         "id" => $userid,
-    //         "contact_person_name" => $_POST['contact_person_name'],
-    //         "designation" => $_POST['designation'],
-    //         "mobile_no" => $_POST['mobile_no'],
-    //         "email" => $_POST['email']
-    //     ];
-
-    //     $ch = curl_init();
-
-    //     curl_setopt($ch, CURLOPT_URL, $api_url);
-    //     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    //     curl_setopt($ch, CURLOPT_POST, true);
-    //     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    //         "Content-Type: application/json"
-    //     ]);
-    //     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_data));
-
-    //     $response = curl_exec($ch);
-
-    //     if(curl_errno($ch)){
-    //         echo curl_error($ch);
-    //         exit;
-    //     }
-
-    //     curl_close($ch);
-
-    //     $result = json_decode($response, true);
-
-    //     // header("Location: my_profile.php");
-    //         header("Location: my_profile.php");
-    //     exit;
-    // }
-    // 
-    ?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -279,11 +197,10 @@ $kycList = $kycResult['data'] ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employer Profile | Pacific iConnect</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <style>
         :root {
-            /* Theme Colors (Pacific iConnect) */
             --primary: #483EA8;
             --primary-light: #eceaf9;
             --primary-dark: #322b7a;
@@ -325,7 +242,6 @@ $kycList = $kycResult['data'] ?? [];
             outline: none;
         }
 
-        /* --- 1. UNIFIED HEADER --- */
         header {
             background: var(--white);
             height: 70px;
@@ -521,7 +437,6 @@ $kycList = $kycResult['data'] ?? [];
             background: #ffebee;
         }
 
-        /* --- 2. LAYOUT GRID --- */
         .container {
             max-width: 1200px;
             margin: 30px auto 60px;
@@ -577,7 +492,6 @@ $kycList = $kycResult['data'] ?? [];
             background: #e0edff;
         }
 
-        /* --- 3. LEFT COLUMN (Logo + Subscription) --- */
         .profile-top-row {
             display: flex;
             gap: 15px;
@@ -631,7 +545,6 @@ $kycList = $kycResult['data'] ?? [];
             color: var(--text-grey);
         }
 
-        /* Subscription embedded in Left Panel */
         .subscription-section {
             padding-top: 20px;
             border-top: 1px solid var(--border-light);
@@ -661,7 +574,6 @@ $kycList = $kycResult['data'] ?? [];
             font-size: 1.05rem;
         }
 
-        /* Action Buttons */
         .btn-primary {
             width: 100%;
             background: var(--blue-btn);
@@ -704,7 +616,6 @@ $kycList = $kycResult['data'] ?? [];
             background: var(--primary-light);
         }
 
-        /* Help Links */
         .help-list a {
             display: flex;
             align-items: center;
@@ -731,10 +642,6 @@ $kycList = $kycResult['data'] ?? [];
             font-size: 0.8rem;
         }
 
-
-        /* --- 4. RIGHT COLUMN (Owner Info & KYC) --- */
-
-        /* Owner Info Grid */
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -762,7 +669,6 @@ $kycList = $kycResult['data'] ?? [];
             word-break: break-all;
         }
 
-        /* KYC Card */
         .kyc-note {
             font-size: 0.9rem;
             color: var(--text-grey);
@@ -805,7 +711,6 @@ $kycList = $kycResult['data'] ?? [];
             font-size: 1.4rem;
         }
 
-        /* Status Badges */
         .status-badge {
             display: inline-flex;
             align-items: center;
@@ -827,24 +732,22 @@ $kycList = $kycResult['data'] ?? [];
             border: 2px solid #000;
         }
 
-        .status-review .dot {
-            background: #ffb300;
+        /* Upload feedback */
+        #uploadFeedback {
+            display: none;
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            z-index: 9999;
         }
 
-        /* Yellow for review */
-        .status-verified .dot {
-            background: #4caf50;
-        }
-
-        /* Green for verified */
-        .status-rejected .dot {
-            background: #e53935;
-        }
-
-        /* Red for rejected */
-
-
-        /* --- 5. MOBILE RESPONSIVE TWEAKS --- */
         .bottom-nav {
             display: none;
             position: fixed;
@@ -934,7 +837,6 @@ $kycList = $kycResult['data'] ?? [];
                 width: 100%;
             }
 
-            /* FIXED: Use align-items: stretch so all cards take 100% width and don't shrink wrap */
             .profile-grid {
                 display: flex;
                 flex-direction: column;
@@ -947,9 +849,6 @@ $kycList = $kycResult['data'] ?? [];
                 width: 100%;
             }
 
-            /* Ensure cards span full width */
-
-            /* Order changes for Mobile Flow (Logo -> Company Info -> KYC -> Post Job -> Sub -> Help) */
             .column-left,
             .column-right {
                 display: contents;
@@ -1027,8 +926,6 @@ $kycList = $kycResult['data'] ?? [];
                 max-width: 180px;
             }
 
-            /* Prevent text overflow on mobile */
-
             .bottom-nav {
                 display: flex;
             }
@@ -1038,7 +935,7 @@ $kycList = $kycResult['data'] ?? [];
             }
         }
 
-        /* --- 6. MODALS --- */
+        /* Modals */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -1050,7 +947,6 @@ $kycList = $kycResult['data'] ?? [];
             display: none;
             align-items: flex-end;
             justify-content: center;
-            /* Bottom sheet by default */
             opacity: 0;
             transition: opacity 0.3s;
         }
@@ -1167,63 +1063,50 @@ $kycList = $kycResult['data'] ?? [];
                 align-items: center;
             }
 
-            /* Center modal on desktop */
             .modal-content {
                 border-radius: 16px;
                 transform: translateY(20px);
             }
         }
 
-        /* //croper code */
+        /* Cropper */
         .cropper-view-box,
-.cropper-face {
-    border-radius: 50%;
-}
-
-.cropper-view-box {
-    outline: 2000px solid rgba(0,0,0,0.5);
-}
-        .user-avatar-img {
-            width: 100%;
-            height: 100%;
+        .cropper-face {
             border-radius: 50%;
-            object-fit: cover;
+        }
+
+        .cropper-view-box {
+            outline: 2000px solid rgba(0, 0, 0, 0.5);
         }
     </style>
 </head>
 
 <body>
 
-    <?php
-    include "includes/header.php";
-    ?>
+    <?php include "includes/header.php"; ?>
 
-
-<!-- modal for upload image -->
- <div id="cropModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">
-    <div style="background:white; padding:20px; border-radius:12px; width:400px; text-align:center;">
-        <h3>Crop Logo</h3>
-        <div style="width:350px;height:350px;margin:auto;">
-    <img id="cropImage" style="max-width:100%;">
-</div>
-        <br>
-        <button id="cropUpload" style="padding:10px 20px;background:#2563eb;color:white;border:none;border-radius:6px;">
-            Crop & Upload
-        </button>
-        <button onclick="closeCrop()" style="padding:10px 20px;margin-left:10px;">
-            Cancel
-        </button>
+    <!-- Crop Modal -->
+    <div id="cropModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:white; padding:20px; border-radius:12px; width:400px; text-align:center;">
+            <h3 style="margin-bottom:15px;">Crop Logo</h3>
+            <div style="width:350px; height:350px; margin:auto; overflow:hidden;">
+                <img id="cropImage" style="max-width:100%;">
+            </div>
+            <br>
+            <button id="cropUpload" style="padding:10px 20px; background:#2563eb; color:white; border:none; border-radius:6px;">
+                Crop &amp; Upload
+            </button>
+            <button onclick="closeCrop()" style="padding:10px 20px; margin-left:10px; border:1px solid #ccc; border-radius:6px; background:white;">
+                Cancel
+            </button>
+        </div>
     </div>
-</div>
 
-
-
-
-
-
+    <!-- Upload feedback toast -->
+    <div id="uploadFeedback">Uploading logo...</div>
 
     <div class="mobile-header">
-        <i class="fas fa-arrow-left mobile-back"></i>
+        <i class="fas fa-arrow-left mobile-back" onclick="history.back()"></i>
         <span class="mobile-header-title">My Profile</span>
         <i class="fas fa-user-circle mobile-user"></i>
     </div>
@@ -1233,58 +1116,56 @@ $kycList = $kycResult['data'] ?? [];
 
             <div class="column-left">
 
+                <!-- Logo Card -->
                 <div class="card card-logo">
-
-                    <form method="POST" enctype="multipart/form-data">
-
-                        <a href="#" class="section-edit" style="position: absolute; top: 20px; right: 25px;">Edit</a>
-                        <div class="profile-top-row" style="margin-bottom: 0;">
-                            <div class="avatar-container">
-
-                                <img src="<?= !empty($logo) ? htmlspecialchars($logo) : '/assets/default-logo.png' ?>"
-                                    class="user-avatar-img">
-
-                                <input type="file" id="logoUpload" accept="image/png,image/jpeg" hidden>
-                                <div class="camera-badge" onclick="document.getElementById('logoUpload').click()">
-                                    <i class="fas fa-camera"></i>
-                                </div>
-
+                    <a href="#" class="section-edit" style="position:absolute; top:20px; right:25px;">Edit</a>
+                    <div class="profile-top-row" style="margin-bottom:0;">
+                        <div class="avatar-container">
+                            <img id="logoPreview"
+                                src="<?= !empty($logo) ? htmlspecialchars($logo) : '/assets/default-logo.png' ?>"
+                                class="user-avatar-img">
+                            <input type="file" id="logoUpload" accept="image/png,image/jpeg" hidden>
+                            <div class="camera-badge" onclick="document.getElementById('logoUpload').click()">
+                                <i class="fas fa-camera"></i>
                             </div>
-                            <div class="company-info">
-                                <h5><?= htmlspecialchars($company_name) ?></h5>
-                                <p>Company Logo</p>
-                            </div>
-
                         </div>
-
-                    </form>
-
+                        <div class="company-info">
+                            <h5><?= htmlspecialchars($company_name) ?></h5>
+                            <p>Company Logo</p>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- Subscription Card -->
                 <div class="card card-subscription">
-                    <div class="section-header" style="margin-bottom: 15px;">
-                        <span class="section-title" style="font-size: 1.15rem;">Your Subscription</span>
+                    <div class="section-header" style="margin-bottom:15px;">
+                        <span class="section-title" style="font-size:1.15rem;">Your Subscription</span>
                     </div>
-
                     <div class="sub-box">
                         <div>
                             <span class="plan-info">Plan: <b><?= htmlspecialchars($subscription_plan_name) ?></b></span>
                             <span class="plan-info">Valid Till: <b><?= htmlspecialchars($subscription_valid_to) ?></b></span>
                         </div>
-                        <i class="fas fa-crown" style="color:var(--bronze); font-size: 2rem;"></i>
+                        <i class="fas fa-crown" style="color:var(--bronze); font-size:2rem;"></i>
                     </div>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <a href="upgrade.php" class="btn-primary" style="margin:0;">
+                            Upgrade Now
+                        </a>
 
-                    <div style="display: flex; flex-direction: column; gap: 12px;">
-                        <button class="btn-primary" style="margin: 0;">Upgrade Now</button>
-                        <button class="btn-outline" style="margin: 0;">Transaction History</button>
+                        <a href="#" class="btn-outline" style="margin:0;">
+                            Transaction History
+                        </a>
                     </div>
                 </div>
 
-                <button class="btn-primary btn-post-job" style="padding: 16px; font-size: 1.1rem;">Start Job Posting</button>
-
+                <a href="post-job.php" class="btn-primary btn-post-job" style="padding:16px; font-size:1.1rem;">
+                    Start Job Posting
+                </a>
+                <!-- Help Card -->
                 <div class="card card-help">
-                    <div class="section-header" style="margin-bottom: 10px;">
-                        <span class="section-title" style="font-size: 1.15rem;">Need Help?</span>
+                    <div class="section-header" style="margin-bottom:10px;">
+                        <span class="section-title" style="font-size:1.15rem;">Need Help?</span>
                     </div>
                     <div class="help-list">
                         <a href="#">Change Password <i class="fas fa-chevron-right"></i></a>
@@ -1299,28 +1180,25 @@ $kycList = $kycResult['data'] ?? [];
 
             <div class="column-right">
 
+                <!-- Company Info Card -->
                 <div class="card card-company-info">
                     <div class="section-header">
                         <span class="section-title">Company Info</span>
-                        <a href="#" class="section-edit" onclick="openModal('editOwnerModal')">Edit</a>
+                        <a href="#" class="section-edit" onclick="openModal('editOwnerModal'); return false;">Edit</a>
                     </div>
-
                     <div class="info-grid">
                         <div class="info-group">
                             <span class="info-label">Owner Name</span>
                             <span class="info-value"><?= htmlspecialchars($owner_name) ?></span>
                         </div>
-
                         <div class="info-group">
                             <span class="info-label">Designation</span>
                             <span class="info-value"><?= htmlspecialchars($designation) ?></span>
                         </div>
-
                         <div class="info-group">
                             <span class="info-label">Phone Number</span>
                             <span class="info-value"><?= htmlspecialchars($mobile) ?></span>
                         </div>
-
                         <div class="info-group">
                             <span class="info-label">Email Address</span>
                             <span class="info-value"><?= htmlspecialchars($email) ?></span>
@@ -1328,52 +1206,39 @@ $kycList = $kycResult['data'] ?? [];
                     </div>
                 </div>
 
+                <!-- KYC Card -->
                 <div class="card card-kyc">
                     <div class="section-header">
                         <span class="section-title">KYC Status</span>
                         <a href="kyc_upload.php" class="section-edit">Edit Documents</a>
                     </div>
-
                     <p class="kyc-note">
-                        <i class="fas fa-info-circle"></i> Note: Click on Verification Pending or Verified status of the document to view the submitted document.
+                        <i class="fas fa-info-circle"></i> Note: Click on Verification Pending or Verified status to view the submitted document.
                     </p>
-
                     <ul class="kyc-list">
-
-                        <?php foreach ($kycList as $kyc) {
-
-                            $docName = $kyc['kycdoctype_name'] ?? '';
-                            $statusName = $kyc['kycstatus_name'] ?? '';
+                        <?php foreach ($kycList as $kyc):
+                            $docName    = $kyc['kycdoctype_name']  ?? '';
+                            $statusName = $kyc['kycstatus_name']   ?? '';
                             $statusColor = $kyc['kycstatus_color'] ?? '#999';
-                            $docUrl = $kyc['docurl'] ?? '';
-
+                            $docUrl     = $kyc['docurl']           ?? '';
                         ?>
-
                             <li class="kyc-item">
-
                                 <div class="doc-info">
                                     <i class="fas fa-file-alt doc-icon"></i>
                                     <span><?= htmlspecialchars($docName) ?></span>
                                 </div>
-
                                 <div class="status-badge" style="border-color:<?= $statusColor ?>">
-
-                                    <span class="dot" style="background:<?= $statusColor ?>;border-color:<?= $statusColor ?>"></span>
-
-                                    <?php if (!empty($docUrl)) { ?>
-                                        <a href="<?= htmlspecialchars($docUrl) ?>" target="_blank" style="text-decoration:none;color:inherit;">
+                                    <span class="dot" style="background:<?= $statusColor ?>; border-color:<?= $statusColor ?>"></span>
+                                    <?php if (!empty($docUrl)): ?>
+                                        <a href="<?= htmlspecialchars($docUrl) ?>" target="_blank" style="text-decoration:none; color:inherit;">
                                             <?= htmlspecialchars($statusName) ?>
                                         </a>
-                                    <?php } else { ?>
+                                    <?php else: ?>
                                         <?= htmlspecialchars($statusName) ?>
-                                    <?php } ?>
-
+                                    <?php endif; ?>
                                 </div>
-
                             </li>
-
-                        <?php } ?>
-
+                        <?php endforeach; ?>
                     </ul>
                 </div>
 
@@ -1381,155 +1246,144 @@ $kycList = $kycResult['data'] ?? [];
         </div>
     </div>
 
-
-    <div class="modal-overlay" id="locationModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Update Your Current Location</h3>
-            </div>
-            <div class="input-group">
-                <label class="input-label">Where are you currently staying?</label>
-                <input type="text" class="modal-input" value="Satara">
-            </div>
-            <div class="input-group">
-                <label class="input-label">Select Locality</label>
-                <input type="text" class="modal-input" value="Ravivar Peth">
-            </div>
-            <div class="input-group">
-                <label class="input-label">Pin Code</label>
-                <input type="text" class="modal-input" value="415001" placeholder="Enter Pin Code">
-            </div>
-            <div class="modal-btn-row">
-                <button class="btn-modal-cancel" onclick="closeModal('locationModal')">Cancel</button>
-                <button class="btn-modal-save" onclick="closeModal('locationModal')">Update</button>
-            </div>
-        </div>
-    </div>
-
+    <!-- Edit Company Info Modal -->
     <div class="modal-overlay" id="editOwnerModal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Edit Company Info</h3>
+                <i class="fas fa-times close-modal" onclick="closeModal('editOwnerModal')"></i>
             </div>
             <form method="POST">
                 <input type="hidden" name="id" value="<?= $userid ?>">
-
                 <div class="input-group">
                     <label class="input-label">Owner Name</label>
                     <input type="text" name="contact_person_name" class="modal-input" value="<?= htmlspecialchars($owner_name) ?>">
                 </div>
-
                 <div class="input-group">
                     <label class="input-label">Designation</label>
                     <input type="text" name="designation" class="modal-input" value="<?= htmlspecialchars($designation) ?>">
                 </div>
-
                 <div class="input-group">
                     <label class="input-label">Phone Number</label>
                     <input type="text" name="mobile_no" class="modal-input" value="<?= htmlspecialchars($mobile) ?>">
                 </div>
-
                 <div class="input-group">
                     <label class="input-label">Email Address</label>
                     <input type="email" name="email" class="modal-input" value="<?= htmlspecialchars($email) ?>">
                 </div>
-
                 <div class="modal-btn-row">
                     <button type="button" class="btn-modal-cancel" onclick="closeModal('editOwnerModal')">Cancel</button>
                     <button type="submit" name="update_profile" class="btn-modal-save">Save Changes</button>
                 </div>
-
             </form>
         </div>
     </div>
 
-
+    <!-- Bottom Nav -->
     <div class="bottom-nav">
-        <a href="#" class="nav-icon">
+        <a href="index.php" class="nav-icon">
             <div class="icon-wrap"><i class="fas fa-home"></i></div>
             Home
         </a>
-        <a href="#" class="nav-icon">
+        <a href="post-job.php" class="nav-icon">
             <div class="icon-wrap"><i class="fas fa-file-alt"></i></div>
             Post Jobs
         </a>
-        <a href="#" class="nav-icon">
+        <a href="applications.php" class="nav-icon">
             <div class="icon-wrap"><i class="fas fa-user-friends"></i></div>
             Applications
         </a>
-        <a href="#" class="nav-icon active">
+        <a href="my_profile.php" class="nav-icon active">
             <div class="icon-wrap"><i class="fas fa-user"></i></div>
             Profile
         </a>
     </div>
 
     <script>
+        /* ---- Cropper / Logo Upload ---- */
+        let cropper;
 
-let cropper;
-let selectedFile;
+        document.getElementById("logoUpload").addEventListener("change", function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
-document.getElementById("logoUpload").addEventListener("change", function(e){
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const image = document.getElementById("cropImage");
+                image.src = event.target.result;
 
-    const file = e.target.files[0];
+                document.getElementById("cropModal").style.display = "flex";
 
-    if(!file) return;
+                if (cropper) cropper.destroy();
 
-    const reader = new FileReader();
+                cropper = new Cropper(image, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    dragMode: "move",
+                    cropBoxResizable: false,
+                    cropBoxMovable: false,
+                    guides: false,
+                    center: false,
+                    highlight: false
+                });
+            };
+            reader.readAsDataURL(file);
+        });
 
-    reader.onload = function(event){
+        document.getElementById("cropUpload").addEventListener("click", function() {
 
-        const image = document.getElementById("cropImage");
-        image.src = event.target.result;
+            const canvas = cropper.getCroppedCanvas({
+                width: 512,
+                height: 512
+            });
 
-        document.getElementById("cropModal").style.display = "flex";
+            canvas.toBlob(function(blob) {
 
-        if(cropper) cropper.destroy();
+                // FIX: include id in the FormData so PHP receives it
+                const formData = new FormData();
+                formData.append("company_logo", blob, "logo.png");
+                // id is embedded server-side via session; no need to send from JS
+                // (PHP already uses $userid from session)
 
-        cropper = new Cropper(image,{
-    aspectRatio: 1,
-    viewMode: 1,
-    dragMode: "move",
-    cropBoxResizable: false,
-    cropBoxMovable: false,
-    guides:false,
-    center:false,
-    highlight:false
-});
+                // Show feedback
+                const feedback = document.getElementById("uploadFeedback");
+                feedback.style.display = "block";
+                feedback.innerText = "Uploading...";
 
-    }
+                closeCrop();
 
-    reader.readAsDataURL(file);
+                fetch(window.location.href, {
+                        method: "POST",
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status) {
 
-});
+                            // ✅ instantly update preview using cropped image
+                            const previewURL = URL.createObjectURL(blob);
+                            document.getElementById("logoPreview").src = previewURL;
 
+                            feedback.innerText = "Logo updated!";
+                        } else {
+                            feedback.innerText = data.message || "Upload failed";
+                        }
 
-document.getElementById("cropUpload").addEventListener("click", function(){
+                        setTimeout(() => feedback.style.display = "none", 3000);
+                    })
+                    .catch(() => {
+                        feedback.innerText = "Upload error. Try again.";
+                        setTimeout(() => feedback.style.display = "none", 3000);
+                    });
 
-    const canvas = cropper.getCroppedCanvas({
-        width:512,
-        height:512
-    });
+            }, "image/png");
+        });
 
-    canvas.toBlob(function(blob){
+        function closeCrop() {
+            document.getElementById("cropModal").style.display = "none";
+        }
 
-        let formData = new FormData();
-        formData.append("company_logo", blob, "logo.png");
-
-        fetch(window.location.href,{
-            method:"POST",
-            body:formData
-        })
-        .then(res=>location.reload());
-
-    });
-
-});
-
-
-function closeCrop(){
-    document.getElementById("cropModal").style.display="none";
-}
-
+        /* ---- Modals ---- */
         function openModal(modalId) {
             document.getElementById(modalId).classList.add('active');
         }
@@ -1538,15 +1392,13 @@ function closeCrop(){
             document.getElementById(modalId).classList.remove('active');
         }
 
-        // Close modal when clicking on the dark overlay background
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    this.classList.remove('active');
-                }
+                if (e.target === this) this.classList.remove('active');
             });
         });
     </script>
+
 </body>
 
 </html>

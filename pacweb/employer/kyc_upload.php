@@ -11,13 +11,13 @@ if (!isset($_SESSION['user'])) {
 
 $user = $_SESSION['user'];
 $userid = $user['id'];
-// $userid = 166; // session user id
-
+$profile_id = $user['profile_id'];
+//  print_r( $profile_id);
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['docurl'])) {
 
-  $api_url = "https://beta.inv51.in/webservices/addRecruterkyc.php";
+  $api_url = "https://pacweb.inv11.in/webservices/addRecruterkyc.php";
 
-  $recruiter_id = $_POST['recruiter_id'];
+  $recruiter_id = $profile_id;
   $kycdoctype_id = $_POST['kycdoctype_id'];
   $docno = $_POST['docno'];
 
@@ -773,40 +773,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['docurl'])) {
 </head>
 
 <body>
-  <header>
-    <div class="header-container">
-      <div class="brand-group">
-        <div class="brand">
-          <i class="fas fa-user-tie"></i> <span>PACIFIC iCONNECT</span>
-        </div>
-        <div class="location-pin">
-          <i class="fas fa-map-marker-alt"></i> Satara
-        </div>
-      </div>
-      <nav class="desktop-nav">
-        <a href="#" class="nav-link">Dashboard</a>
-        <a href="#" class="nav-link">Post Jobs</a>
-        <a href="#" class="nav-link">Applications</a>
-      </nav>
-      <div class="header-actions">
-        <div class="nav-action-icon" title="Notifications">
-          <i class="fas fa-bell"></i> <span class="noti-badge">47</span>
-        </div>
-        <div class="profile-dropdown-wrap">
-          <div class="user-profile">
-            <div class="user-avatar"><i class="fas fa-user"></i></div>
-            <span class="user-name">Profile
-              <i class="fas fa-chevron-down" style="font-size: 0.75rem"></i></span>
-          </div>
-          <div class="dropdown-menu">
-            <a href="#" class="dropdown-item"><i class="fas fa-building"></i> Company Profile</a>
-            <a href="#" class="dropdown-item"><i class="fas fa-wallet"></i> Billing & Wallet</a>
-            <a href="#" class="dropdown-item text-danger"><i class="fas fa-sign-out-alt"></i> Logout</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </header>
+    <?php include "includes/header.php"; ?>
   <div class="mobile-header">
     <i
       class="fas fa-arrow-left mobile-back"
@@ -954,7 +921,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['docurl'])) {
         <h3 class="modal-title" id="modalDocName">Upload Document</h3>
 
         <input type="hidden" name="kycdoctype_id" id="kycdoctype_id">
-        <input type="hidden" name="recruiter_id" value="166">
+        <input type="hidden" name="recruiter_id" value="<?= $userid ?>">
 
         <div
           class="drop-zone"

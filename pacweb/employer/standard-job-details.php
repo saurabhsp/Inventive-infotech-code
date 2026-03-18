@@ -27,31 +27,56 @@ $result = json_decode($response, true);
 
 $job = $result['data'] ?? [];
 
-$logo = $job['company_logo'] ?? '';
+$logo = !empty($job['company_logo'])
+    ? $job['company_logo']
+    : '/assets/images/default-company.png';
 
+$alreadyApplied = $job['application_status'] ?? false;
+
+function safe($v)
+{
+    return ($v && trim($v) != "") ? htmlspecialchars($v) : "Not specified";
+}
 ?>
 
+<!DOCTYPE html>
+<html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Standard Jobs | Pacific iConnect</title>
+
+    <title><?= safe($job['job_position']); ?> | Pacific iConnect</title>
+
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+
+
+
+
+    <!-- ✅ COPY CSS FROM jobdetails.html -->
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="/assets/css/main.css">
+
+    <!-- ================= KEEP SAME CSS ================= -->
     <style>
         :root {
             /* Theme Colors */
             --primary: #483EA8;
+            --primary-light: #eceaf9;
+            --secondary: #ff6f00;
             --bg-body: #f4f6f9;
             --white: #ffffff;
             --text-dark: #1a1a1a;
-            --text-grey: #666666;
+            --text-grey: #555555;
             --green: #25D366;
 
-            /* Badge Colors */
-            --gold: #FFC107;
-            --silver: #9E9E9E;
-            --bronze: #A16B49;
+            /* Standard Job Specific */
+            --border-light: #e0e0e0;
+            --share-bg: #e3f2fd;
+            --share-text: #1565c0;
         }
 
         * {
@@ -64,8 +89,9 @@ $logo = $job['company_logo'] ?? '';
         body {
             background-color: var(--bg-body);
             color: var(--text-dark);
-            font-size: 14.5px;
-            line-height: 1.5;
+            font-size: 15.5px;
+            /* Base font size */
+            line-height: 1.6;
         }
 
         a {
@@ -83,12 +109,12 @@ $logo = $job['company_logo'] ?? '';
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1150px;
             margin: 0 auto;
             padding: 0 15px;
         }
 
-        /* --- HEADER --- */
+        /* --- 1. HEADER --- */
         header {
             background: var(--white);
             height: 70px;
@@ -112,6 +138,10 @@ $logo = $job['company_logo'] ?? '';
             color: var(--primary);
             font-weight: 800;
             font-size: 1.3rem;
+        }
+
+        .brand i {
+            font-size: 1.5rem;
         }
 
         .nav-menu {
@@ -149,661 +179,578 @@ $logo = $job['company_logo'] ?? '';
             border: none;
         }
 
-        /* --- PAGE LAYOUT --- */
-        .page-wrapper {
-            display: grid;
-            grid-template-columns: 280px 1fr;
-            gap: 25px;
+        /* --- 2. LAYOUT GRID --- */
+        .main-content {
             padding: 30px 0;
+        }
+
+        .job-grid-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            /* 66% Left, 33% Right */
+            gap: 25px;
             align-items: start;
         }
 
-        .page-title {
-            font-size: 1.4rem;
-            font-weight: 800;
-            color: var(--text-dark);
-            margin-bottom: 20px;
-            border-left: 4px solid var(--primary);
-            padding-left: 12px;
-        }
-
-        /* --- SIDEBAR --- */
-        .filter-sidebar {
-            background: var(--white);
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #eee;
-            position: sticky;
-            top: 90px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        /* Slim Scrollbar */
-        .filter-sidebar::-webkit-scrollbar {
-            width: 5px;
-        }
-
-        .filter-sidebar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
-        }
-
-        .filter-sidebar::-webkit-scrollbar-thumb {
-            background: #ccc;
-            border-radius: 4px;
-        }
-
-        .filter-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .filter-header h3 {
-            font-size: 1rem;
-            font-weight: 700;
-        }
-
-        .clear-btn {
-            color: var(--primary);
-            font-size: 0.85rem;
-            font-weight: 600;
-            background: none;
-            border: none;
-        }
-
-        .filter-group {
-            margin-bottom: 20px;
-            border-bottom: 1px solid #f5f5f5;
-            padding-bottom: 15px;
-        }
-
-        .filter-group:last-child {
-            border: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        .filter-label {
-            font-weight: 700;
-            margin-bottom: 10px;
-            display: block;
-            font-size: 0.9rem;
-        }
-
-        .filter-search {
-            position: relative;
-            margin-bottom: 10px;
-        }
-
-        .filter-search input {
-            width: 100%;
-            padding: 8px 10px 8px 30px;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            outline: none;
-            background: #fdfdfd;
-        }
-
-        .filter-search i {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #aaa;
-            font-size: 0.8rem;
-        }
-
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-            color: #555;
-            cursor: pointer;
-        }
-
-        .checkbox-item input {
-            accent-color: var(--primary);
-            width: 15px;
-            height: 15px;
-        }
-
-        .hidden-options {
-            display: none;
-        }
-
-        .show-more-btn {
-            color: var(--primary);
-            font-size: 0.85rem;
-            font-weight: 600;
-            background: none;
-            border: none;
-            padding: 0;
-            margin-top: 5px;
-            cursor: pointer;
-        }
-
-        /* --- JOB GRID (2 Columns) --- */
-        .job-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-
-        /* --- CARD DESIGN --- */
-        .job-card {
+        /* Common Card Style */
+        .content-card {
             background: var(--white);
             border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.03);
-            border: 1px solid #f0f0f0;
-            transition: 0.2s;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .job-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-            border-color: rgba(72, 62, 168, 0.15);
-        }
-
-        /* Header Grid */
-        .card-header-grid {
-            display: grid;
-            grid-template-columns: 80px 1fr;
-            gap: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eee;
             margin-bottom: 25px;
         }
 
-        /* Logo Section */
-        .logo-col {
+        /* --- 3. STANDARD HEADER (Simple) --- */
+        .job-header-card {
             display: flex;
-            flex-direction: column;
+            gap: 20px;
             align-items: center;
+            background: var(--white);
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eee;
+            margin-bottom: 25px;
+        }
+
+        /* Standard Logo (No Ring) */
+        .logo-box-standard {
+            width: 80px;
+            height: 80px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #eee;
+            border-radius: 50%;
+            padding: 5px;
+        }
+
+        .company-logo {
             width: 100%;
-            position: relative;
-        }
-
-        .logo-ring-container {
-            width: 60px;
-            height: 60px;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1;
-        }
-
-        .shiny-ring {
-            position: absolute;
-            inset: 0;
+            height: 100%;
             border-radius: 50%;
-            padding: 3px;
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
+            object-fit: contain;
         }
 
-        .ring-gold {
-            background: var(--gold);
-        }
-
-        .ring-silver {
-            background: var(--silver);
-        }
-
-        .ring-bronze {
-            background: var(--bronze);
-        }
-
-        .company-img {
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            object-fit: cover;
-            /* 🔥 better than contain */
-            border: 2px solid white;
-            background: #fff;
-        }
-
-
-
-        /* Job Details */
-        .job-info {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .job-title {
-            font-size: 1.1rem;
+        .job-title-info h1 {
+            font-size: 1.8rem;
             font-weight: 800;
             color: var(--text-dark);
-            margin-bottom: 2px;
+            margin-bottom: 5px;
             line-height: 1.2;
         }
 
-        .job-company {
-            font-size: 0.9rem;
-            color: #444;
+        .company-name {
+            font-size: 1.1rem;
+            color: var(--primary);
             font-weight: 600;
-            text-transform: uppercase;
-            margin-bottom: 4px;
+            display: block;
         }
 
-        .job-meta {
+        /* --- 4. SIDEBAR (Overview & Actions) --- */
+        .job-sidebar {
+            position: sticky;
+            top: 90px;
+        }
+
+        .overview-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Boxed Style for Stats */
+        .stat-box {
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: #fff;
+        }
+
+        .stat-icon {
+            font-size: 1.2rem;
+            color: var(--text-dark);
+        }
+
+        .stat-text {
+            font-weight: 400;
+            font-size: 1rem;
+            color: var(--text-dark);
+        }
+
+        .stat-label {
             font-size: 0.85rem;
             color: #666;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            margin-bottom: 2px;
+            font-weight: bolder;
+            margin-right: 5px;
         }
 
-        .job-meta i {
-            font-size: 0.85rem;
-            color: #888;
-            width: 14px;
-        }
-
-        .job-salary {
-            font-weight: 700;
-            font-size: 0.95rem;
-            color: var(--text-dark);
-            margin-top: 4px;
-        }
-
-        /* Tags */
-        .tags-row {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 15px;
-            margin-top: auto;
-        }
-
-        .tag-pill {
-            font-size: 0.75rem;
-            color: #555;
-            background: #fff;
-            border: 1px solid #ddd;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-weight: 500;
-        }
-
-        /* Footer */
-        .card-footer {
-            display: flex;
-            align-items: center;
-            margin-top: 10px;
-            padding-top: 12px;
-            border-top: 1px solid #f7f7f7;
-        }
-
-        .btn-arrow {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: 1px solid #3b82f6;
-            color: #3b82f6;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-            transition: 0.2s;
-            background: white;
-            margin-left: auto;
-            /* ✅ RIGHT SIDE */
-        }
-
-        .btn-arrow:hover {
-            background: #3b82f6;
+        .btn-apply-main {
+            width: 100%;
+            background: var(--primary);
             color: white;
+            padding: 15px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            border: none;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(72, 62, 168, 0.3);
+            transition: 0.2s;
         }
 
-        /* Error/No Results */
-        .no-results {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 60px 20px;
-            background: var(--white);
+        .btn-apply-main:hover {
+            background: #322b7a;
+            transform: translateY(-2px);
+        }
+
+        /* --- 5. MAIN CONTENT --- */
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        /* Requirements Box */
+        .req-box {
+            border: 1px solid var(--border-light);
             border-radius: 12px;
-            border: 1px solid #f0f0f0;
+            padding: 20px;
+            background: #fafafa;
+            margin-bottom: 30px;
         }
 
-        .no-results i {
-            font-size: 4rem;
-            color: #ddd;
+        .req-list {
+            list-style: none;
+            padding-left: 5px;
+        }
+
+        .req-list li {
+            position: relative;
+            padding-left: 15px;
+            margin-bottom: 8px;
+            color: #444;
+            font-size: 0.95rem;
+        }
+
+        .req-list li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--text-dark);
+            font-weight: bold;
+        }
+
+        /* Contact Details */
+        .contact-section {
+            margin-top: 20px;
+        }
+
+        .hr-name {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1.1rem;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .hr-address {
+            color: #444;
+            font-size: 0.95rem;
+            line-height: 1.5;
             margin-bottom: 20px;
         }
 
-        .no-results h3 {
-            font-size: 1.3rem;
-            color: var(--text-dark);
-            margin-bottom: 10px;
-        }
-
-        .no-results p {
-            color: var(--text-grey);
-            font-size: 0.95rem;
-        }
-
-        /* Pagination */
-        .pagination {
+        /* Action Buttons Row */
+        .contact-actions {
             display: flex;
-            justify-content: center;
-            align-items: center;
             gap: 10px;
-            margin-top: 30px;
-            padding: 20px;
+            margin-top: 15px;
         }
 
-        .pagination a,
-        .pagination span {
-            padding: 8px 15px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            color: var(--text-dark);
+        .btn-action-outline {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 15px;
+            border: 1px solid var(--primary);
+            border-radius: 30px;
+            background: white;
+            color: var(--primary);
             font-weight: 600;
-            transition: 0.2s;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            white-space: nowrap;
         }
 
-        .pagination a:hover {
-            background: var(--primary);
+        .btn-action-outline:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+        }
+
+        /* Share Box */
+        .share-box {
+            background: #f0f7ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+            border: 1px solid #d0e4f7;
+        }
+
+        .share-title {
+            font-weight: 700;
+            color: #1976d2;
+            margin-bottom: 5px;
+            font-size: 1rem;
+        }
+
+        .share-desc {
+            font-size: 0.9rem;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .btn-share {
+            background: #1565c0;
             color: white;
-            border-color: var(--primary);
-        }
-
-        .pagination .current {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        .pagination .disabled {
-            opacity: 0.4;
-            pointer-events: none;
-        }
-
-        /* Mobile FAB */
-        .mobile-filter-fab {
-            display: none;
-            position: fixed;
-            bottom: 30px;
-            right: 20px;
-            background: var(--primary);
-            color: white;
-            padding: 12px 25px;
+            border: none;
+            padding: 10px 25px;
             border-radius: 30px;
             font-weight: 600;
-            box-shadow: 0 5px 20px rgba(72, 62, 168, 0.4);
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            z-index: 2000;
-            border: none;
+            font-size: 0.9rem;
         }
 
+        .btn-share:hover {
+            background: #0d47a1;
+        }
+
+
+
         @media (max-width: 900px) {
+
             .nav-menu {
                 display: none;
             }
 
-            .page-wrapper {
-                grid-template-columns: 1fr;
-                padding: 20px 0;
-                gap: 0;
+            .main-content {
+                padding: 15px 0;
             }
 
-            .job-grid {
-                grid-template-columns: 1fr;
-                gap: 15px;
-            }
-
-            .mobile-filter-fab {
+            .job-grid-layout {
                 display: flex;
+                flex-direction: column;
             }
 
-            .job-card {
+            .job-sidebar {
+                order: -1;
+                width: 100%;
+                position: static;
+            }
+
+            /* HEADER */
+            .job-header-card {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 10px;
                 padding: 15px;
             }
 
-            /* 🔥 Sidebar as overlay */
-            .filter-sidebar {
+            .logo-box-standard {
+                width: 60px;
+                height: 60px;
+            }
+
+            .job-title-info h1 {
+                font-size: 1.3rem;
+            }
+
+            .company-name {
+                font-size: 0.95rem;
+            }
+
+            /* CARD */
+            .content-card {
+                padding: 15px;
+                border-radius: 12px;
+            }
+
+            .req-box {
+                padding: 15px;
+            }
+
+            /* STATS */
+            .overview-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .stat-box {
+                padding: 10px;
+                border-radius: 10px;
+            }
+
+            .stat-text {
+                font-size: 0.9rem;
+            }
+
+            /* CONTACT BUTTONS */
+            .contact-actions {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .btn-action-outline {
+                width: 100%;
+                font-size: 0.85rem;
+                padding: 10px;
+            }
+
+            /* ✅ FIXED STICKY BUTTON */
+            .btn-apply-main {
                 position: fixed;
-                top: 0;
-                left: -100%;
-                width: 80%;
-                height: 100%;
-                background: #fff;
+                bottom: 15px;
+                /* 🔥 IMPORTANT */
+                left: 10px;
+                right: 10px;
+                width: auto;
+
+                background: var(--primary);
+                color: white;
+                padding: 14px;
+                font-size: 1rem;
+                font-weight: 700;
+                border: none;
+
+                border-radius: 30px;
+                /* 🔥 modern look */
                 z-index: 9999;
-                transition: 0.3s;
-                overflow-y: auto;
+
+                box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+
+                padding-bottom: calc(14px + env(safe-area-inset-bottom));
             }
 
-            /* ✅ OPEN */
-            #filterToggle:checked~.filter-sidebar {
-                left: 0;
+            .footer-grid {
+                grid-template-columns: 1fr;
+                gap: 30px;
             }
+        }
 
+        /* ✅ IMPORTANT: keep this OUTSIDE media */
+        body {
+            padding-bottom: 90px;
         }
 
         @media (max-width: 900px) {
-            #filterToggle:checked~.container::before {
-                content: "";
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.4);
-                z-index: 9998;
+
+            footer,
+            .footer {
+                display: none !important;
             }
-
-            @media (max-width: 900px) {
-
-                footer,
-                .footer,
-                .footer-grid {
-                    display: none !important;
-                }
-            }
-
         }
-
-        
     </style>
+
 </head>
 
-<div class="container main-content">
+<body>
+    <?php // include "includes/preloader.php"; 
+    ?>
+    <?php // include "includes/header.php"; 
+    ?>
 
-    <div class="job-header-card">
+    <div class="container main-content">
 
-        <div class="logo-box-standard">
-            <img src="<?= $logo ?>" class="company-logo">
+        <div style="margin-bottom:20px;color:#666;font-size:.9rem;">
+            <a href="/">Home</a> › <?= safe($job['job_position']); ?>
         </div>
 
-        <div class="job-title-info">
-            <h1><?= $job['job_position'] ?? '' ?></h1>
-            <span class="company-name"><?= $job['company_name'] ?? '' ?></span>
-        </div>
+        <!-- HEADER -->
 
-    </div>
+        <div class="job-header-card">
 
-
-    <div class="job-grid-layout">
-
-        <!-- LEFT -->
-
-        <main>
-
-            <div class="content-card">
-
-                <h3 class="section-title">Job Requirements</h3>
-
-                <div class="req-box">
-                    <ul>
-
-                        <li><b>Gender:</b> <?= $job['gender'] ?? '' ?></li>
-
-                        <li><b>Education:</b> <?= $job['qualification'] ?? '' ?></li>
-
-                        <li><b>Experience:</b>
-                            <?= $job['experience_from'] ?? '' ?> -
-                            <?= $job['experience_to'] ?? '' ?>
-                        </li>
-
-                    </ul>
-                </div>
-
-
-                <h3 class="section-title">Contact Details</h3>
-
-                <div>
-
-                    <b><?= $job['contact_person'] ?? '' ?></b>
-
-                    <p><?= $job['interview_address'] ?? '' ?></p>
-
-                    <div class="contact-actions">
-
-                        <a href="tel:<?= $job['mobile_no'] ?? '' ?>" class="btn-action-outline">
-                            <i class="fas fa-phone-alt"></i> Call HR
-                        </a>
-
-                        <a target="_blank"
-                            href="https://wa.me/91<?= preg_replace('/\D/', '', $job['mobile_no'] ?? '') ?>"
-                            class="btn-action-outline">
-
-                            <i class="fas fa-comment-dots"></i> Chat
-
-                        </a>
-
-                        <a target="_blank"
-                            href="https://www.google.com/maps?q=<?= urlencode($job['interview_address'] ?? '') ?>"
-                            class="btn-action-outline">
-
-                            <i class="fas fa-map-marker-alt"></i> View Map
-
-                        </a>
-
-                    </div>
-
-
-                    <div class="share-box">
-
-                        <div class="share-title">Share This Job</div>
-
-                        <p class="share-desc">
-                            Know someone who might be interested? Let them know now.
-                        </p>
-
-                        <button class="btn-share">
-                            <i class="fas fa-paper-plane"></i> Share Now
-                        </button>
-
-                    </div>
-
-                </div>
+            <div class="logo-box-standard">
+                <!--<img src="<?= $logo ?>" class="company-logo">-->
+                <img src="<?= $job['company_logo']; ?>" class="company-logo">
 
             </div>
 
-        </main>
-
-
-
-        <!-- RIGHT -->
-
-        <aside class="job-sidebar">
-
-            <div class="content-card">
-
-                <div class="overview-grid">
-
-                    <div class="stat-box">
-
-                        <i class="fas fa-map-marker-alt stat-icon"></i>
-
-                        <div>
-
-                            <span class="stat-label"><b>Location:</b></span>
-
-                            <span class="stat-text">
-                                <?= $job['city'] ?? '' ?>, <?= $job['locality'] ?? '' ?>
-                            </span>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="stat-box">
-
-                        <i class="fas fa-rupee-sign stat-icon"></i>
-
-                        <div>
-
-                            <span class="stat-label">Salary:</span>
-
-                            <span class="stat-text">
-
-                                ₹<?= $job['salary_from'] ?? '' ?> –
-                                ₹<?= $job['salary_to'] ?? '' ?>
-
-                            </span>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="stat-box">
-
-                        <i class="fas fa-briefcase stat-icon"></i>
-
-                        <div>
-
-                            <span class="stat-label">Experience:</span>
-
-                            <span class="stat-text">
-
-                                <?= $job['experience_from'] ?? '' ?> –
-                                <?= $job['experience_to'] ?? '' ?>
-
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <button class="btn-apply-main">
-
-                    Apply Now
-
-                </button>
-
-
-                <div style="margin-top:10px;font-size:12px;color:#888;text-align:center;">
-
-                    100% Safe & Verified Job
-
-                </div>
-
+            <div class="job-title-info">
+                <h1><?= safe($job['job_position']); ?></h1>
+                <span class="company-name"><?= safe($job['company_name']); ?></span>
             </div>
 
-        </aside>
+        </div>
 
+        <div class="job-grid-layout">
+
+            <!-- LEFT -->
+
+            <main>
+
+                <div class="content-card">
+
+                    <h3 class="section-title">Job Requirements</h3>
+
+                    <div class="req-box">
+                        <ul>
+                            <li>Gender: <?= safe($job['gender']); ?></li>
+                            <li>Education: <?= safe($job['qualification']); ?></li>
+                        </ul>
+                    </div>
+
+                    <h3 class="section-title">Contact Details</h3>
+
+                    <div>
+
+                        <b><?= safe($job['contact_person']); ?></b>
+                        <p><?= safe($job['interview_address']); ?></p>
+
+                        <div class="contact-actions">
+
+                            <?php // if (!empty($_SESSION['is_logged_in'])): 
+                            ?>
+
+                            <!-- CALL -->
+                            <a href="tel:<?= safe($job['mobile_no']); ?>"
+                                class="btn-action-outline"
+                                onclick="logAction(1)">
+                                <i class="fas fa-phone-alt"></i> Call HR
+                            </a>
+
+                            <!-- WHATSAPP -->
+                            <a target="_blank"
+                                href="https://wa.me/91<?= preg_replace('/\D/', '', $job['mobile_no']); ?>"
+                                class="btn-action-outline"
+                                onclick="logAction(2)">
+                                <i class="fas fa-comment-dots"></i> Chat
+                            </a>
+
+                            <!-- MAP -->
+                            <a target="_blank"
+                                href="https://www.google.com/maps?q=<?= urlencode($job['interview_address']); ?>"
+                                class="btn-action-outline"
+                                onclick="logAction(3)">
+                                <i class="fas fa-map-marker-alt" style="color:#e53935;"></i> View Map
+                            </a>
+
+
+                        </div>
+
+                        <div class="share-box">
+                            <div class="share-title">Share This Job</div>
+                            <p class="share-desc">Know someone who might be interested? Let them know now.</p>
+                            <button class="btn-share"><i class="fas fa-paper-plane"></i> Share Now</button>
+                        </div>
+                    </div>
+
+            </main>
+
+            <!-- RIGHT -->
+
+            <aside class="job-sidebar">
+
+                <div class="content-card">
+
+                    <!-- REQUIRED WRAPPER -->
+                    <div class="overview-grid">
+
+                        <div class="stat-box">
+                            <i class="fas fa-map-marker-alt stat-icon" style="color:#e53935;"></i>
+                            <div>
+                                <span class="stat-label"><b>Location:</b></span>
+                                <span class="stat-text"><?= safe($job['city']); ?></span>
+                            </div>
+                        </div>
+
+                        <div class="stat-box">
+                            <i class="fas fa-rupee-sign stat-icon" style="color:#fbc02d;"></i>
+                            <div>
+                                <span class="stat-label">Salary:</span>
+                                <span class="stat-text">
+                                    ₹<?= safe($job['salary_from']); ?> – <?= safe($job['salary_to']); ?>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="stat-box">
+                            <i class="fas fa-briefcase stat-icon" style="color:#795548;"></i>
+                            <div>
+                                <span class="stat-label">Experience:</span>
+                                <span class="stat-text">
+                                    <?= safe($job['experience_from']); ?> – <?= safe($job['experience_to']); ?>
+                                </span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <?php // if (empty($_SESSION['is_logged_in'])): 
+                    ?>
+
+                    <!-- <a href="/login.php?redirect=<?= urlencode($_SERVER['REQUEST_URI']); ?>" 
+   class="btn-apply-main"
+   style="display:block;text-align:center;">
+   Apply Now
+</a> -->
+
+                    <?php // else: 
+                    ?>
+
+                    <?php //if($alreadyApplied): 
+                    ?>
+
+                    <!-- <button
+class="btn-apply-main"
+disabled
+style="display:block;text-align:center;cursor:not-allowed;background:#bdbdbd;">
+Applied
+</button> -->
+
+                    <?php // else: 
+                    ?>
+
+                    <button
+                        class="btn-apply-main"
+                        id="applyBtn"
+                        data-job="<?= $job['id']; ?>"
+                        data-type="2"
+                        style="display:block;text-align:center;">
+                        Apply Now
+                    </button>
+
+                    <?php // endif; 
+                    ?>
+
+                    <?php //  endif; 
+                    ?>
+                </div>
+
+            </aside>
+
+
+
+
+        </div>
     </div>
 
-</div>
+
+</body>
+
+</html>

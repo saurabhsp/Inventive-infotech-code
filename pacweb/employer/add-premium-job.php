@@ -3,13 +3,13 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
 
-// if (!isset($_SESSION['user'])) {
-//     header("Location: ../login.php");
-//     exit();
-// }
+if (!isset($_SESSION['user'])) {
+    header("Location: ../login.php");
+    exit();
+}
 
-// $user = $_SESSION['user'];
-$user = 741;
+$user = $_SESSION['user'] ?? null;
+$userid = $user['id'] ?? 0;
 
 
 
@@ -520,6 +520,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Post Premium Job | Pacific iConnect</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
     <style>
         :root {
             /* Pacific iConnect Theme Colors */
@@ -1557,20 +1558,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 /* Slightly taller for touch */
             }
         }
-
-        input[readonly],
-textarea[readonly] {
-    background-color: #f1f3f5;
-    color: #555;
-    cursor: not-allowed;
-}
     </style>
 </head>
 
 <body>
 
 
-    <?php // include "includes/header.php"; 
+   <?php include "includes/preloader.php"; ?>
+    <?php  include "includes/header.php"; 
     ?>
     <?php if (!empty($_SESSION['success_message'])): ?>
         <div class="modal-full-overlay active" id="successModal">
@@ -2098,6 +2093,7 @@ textarea[readonly] {
     </div>
 
     <script>
+        window.onload = () => document.getElementById("global-preloader")?.remove();
         // Generic Toggle Logic for button groups
         function toggleGroup(clickedBtn, groupId) {
             const container = document.getElementById(groupId);

@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Post Premium Job | Pacific iConnect</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            --primary: #483EA8;
+            --primary-light: #eceaf9;
+            --primary-dark: #322b7a;
+            --blue-btn: #2563eb;
+            --blue-hover: #1d4ed8;
+            --success-green: #10b981;
+            --danger-red: #e53935;
+            --text-dark: #1a1a1a;
+            --text-muted: #64748b;
+            --border-light: #cbd5e1;
+            --bg-body: #f8fafc;
+            --white: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-dark);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        a { text-decoration: none; transition: 0.3s; color: inherit; }
+        button { cursor: pointer; outline: none; border: none; font-family: inherit; }
+
+        header {
+            background: var(--white);
+            height: 70px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+        }
+
+        .header-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-group { display: flex; align-items: center; gap: 20px; }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary);
+            font-weight: 800;
+            font-size: 1.3rem;
+        }
+
+        .desktop-nav { display: flex; gap: 20px; align-items: center; }
+        .nav-link {
+            font-weight: 600;
+            color: #555;
+            font-size: 1rem;
+            padding: 5px 10px;
+        }
+        .nav-link:hover, .nav-link.active { color: var(--primary); }
+
+        .header-actions { display: flex; align-items: center; gap: 15px; }
+        .nav-action-icon {
+            position: relative;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            transition: 0.2s;
+        }
+
+        .noti-badge {
+            position: absolute;
+            top: -5px;
+            right: -8px;
+            background: var(--danger-red);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 10px;
+            border: 2px solid white;
+            line-height: 1.1;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 15px 5px 5px;
+            background: var(--primary-light);
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .user-profile:hover { background: #e0dcf5; }
+
+        .user-name {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+        }
+
+        .form-card {
+            background: var(--white);
+            width: 100%;
+            max-width: 1200px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+            border: 1px solid #e2e8f0;
+            padding: 20px 40px 30px;
+        }
+
+        .desktop-page-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color: var(--text-dark);
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .desktop-page-title .premium-star { color: #fbbf24; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px 30px;
+            align-items: start;
+        }
+
+        .full-width { grid-column: 1 / -1; }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--text-dark);
+            margin-bottom: 6px;
+        }
+
+        .form-row { display: flex; gap: 15px; }
+        .form-col { flex: 1; }
+
+        .form-control {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            background-color: var(--white);
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        .form-control:focus {
+            border-color: var(--blue-btn);
+            box-shadow: 0 0 0 3px #eff6ff;
+        }
+
+        select.form-control {
+            appearance: auto;
+            cursor: pointer;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+            line-height: 1.5;
+        }
+
+        .map-input-container {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .map-input-container .form-control {
+            padding-right: 40px;
+            cursor: pointer;
+            background-color: #f8fafc;
+        }
+
+        .map-input-container .map-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--danger-red);
+            font-size: 1.2rem;
+            pointer-events: none;
+        }
+
+        .toggle-container {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-toggle {
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background: #f8fafc;
+            color: var(--text-muted);
+            border: 1px solid var(--border-light);
+            transition: all 0.2s;
+            flex: 1;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .btn-toggle.active {
+            background: var(--blue-btn);
+            color: var(--white);
+            border-color: var(--blue-btn);
+        }
+
+        .deadline-date-wrapper {
+            display: none;
+            margin-top: 5px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .deadline-date-wrapper.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .submit-container {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .btn-submit {
+            width: auto;
+            min-width: 250px;
+            background: var(--blue-btn);
+            color: var(--white);
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            transition: background 0.2s;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+            display: inline-block;
+        }
+
+        .btn-submit:hover { background: var(--blue-hover); }
+
+        .modal-full-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-full-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-map-card {
+            background: var(--white);
+            width: 100%;
+            max-width: 700px;
+            height: 90vh;
+            max-height: 850px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: visible;
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal-full-overlay.active .modal-map-card {
+            transform: translateY(0);
+        }
+
+        .map-header {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-light);
+            background: #fff;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .map-header-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            flex: 1;
+            text-align: center;
+        }
+
+        .map-close-btn {
+            background: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text-dark);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .map-close-btn:hover {
+            background: #f1f5f9;
+        }
+
+        .map-search-bar {
+            padding: 15px;
+            position: relative;
+            z-index: 30;
+            background: var(--white);
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .map-search-input {
+            width: 100%;
+            padding: 12px 15px 12px 40px;
+            border-radius: 30px;
+            border: 1px solid var(--border-light);
+            font-size: 1rem;
+            outline: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .map-search-icon {
+            position: absolute;
+            left: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .search-results {
+            position: absolute;
+            top: calc(100% - 8px);
+            left: 15px;
+            right: 15px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.14);
+            max-height: 260px;
+            overflow-y: auto;
+            display: none;
+            z-index: 50;
+        }
+
+        .search-results.active {
+            display: block;
+        }
+
+        .search-result-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-result-item:hover {
+            background: #f8fafc;
+        }
+
+        .search-result-icon {
+            color: var(--danger-red);
+            font-size: 1rem;
+            margin-top: 2px;
+        }
+
+        .search-result-text {
+            flex: 1;
+        }
+
+        .search-result-main {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            line-height: 1.3;
+        }
+
+        .search-result-sub {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+            line-height: 1.3;
+        }
+
+        .map-view-area {
+            flex: 1;
+            position: relative;
+            background: #e2e8f0;
+            min-height: 420px;
+            z-index: 1;
+        }
+
+        #googleMap {
+            width: 100%;
+            height: 100%;
+            min-height: 420px;
+        }
+
+        .map-footer {
+            padding: 20px;
+            background: var(--white);
+            border-top: 1px solid var(--border-light);
+            border-radius: 0 0 12px 12px;
+        }
+
+        .selected-address-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+
+        .selected-address-text {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+            line-height: 1.4;
+            min-height: 44px;
+        }
+
+        .selected-coords {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+        }
+
+        .btn-confirm-loc {
+            width: 100%;
+            background: var(--blue-btn);
+            color: var(--white);
+            padding: 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            transition: 0.2s;
+        }
+
+        .btn-confirm-loc:hover { background: var(--blue-hover); }
+
+        .bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: white;
+            height: 70px;
+            border-top: 1px solid #eee;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+            padding-bottom: 5px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+        }
+
+        .nav-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #888;
+            font-size: 0.75rem;
+            gap: 5px;
+            font-weight: 600;
+        }
+
+        .nav-icon i { font-size: 1.3rem; }
+        .nav-icon.active { color: var(--primary); }
+        .nav-icon.active .icon-wrap {
+            background: var(--primary-light);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+
+        .mobile-header {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            height: 60px;
+            background: white;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid #eee;
+        }
+
+        .mobile-header-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .mobile-back {
+            position: absolute;
+            left: 20px;
+            font-size: 1.2rem;
+            color: #333;
+            cursor: pointer;
+        }
+
+        @media (max-width: 900px) {
+            header { display: none; }
+            .mobile-header { display: flex; }
+            .bottom-nav { display: flex; }
+            body { padding-bottom: 80px; background: var(--white); }
+
+            .main-wrapper { padding: 15px 10px; }
+            .desktop-page-title { display: none; }
+
+            .form-card {
+                padding: 0;
+                border: none;
+                box-shadow: none;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .btn-submit { width: 100%; }
+
+            .modal-map-card {
+                height: 100vh;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+
+            .map-header {
+                border-radius: 0;
+            }
+
+            .map-footer {
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-container">
+            <div class="brand-group">
+                <div class="brand">
+                    <i class="fas fa-user-tie"></i>
+                    <span>PACIFIC iCONNECT</span>
+                </div>
+            </div>
+            <nav class="desktop-nav">
+                <a href="#" class="nav-link">Find Jobs</a>
+                <a href="#" class="nav-link">Companies</a>
+                <a href="#" class="nav-link">For Employers</a>
+            </nav>
+            <div class="header-actions">
+                <div class="nav-action-icon">
+                    <i class="fas fa-bell"></i>
+                    <span class="noti-badge">3</span>
+                </div>
+                <div class="user-profile">
+                    <div class="user-avatar">A</div>
+                    <span class="user-name">Ashwin Jawale <i class="fas fa-chevron-down" style="font-size:0.75rem;"></i></span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="mobile-header">
+        <i class="fas fa-arrow-left mobile-back"></i>
+        <span class="mobile-header-title">Post Premium Job</span>
+    </div>
+
+    <main class="main-wrapper">
+        <div class="form-card">
+            <h1 class="desktop-page-title">
+                <i class="fas fa-star premium-star"></i> Post Premium Job
+            </h1>
+
+            <form action="#" method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Company Name</label>
+                        <input type="text" class="form-control" value="INVENTIVE INFOTECH">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Job Position</label>
+                        <select class="form-control">
+                            <option>Try Software Developer</option>
+                            <option>Frontend Developer</option>
+                            <option>Backend Developer</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">District/ Tehsil/ City</label>
+                        <input type="text" class="form-control" placeholder="Choose District/ Taluka/ City">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Area/ Locality/ Village</label>
+                        <input type="text" class="form-control" placeholder="Choose Area/ Locality/ Village">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Number of Openings</label>
+                        <input type="text" class="form-control" placeholder="Eg :- 3, 5, 10">
+                    </div>
+
+                    <div class="form-group" style="display:flex; flex-direction:column; gap:15px;">
+                        <div>
+                            <label class="form-label">Does this Job require Fieldwork?</label>
+                            <div class="toggle-container" id="fieldworkToggle">
+                                <button type="button" class="btn-toggle active" onclick="toggleGroup(this, 'fieldworkToggle')">Yes</button>
+                                <button type="button" class="btn-toggle" onclick="toggleGroup(this, 'fieldworkToggle')">No</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Job Type</label>
+                        <div class="toggle-container" id="jobTypeToggle">
+                            <button type="button" class="btn-toggle active" onclick="toggleGroup(this, 'jobTypeToggle')">Full-time</button>
+                            <button type="button" class="btn-toggle" onclick="toggleGroup(this, 'jobTypeToggle')">Part-time</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Work Model</label>
+                        <div class="toggle-container" id="workModelToggle">
+                            <button type="button" class="btn-toggle active" onclick="toggleGroup(this, 'workModelToggle')">Work from Office</button>
+                            <button type="button" class="btn-toggle" onclick="toggleGroup(this, 'workModelToggle')">Work from Home</button>
+                            <button type="button" class="btn-toggle" onclick="toggleGroup(this, 'workModelToggle')">Hybrid</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Gender</label>
+                        <div class="toggle-container" id="genderToggle">
+                            <button type="button" class="btn-toggle" onclick="toggleGroup(this, 'genderToggle')">Male</button>
+                            <button type="button" class="btn-toggle" onclick="toggleGroup(this, 'genderToggle')">Female</button>
+                            <button type="button" class="btn-toggle active" onclick="toggleGroup(this, 'genderToggle')">Male / Female</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Basic Qualification</label>
+                        <select class="form-control">
+                            <option>Choose Basic Qualification</option>
+                            <option>10th Pass</option>
+                            <option>12th Pass</option>
+                            <option>Graduate</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Experience</label>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <select class="form-control">
+                                    <option>From</option>
+                                    <option>0 Yrs</option>
+                                    <option>1 Yr</option>
+                                    <option>2 Yrs</option>
+                                </select>
+                            </div>
+                            <div class="form-col">
+                                <select class="form-control">
+                                    <option>To</option>
+                                    <option>1 Yr</option>
+                                    <option>2 Yrs</option>
+                                    <option>3 Yrs</option>
+                                    <option>5 Yrs</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Monthly Salary Range</label>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <select class="form-control">
+                                    <option>From ₹</option>
+                                    <option>₹15,000</option>
+                                    <option>₹20,000</option>
+                                    <option>₹25,000</option>
+                                </select>
+                            </div>
+                            <div class="form-col">
+                                <select class="form-control">
+                                    <option>To ₹</option>
+                                    <option>₹25,000</option>
+                                    <option>₹30,000</option>
+                                    <option>₹40,000</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Skills & Languages</label>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <select class="form-control">
+                                    <option>Choose Skill</option>
+                                </select>
+                            </div>
+                            <div class="form-col">
+                                <select class="form-control">
+                                    <option>Choose Languages</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Contact Details</label>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <input type="text" class="form-control" value="Suhel" placeholder="HR Name">
+                            </div>
+                            <div class="form-col">
+                                <input type="tel" class="form-control" value="9823489786" placeholder="Mobile No">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Interview Location</label>
+                        <div class="map-input-container" onclick="openMapModal()">
+                            <input type="text" class="form-control" id="mainLocationInput" placeholder="Choose map location" readonly>
+                            <i class="fas fa-map-marker-alt map-icon"></i>
+                        </div>
+
+                        <input type="hidden" id="interview_lat" name="interview_lat">
+                        <input type="hidden" id="interview_lng" name="interview_lng">
+                        <input type="hidden" id="interview_full_address" name="interview_full_address">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Interview Address</label>
+                        <textarea class="form-control" id="mainAddressTextarea" placeholder="Address will auto-fill based on map location..."></textarea>
+                    </div>
+
+                    <div class="form-group full-width" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:30px;">
+                        <div>
+                            <label class="form-label">Does this Job have a deadline?</label>
+                            <div class="toggle-container" id="deadlineToggle">
+                                <button type="button" class="btn-toggle active" onclick="handleDeadlineToggle(true, this)">Yes</button>
+                                <button type="button" class="btn-toggle" onclick="handleDeadlineToggle(false, this)">No</button>
+                            </div>
+                            <div class="deadline-date-wrapper active" id="deadlineDateGroup">
+                                <input type="date" class="form-control" placeholder="Select Date">
+                            </div>
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; height:100%;">
+                            <label class="form-label">Job Description : (Optional)</label>
+                            <textarea class="form-control" placeholder="Enter Job Description" style="flex:1; min-height:80px;"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="submit-container">
+                    <button type="submit" class="btn-submit">Submit</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <div class="bottom-nav">
+        <a href="#" class="nav-icon"><div class="icon-wrap"><i class="fas fa-home"></i></div>Home</a>
+        <a href="#" class="nav-icon active"><div class="icon-wrap"><i class="fas fa-plus-square"></i></div>Post Jobs</a>
+        <a href="#" class="nav-icon"><div class="icon-wrap"><i class="fas fa-file-alt"></i></div>Applications</a>
+        <a href="#" class="nav-icon"><div class="icon-wrap"><i class="fas fa-user"></i></div>Profile</a>
+    </div>
+
+    <div class="modal-full-overlay" id="mapModal">
+        <div class="modal-map-card">
+            <div class="map-header">
+                <button class="map-close-btn" onclick="closeMapModal()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="map-header-title">Confirm Interview Location</div>
+                <div style="width:40px;"></div>
+            </div>
+
+            <div class="map-search-bar">
+                <i class="fas fa-search map-search-icon"></i>
+                <input
+                    type="text"
+                    class="map-search-input"
+                    id="mapSearchInput"
+                    placeholder="Search locality, area, village, city..."
+                    autocomplete="off"
+                />
+                <div id="searchResults" class="search-results"></div>
+            </div>
+
+            <div class="map-view-area">
+                <div id="googleMap"></div>
+            </div>
+
+            <div class="map-footer">
+                <div class="selected-address-label">Selected Address:</div>
+                <div class="selected-address-text" id="modalAddressText">Move marker or search location</div>
+                <div class="selected-coords" id="modalCoordsText">Lat: -, Lng: -</div>
+                <button class="btn-confirm-loc" onclick="confirmLocation()">Confirm Location</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleGroup(clickedBtn, groupId) {
+            const container = document.getElementById(groupId);
+            const buttons = container.querySelectorAll('.btn-toggle');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            clickedBtn.classList.add('active');
+        }
+
+        function handleDeadlineToggle(isYes, clickedBtn) {
+            toggleGroup(clickedBtn, 'deadlineToggle');
+            const dateGroup = document.getElementById('deadlineDateGroup');
+            if (isYes) {
+                dateGroup.classList.add('active');
+            } else {
+                dateGroup.classList.remove('active');
+            }
+        }
+
+        let map;
+        let marker;
+        let geocoder;
+        let placesService;
+        let autocompleteService;
+        let radiusCircle;
+        let debounceTimer = null;
+
+        const defaultLocation = { lat: 17.680463, lng: 74.018261 };
+        const radiusMeters = 500;
+
+        const mapModal = document.getElementById('mapModal');
+        const searchInput = document.getElementById('mapSearchInput');
+        const searchResults = document.getElementById('searchResults');
+        const modalAddressText = document.getElementById('modalAddressText');
+        const modalCoordsText = document.getElementById('modalCoordsText');
+
+        const mainLocationInput = document.getElementById('mainLocationInput');
+        const mainAddressTextarea = document.getElementById('mainAddressTextarea');
+
+        const latInput = document.getElementById('interview_lat');
+        const lngInput = document.getElementById('interview_lng');
+        const fullAddressInput = document.getElementById('interview_full_address');
+
+        function initCityAutocomplete() {
+            geocoder = new google.maps.Geocoder();
+
+            map = new google.maps.Map(document.getElementById("googleMap"), {
+                center: defaultLocation,
+                zoom: 15,
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false,
+                clickableIcons: false
+            });
+
+            marker = new google.maps.Marker({
+                position: defaultLocation,
+                map: map,
+                draggable: true,
+                animation: google.maps.Animation.DROP
+            });
+
+            radiusCircle = new google.maps.Circle({
+                map: map,
+                center: defaultLocation,
+                radius: radiusMeters,
+                fillColor: "#60A5FA",
+                fillOpacity: 0.20,
+                strokeColor: "#3B82F6",
+                strokeOpacity: 0.65,
+                strokeWeight: 2
+            });
+
+            placesService = new google.maps.places.PlacesService(map);
+            autocompleteService = new google.maps.places.AutocompleteService();
+
+            marker.addListener("dragend", function(event) {
+                const lat = event.latLng.lat();
+                const lng = event.latLng.lng();
+                setMarkerAndMap(lat, lng);
+                reverseGeocode(lat, lng);
+            });
+
+            map.addListener("click", function(event) {
+                const lat = event.latLng.lat();
+                const lng = event.latLng.lng();
+                setMarkerAndMap(lat, lng);
+                reverseGeocode(lat, lng);
+            });
+
+            searchInput.addEventListener("input", function() {
+                const query = this.value.trim();
+
+                clearTimeout(debounceTimer);
+
+                if (query.length < 2) {
+                    clearSearchResults();
+                    return;
+                }
+
+                debounceTimer = setTimeout(function() {
+                    fetchPredictions(query);
+                }, 300);
+            });
+
+            searchInput.addEventListener("focus", function() {
+                const query = this.value.trim();
+                if (query.length >= 2) {
+                    fetchPredictions(query);
+                }
+            });
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const currentLat = position.coords.latitude;
+                        const currentLng = position.coords.longitude;
+                        setMarkerAndMap(currentLat, currentLng);
+                        reverseGeocode(currentLat, currentLng);
+                    },
+                    function() {
+                        setMarkerAndMap(defaultLocation.lat, defaultLocation.lng);
+                        reverseGeocode(defaultLocation.lat, defaultLocation.lng);
+                    }
+                );
+            } else {
+                setMarkerAndMap(defaultLocation.lat, defaultLocation.lng);
+                reverseGeocode(defaultLocation.lat, defaultLocation.lng);
+            }
+        }
+
+        function fetchPredictions(query) {
+            autocompleteService.getPlacePredictions(
+                {
+                    input: query,
+                    componentRestrictions: { country: "in" },
+                    types: ["geocode"]
+                },
+                function(predictions, status) {
+                    if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions || !predictions.length) {
+                        clearSearchResults();
+                        return;
+                    }
+                    renderPredictions(predictions);
+                }
+            );
+        }
+
+        function renderPredictions(predictions) {
+            let html = "";
+
+            predictions.forEach(function(item) {
+                const mainText = item.structured_formatting && item.structured_formatting.main_text
+                    ? item.structured_formatting.main_text
+                    : item.description;
+
+                const secondaryText = item.structured_formatting && item.structured_formatting.secondary_text
+                    ? item.structured_formatting.secondary_text
+                    : "";
+
+                html += `
+                    <div class="search-result-item" onclick="selectPrediction('${item.place_id.replace(/'/g, "\\'")}')">
+                        <div class="search-result-icon"><i class="fas fa-map-marker-alt"></i></div>
+                        <div class="search-result-text">
+                            <div class="search-result-main">${escapeHtml(mainText)}</div>
+                            <div class="search-result-sub">${escapeHtml(secondaryText || item.description)}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            searchResults.innerHTML = html;
+            searchResults.classList.add("active");
+        }
+
+        function selectPrediction(placeId) {
+            placesService.getDetails(
+                {
+                    placeId: placeId,
+                    fields: ["name", "formatted_address", "geometry"]
+                },
+                function(place, status) {
+                    if (status !== google.maps.places.PlacesServiceStatus.OK || !place || !place.geometry || !place.geometry.location) {
+                        alert("Location details not found.");
+                        return;
+                    }
+
+                    const lat = place.geometry.location.lat();
+                    const lng = place.geometry.location.lng();
+                    const address = place.formatted_address || place.name || "";
+
+                    searchInput.value = address;
+                    clearSearchResults();
+                    setMarkerAndMap(lat, lng, address);
+                    map.setZoom(16);
+                }
+            );
+        }
+
+        function clearSearchResults() {
+            searchResults.innerHTML = "";
+            searchResults.classList.remove("active");
+        }
+
+        function openMapModal() {
+            mapModal.classList.add('active');
+
+            setTimeout(() => {
+                if (map) {
+                    google.maps.event.trigger(map, "resize");
+
+                    let lat = parseFloat(latInput.value);
+                    let lng = parseFloat(lngInput.value);
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        const savedLocation = { lat: lat, lng: lng };
+                        map.setCenter(savedLocation);
+                        marker.setPosition(savedLocation);
+                        radiusCircle.setCenter(savedLocation);
+                        updateCoordsText(lat, lng);
+
+                        if (fullAddressInput.value) {
+                            modalAddressText.innerText = fullAddressInput.value;
+                        } else {
+                            reverseGeocode(lat, lng);
+                        }
+                    } else {
+                        map.setCenter(defaultLocation);
+                        marker.setPosition(defaultLocation);
+                        radiusCircle.setCenter(defaultLocation);
+                        updateCoordsText(defaultLocation.lat, defaultLocation.lng);
+                    }
+                }
+            }, 300);
+        }
+
+        function closeMapModal() {
+            mapModal.classList.remove('active');
+            clearSearchResults();
+        }
+
+        function setMarkerAndMap(lat, lng, address = "") {
+            const position = { lat: lat, lng: lng };
+
+            map.setCenter(position);
+            marker.setPosition(position);
+            radiusCircle.setCenter(position);
+
+            setLatLngFields(lat, lng);
+            updateCoordsText(lat, lng);
+
+            if (address) {
+                updateAddressUI(address, lat, lng);
+            }
+        }
+
+        function setLatLngFields(lat, lng) {
+            latInput.value = lat;
+            lngInput.value = lng;
+        }
+
+        function updateCoordsText(lat, lng) {
+            modalCoordsText.innerText = "Lat: " + Number(lat).toFixed(6) + ", Lng: " + Number(lng).toFixed(6);
+        }
+
+        function reverseGeocode(lat, lng) {
+            geocoder.geocode({ location: { lat: lat, lng: lng } }, function(results, status) {
+                if (status === "OK" && results && results[0]) {
+                    const address = results[0].formatted_address;
+                    updateAddressUI(address, lat, lng);
+                } else {
+                    modalAddressText.innerText = "Address not found";
+                    fullAddressInput.value = "";
+                }
+            });
+        }
+
+        function updateAddressUI(address, lat, lng) {
+            modalAddressText.innerText = address;
+            fullAddressInput.value = address;
+            setLatLngFields(lat, lng);
+            updateCoordsText(lat, lng);
+        }
+
+        function confirmLocation() {
+            const finalAddress = modalAddressText.innerText;
+            const lat = latInput.value;
+            const lng = lngInput.value;
+
+            mainLocationInput.value = finalAddress;
+            mainAddressTextarea.value = finalAddress;
+            fullAddressInput.value = finalAddress;
+
+            console.log("Selected Location:", {
+                lat: lat,
+                lng: lng,
+                address: finalAddress
+            });
+
+            closeMapModal();
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        document.addEventListener("click", function(e) {
+            if (!searchResults.contains(e.target) && e.target !== searchInput) {
+                clearSearchResults();
+            }
+
+            if (e.target === mapModal) {
+                closeMapModal();
+            }
+        });
+    </script>
+
+    <!-- Replace YOUR_API_KEY with your real key -->
+<script
+src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCokcdTmQxRaopu75ourz-nNmZNie1wQkY&libraries=places&callback=initCityAutocomplete"
+async defer></script>
+</body>
+</html>

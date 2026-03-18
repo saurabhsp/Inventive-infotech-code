@@ -3,18 +3,17 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
 
-$userid = 741;
 
 
-// $user = $_SESSION['user'];
+$user = $_SESSION['user'];
 
-// $userid = $user['id'];
+$userid = $user['id'];
 
 
 /* ================= USER SUBSCRIPTION CHECK ================= */
 
-// $subscription_api = "https://pacweb.inv11.in/webservices/checkUsersubscription.php";
-$subscription_api = "https://pacificconnect2.0.inv51.in/webservices/checkUsersubscription.php";
+$subscription_api = "https://pacweb.inv11.in/web_api/checkUsersubscription.php";
+// $subscription_api = "https://pacificconnect2.0.inv51.in/webservices/checkUsersubscription.php";
 
 $subscription_post = [
     "user_id" => $userid
@@ -39,13 +38,14 @@ $subscription_response = curl_exec($sub_ch);
 if ($subscription_response === false) {
     echo "Curl Error: " . curl_error($sub_ch);
     exit;
-    }
-    // print_r($subscription_response);
-    // exit;
+}
+// print_r($subscription_response);
+// exit;
 
 curl_close($sub_ch);
 
 $subscription_data = json_decode($subscription_response, true);
+// print_r($subscription_data);
 
 if (!$subscription_data) {
     echo "Subscription JSON Decode Failed";
@@ -58,16 +58,16 @@ $subscription_status = $subscription_data['subscription_status'] ?? '';
 $premium_remaining = $subscription_data['walkin_remaining'] ?? 0;
 $premium_posted = $subscription_data['walkin_posted'] ?? 0;
 $premium_limit = $subscription_data['walkin_limit'] ?? 0;
-$premium_upgrade_dialog = $subscription_data['walkin_upgrade_dialog'] ;
-$premium_limit_dialog = $subscription_data['walkin_limit_dialog'] ;
+$premium_upgrade_dialog = $subscription_data['walkin_upgrade_dialog'];
+$premium_limit_dialog = $subscription_data['walkin_limit_dialog'];
 
 $standard_remaining = $subscription_data['vacancy_remaining'] ?? 0;
 $standard_posted = $subscription_data['vacancy_posted'] ?? 0;
 $standard_limit = $subscription_data['vacancy_limit'] ?? 0;
-$standard_upgrade_dialog = $subscription_data['vacancy_upgrade_dialog'] ; 
-$standard_limit_dialog = $subscription_data['vacancy_limit_dialog'] ; 
+$standard_upgrade_dialog = $subscription_data['vacancy_upgrade_dialog'];
+$standard_limit_dialog = $subscription_data['vacancy_limit_dialog'];
 
-$jobseeker_upgrade_cv_dialog = $subscription_data['jobseeker_upgrade_cv_dialog'] ; 
+$jobseeker_upgrade_cv_dialog = $subscription_data['jobseeker_upgrade_cv_dialog'];
 
 
 ?>
@@ -540,33 +540,9 @@ $jobseeker_upgrade_cv_dialog = $subscription_data['jobseeker_upgrade_cv_dialog']
 </head>
 
 <body>
+    <?php include "includes/preloader.php"; ?>
+    <?php include "includes/header.php"; ?>
 
-    <header>
-        <div class="header-container">
-            <div class="brand-group">
-                <div class="brand">
-                    <i class="fas fa-user-tie"></i> <span>PACIFIC iCONNECT</span>
-                </div>
-            </div>
-
-            <nav class="desktop-nav">
-                <a href="#" class="nav-link">Find Jobs</a>
-                <a href="#" class="nav-link">Companies</a>
-                <a href="#" class="nav-link">For Employers</a>
-            </nav>
-
-            <div class="header-actions">
-                <div class="nav-action-icon" title="Notifications">
-                    <i class="fas fa-bell"></i>
-                    <span class="noti-badge">3</span>
-                </div>
-                <div class="user-profile">
-                    <div class="user-avatar">A</div>
-                    <span class="user-name">Ashwin Jawale <i class="fas fa-chevron-down" style="font-size:0.75rem;"></i></span>
-                </div>
-            </div>
-        </div>
-    </header>
 
     <div class="mobile-header">
         <i class="fas fa-arrow-left mobile-back"></i>
@@ -603,8 +579,10 @@ $jobseeker_upgrade_cv_dialog = $subscription_data['jobseeker_upgrade_cv_dialog']
                     <li><i class="fas fa-check"></i> Perfect for All Levels, Bulk and Urgent Hiring</li>
                 </ul>
 
-<button class="btn-primary" onclick="handlePremiumPost()">Post Premium Vacancy</button>
-                <button class="btn-light">View Premium Listings</button>
+                <button class="btn-primary" onclick="handlePremiumPost()">Post Premium Vacancy</button>
+                <a href="premium-job-list.php">
+                    <button class="btn-light">View Premium Listings</button>
+                </a>
             </div>
 
             <div class="plan-card standard-plan">
@@ -624,7 +602,9 @@ $jobseeker_upgrade_cv_dialog = $subscription_data['jobseeker_upgrade_cv_dialog']
                 </ul>
 
                 <button class="btn-primary" onclick="handleStandardPost()">Post Standard Job</button>
-                <button class="btn-light">View Standard Listings</button>
+                 <a href="standard-job-list.php">
+                    <button class="btn-light">View Standard Listings</button>
+                </a>
             </div>
 
         </div>
@@ -652,32 +632,34 @@ $jobseeker_upgrade_cv_dialog = $subscription_data['jobseeker_upgrade_cv_dialog']
 
 </body>
 <script>
-
-const premiumLimitDialog = <?= $premium_limit_dialog ? 'true' : 'false' ?>;
-const premiumUpgradeDialog = <?= $premium_upgrade_dialog ? 'true' : 'false' ?>;
-
-const standardLimitDialog = <?= $standard_limit_dialog ? 'true' : 'false' ?>;
-const standardUpgradeDialog = <?= $standard_upgrade_dialog ? 'true' : 'false' ?>;
+    window.onload = () => document.getElementById("global-preloader")?.remove();
 
 
-/* PREMIUM JOB POST */
-function handlePremiumPost(){
-    if(!premiumLimitDialog && !premiumUpgradeDialog){
-        window.location.href = "add-premium-job.php";
-    }else{
-        window.location.href = "upgrade.php";
+    const premiumLimitDialog = <?= $premium_limit_dialog ? 'true' : 'false' ?>;
+    const premiumUpgradeDialog = <?= $premium_upgrade_dialog ? 'true' : 'false' ?>;
+
+    const standardLimitDialog = <?= $standard_limit_dialog ? 'true' : 'false' ?>;
+    const standardUpgradeDialog = <?= $standard_upgrade_dialog ? 'true' : 'false' ?>;
+
+
+    /* PREMIUM JOB POST */
+    function handlePremiumPost() {
+        if (!premiumLimitDialog && !premiumUpgradeDialog) {
+            window.location.href = "add-premium-job.php";
+        } else {
+            window.location.href = "upgrade.php";
+        }
     }
-}
 
 
-/* STANDARD JOB POST */
-function handleStandardPost(){
-    if(!standardLimitDialog && !standardUpgradeDialog){
-        window.location.href = "add-standard-job.php";
-    }else{
-        window.location.href = "upgrade.php";
+    /* STANDARD JOB POST */
+    function handleStandardPost() {
+        if (!standardLimitDialog && !standardUpgradeDialog) {
+            window.location.href = "add-standard-job.php";
+        } else {
+            window.location.href = "upgrade.php";
+        }
     }
-}
-
 </script>
+
 </html>
