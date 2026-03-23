@@ -3,6 +3,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
+require_once "../web_api/includes/db_config.php";
 
 if (!isset($_SESSION['user'])) {
     header("Location: ../login.php");
@@ -12,60 +13,23 @@ if (!isset($_SESSION['user'])) {
 $user = $_SESSION['user'];
 
 
-
-
 $userid = $user['id'];
 $jobid = $_POST['id'] ?? '';
 
 
 
-/* ================================================================
-   JOB STATUS FETCH (same as dashboard)
-   ================================================================ */
-$need_status_fetch = (
-    !isset($_SESSION['job_status_list']) ||
-    !isset($_SESSION['job_status_cache_time']) ||
-    (time() - $_SESSION['job_status_cache_time']) > 3600
-);
+$url = API_BASE_URL . "getSinglewalkininterview.php";
 
-if ($need_status_fetch) {
-    require_once __DIR__ . '/../web_api/includes/initialize.php';
-    require_once __DIR__ . '/../web_api/getJobstatus.php';
-
-    $_SESSION['job_status_list']       = getJobstatusData(1, 0);
-    $_SESSION['job_status_cache_time'] = time();
-}
-
-$job_status_list = $_SESSION['job_status_list'] ?? [];
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-$url = "https://pacweb.inv11.in/web_api/getRecruiterdashboard.php";
-
-$payload = json_encode([
-    "userid"       => $userid,
-    "profile_type" => $user['profile_type_id'],
-    "city"         => $user['city_id'] ?? '',
-    "locality"     => ''
-]);
+$data = [
+    "id" => $jobid,
+    "userid" => $userid
+];
 
 $ch = curl_init($url);
 
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Content-Type: application/json'
 ]);
@@ -73,15 +37,25 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 $response = curl_exec($ch);
 curl_close($ch);
 
-
 $result = json_decode($response, true);
 
 if (!$result || $result['status'] != 'success') {
     die("Job Not Found");
 }
 
-$jobs = $result['walkin_interviews'] ?? [];
-// print_r($jobs);
+$job = $result['data'];
+$plan = $job['plan_display_status'];
+
+if ($plan == 1) {
+    $plan_class = "gold";
+    $plan_text  = "GOLD MEMBER";
+} elseif ($plan == 2) {
+    $plan_class = "silver";
+    $plan_text  = "SILVER MEMBER";
+} else {
+    $plan_class = "bronze";
+    $plan_text  = "BRONZE MEMBER";
+}
 
 
 function safe($v)
@@ -94,16 +68,12 @@ function safe($v)
 
 
 
-
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <title>Premium Job List – Pacific iConnect</title>
+    <title><?= safe($job['job_position']); ?> – Pacific iConnect</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 
@@ -124,7 +94,6 @@ function safe($v)
             --bg-body: #f4f6f9;
             --white: #ffffff;
             --text-dark: #1a1a1a;
-            --blue-btn: #2563eb;
             --text-grey: #555555;
             --green: #25D366;
             --silver-bg: #9e9e9e;
@@ -665,143 +634,6 @@ function safe($v)
         .member-badge.bronze {
             background: #cd7f32;
         }
-
-        .boxed-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-        }
-
-        /* Tablet */
-        @media (max-width: 992px) {
-            .boxed-container {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        /* Mobile */
-        @media (max-width: 576px) {
-            .boxed-container {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .r-job-card {
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .load-more-wrapper {
-            display: flex;
-            justify-content: center;
-            margin: 30px 0;
-        }
-
-        .load-more-btn {
-            background: var(--blue-btn);
-            color: white;
-            padding: 12px 40px;
-            border-radius: 30px;
-            border: none;
-            font-weight: 600;
-            font-size: 1rem;
-            box-shadow: 0 5px 15px rgba(72, 62, 168, 0.3);
-            transition: 0.3s;
-        }
-
-        .load-more-btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-        }
-
-        @media (max-width: 576px) {
-            .load-more-btn {
-                width: 80%;
-                padding: 14px;
-                font-size: 1rem;
-            }
-        }
-
-        /* MODAL CSS */
-        .status-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 2000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .status-modal-content {
-            background: white;
-            width: 100%;
-            max-width: 420px;
-            padding: 30px 25px;
-            border-radius: 16px;
-        }
-
-        .close-modal {
-            cursor: pointer;
-        }
-
-        .status-select {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-        }
-
-        .btn-modal-save {
-            width: 100%;
-            padding: 12px;
-            background: #2563eb;
-            color: white;
-            border-radius: 30px;
-        }
-
-        .status-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        /* X button */
-        .close-modal {
-            background: transparent;
-            border: none;
-            font-size: 22px;
-            font-weight: bold;
-            color: #888;
-            cursor: pointer;
-            line-height: 1;
-        }
-
-        .close-modal:hover {
-            color: #e53935;
-        }
-
-        .close-modal {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: #f1f5f9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            transition: 0.2s;
-        }
-
-        .close-modal:hover {
-            background: #fee2e2;
-            color: #dc2626;
-        }
     </style>
 
 
@@ -809,225 +641,235 @@ function safe($v)
 
 <body>
 
+    <?php include "includes/preloader.php";
+    ?>
     <?php include "includes/header.php"; ?>
-
-    <!-- STATUS MODAL -->
-    <div class="status-modal-overlay" id="statusModal">
-        <div class="status-modal-content">
-            <div class="status-modal-header">
-                <h3>Update Job Status</h3>
-                <button class="close-modal" onclick="closeStatusModal()">&times;</button>
-            </div>
-            <div style="margin-bottom:25px;">
-                <label class="input-label">Select New Status</label>
-                <select id="jobStatusSelect" class="status-select">
-                    <?php foreach ($job_status_list as $status): ?>
-                        <option value="<?= $status['id'] ?>"><?= htmlspecialchars($status['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <button class="btn-modal-save" onclick="updateJobStatus()">Save Status</button>
-        </div>
-    </div>
-
-
-    <!-- //CARD CODE HERE -->
 
     <div class="container main-content">
 
-        <div class="boxed-container">
+        <!-- ================= BREADCRUMB ================= -->
+        <div style="margin-bottom:20px;color:#666;font-size:.9rem;">
+            <!--<a href="index.php">Home</a>-->
+            <a href="/">Home</a>
 
-            <?php
-            $limit = 3;
-            $total = count($jobs);
-            ?>
+            <i class="fas fa-chevron-right"></i>
+            <?= safe($job['job_position']); ?>
+        </div>
 
-            <?php foreach ($jobs as $index => $job):
+        <div class="job-grid-layout">
 
-                $plan = intval($job['plan_display_status'] ?? 3);
+            <!-- ================= LEFT ================= -->
+            <main>
 
-                if ($plan == 1) {
-                    $plan_class = "gold";
-                    $plan_text = "GOLD MEMBER";
-                } elseif ($plan == 2) {
-                    $plan_class = "silver";
-                    $plan_text = "SILVER MEMBER";
-                } else {
-                    $plan_class = "bronze";
-                    $plan_text = "BRONZE MEMBER";
-                }
+                <div class="content-card">
 
-            ?>
+                    <div class="job-header-block">
 
-                <div class="r-job-card job-item"
-                    style="<?= $index >= $limit ? 'display:none;' : '' ?>">
-                    <div class="menu-dot-container">
-                        <div class="menu-dot-icon">
-                            <i class="fas fa-ellipsis-v"></i>
-                        </div>
-                    </div>
-
-                    <div class="card-head">
                         <div class="logo-box">
+
                             <div class="shiny-ring <?= $plan_class ?>"></div>
-                            <img src="<?= htmlspecialchars($job['company_logo']) ?>" class="company-logo">
-                            <div class="member-badge <?= $plan_class ?>"><?= $plan_text ?></div>
+
+                            <img src="<?= $job['company_logo']; ?>" class="company-logo large">
+
+                            <div class="member-badge <?= $plan_class ?>">
+                                <?= $plan_text ?>
+                            </div>
+
                         </div>
 
-                        <div class="job-info">
-                            <div class="job-title"><?= htmlspecialchars($job['job_position']) ?></div>
-                            <div class="job-meta">Date: <?= htmlspecialchars($job['created_at']) ?></div>
-                            <div class="job-status">Status: <?= htmlspecialchars($job['job_status']) ?></div>
+                        <div class="job-title-info">
+                            <h1><?= safe($job['job_position']); ?></h1>
+                            <span class="company-name"><?= safe($job['company_name']); ?></span>
+                            <?php if (!empty($job['kyc_verified']) && $job['kyc_verified'] === true): ?>
+                                <div class="kyc-verified">
+                                    <i class="fas fa-check-circle"></i> KYC Verified
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                    </div>
+
+                    <!-- TAGS -->
+                    <div class="tags-container">
+                        <span class="tag-pill"><?= safe($job['work_model']); ?></span>
+                        <span class="tag-pill"><?= safe($job['work_shift']); ?></span>
+                        <span class="tag-pill"><?= safe($job['job_type']); ?></span>
+                    </div>
+
+                    <!-- REQUIREMENTS -->
+                    <h3 class="section-title">
+                        <i class="fas fa-list-check"></i> Job Requirements
+                    </h3>
+
+                    <ul class="req-list">
+                        <li><b>Gender:</b> <?= safe($job['gender']); ?></li>
+                        <li><b>Education:</b> <?= safe($job['qualification']); ?></li>
+                        <li><b>Skills:</b> <?= safe($job['skills_required']); ?></li>
+                        <li><b>Assets:</b> <?= safe($job['work_equipment']); ?></li>
+                    </ul>
+
+                    <!-- DESCRIPTION -->
+                    <h3 class="section-title">
+                        <i class="fas fa-file-alt"></i> Job Description
+                    </h3>
+
+                    <p><?= safe($job['job_description']); ?></p>
+
+                    <!-- CONTACT -->
+                    <h3 class="section-title">
+                        <i class="fas fa-address-card"></i> Contact Details
+                    </h3>
+
+                    <div class="contact-box">
+
+                        <span class="contact-name"><?= safe($job['contact_person_name']); ?></span>
+
+                        <div class="contact-address">
+                            <?= safe($job['interview_address']); ?>
+                        </div>
+
+                        <div class="contact-actions">
+
+                            <?php if (!empty($_SESSION['is_logged_in'])): ?>
+
+                                <!-- CALL -->
+                                <a href="tel:<?= $job['contact_no'] ?: $job['mobile_no']; ?>"
+                                    class="btn-action-outline"
+                                    onclick="logAction(1)">
+                                    <i class="fas fa-phone-alt"></i> Call HR
+                                </a>
+
+                                <!-- WHATSAPP -->
+                                <a target="_blank"
+                                    href="https://wa.me/91<?= preg_replace('/\D/', '', $job['contact_no'] ?: $job['mobile_no']); ?>"
+                                    class="btn-action-outline"
+                                    onclick="logAction(2)">
+                                    <i class="fas fa-comment-dots"></i> Chat
+                                </a>
+
+                                <!-- MAP -->
+                                <a target="_blank"
+                                    href="https://www.google.com/maps?q=<?= urlencode($job['interview_address']); ?>"
+                                    class="btn-action-outline"
+                                    onclick="logAction(3)">
+                                    <i class="fas fa-map-marker-alt" style="color:#e53935;"></i> View Map
+                                </a>
+
+                            <?php else: ?>
+
+                                <!-- CALL LOGIN -->
+                                <a href="/login.php?redirect=<?= urlencode($_SERVER['REQUEST_URI']); ?>"
+                                    class="btn-action-outline">
+                                    <i class="fas fa-phone-alt"></i> Call HR
+                                </a>
+
+                                <!-- CHAT LOGIN -->
+                                <a href="/login.php?redirect=<?= urlencode($_SERVER['REQUEST_URI']); ?>"
+                                    class="btn-action-outline">
+                                    <i class="fas fa-comment-dots"></i> Chat
+                                </a>
+
+                                <!-- MAP LOGIN -->
+                                <a href="/login.php?redirect=<?= urlencode($_SERVER['REQUEST_URI']); ?>"
+                                    class="btn-action-outline">
+                                    <i class="fas fa-map-marker-alt" style="color:#e53935;"></i> View Map
+                                </a>
+
+                            <?php endif; ?>
+
                         </div>
                     </div>
 
-                    <div class="emp-stats-row">
-                        <div class="emp-stat-box">Views: <span><?= intval($job['visit_count'] ?? 0) ?></span></div>
-                        <div class="emp-stat-box">Calls: <span><?= intval($job['call_count'] ?? 0) ?></span></div>
-                        <div class="emp-stat-box">Chats: <span><?= intval($job['whatsapp_count'] ?? 0) ?></span></div>
-                        <div class="emp-stat-box">Locations: <span><?= intval($job['location_count'] ?? 0) ?></span></div>
-                    </div>
 
-                    <div class="apps-count">
-                        Applications <span><?= $job['application_count'] ?></span>
-                    </div>
+                    <div class="share-box">
 
-                    <div class="card-actions">
-                        <a href="applications.php?job_id=<?= $job['id'] ?>" class="btn-card">
-                            View<br>Applications
-                        </a>
+                        <div class="share-title">Share This Job</div>
 
-                        <form action="premium-job-details.php" method="POST" style="flex:1;display:flex;">
-                            <input type="hidden" name="id" value="<?= $job['id'] ?>">
-                            <button type="submit" class="btn-card">View Job</button>
-                        </form>
+                        <p class="share-desc">
+                            Know someone who might be interested? Let them know now.
+                        </p>
 
-                        <button class="btn-card" onclick="openStatusModal(<?= $job['id'] ?>)">
-                            Change Status
+                        <button class="btn-share">
+                            <i class="fas fa-paper-plane"></i> Share Now
                         </button>
+
                     </div>
+
+
                 </div>
 
-            <?php endforeach; ?>
 
+            </main>
+
+            <!-- ================= RIGHT ================= -->
+            <aside class="job-sidebar">
+
+                <div class="content-card">
+
+                    <h3>Job Overview</h3>
+
+                    <div class="overview-item">
+                        <div class="icon-box salary"><i class="fas fa-rupee-sign"></i></div>
+                        <div>
+                            <span class="ov-label">Salary</span>
+                            <span class="ov-value">
+                                ₹<?= safe($job['salary_from']); ?> – <?= safe($job['salary_to']); ?>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="overview-item">
+                        <div class="icon-box loc"><i class="fas fa-map-marker-alt"></i></div>
+                        <div>
+                            <span class="ov-label">Location</span>
+                            <span class="ov-value">
+                                <?= safe($job['locality']); ?>, <?= safe($job['city']); ?>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="overview-item">
+                        <div class="icon-box exp"><i class="fas fa-briefcase"></i></div>
+                        <div>
+                            <span class="ov-label">Experience</span>
+                            <span class="ov-value">
+                                <?= safe($job['experience_from']); ?> – <?= safe($job['experience_to']); ?>
+                            </span>
+                        </div>
+
+                    </div>
+                    <div class="overview-item">
+                        <div class="icon-box type"><i class="fas fa-user-clock"></i></div>
+                        <div>
+                            <span class="ov-label">Job Type</span>
+                            <span class="ov-value"><?= safe($job['job_type']); ?></span>
+
+                        </div>
+                    </div>
+
+
+                    <a href="/login.php?redirect=<?= urlencode($_SERVER['REQUEST_URI']); ?>"
+                        class="btn-apply-now"
+                        style="display:block;text-align:center;">
+                        Apply Now
+                    </a>
+
+                    <div style="text-align:center; margin-top:15px; font-size:0.85rem; color:#888;">
+                        <i class="fas fa-shield-alt"></i> 100% Safe & Verified Job
+                    </div>
+
+                </div>
+
+            </aside>
 
         </div>
-        <?php if ($total > $limit): ?>
-            <div class="load-more-wrapper">
-                <button id="loadMoreBtn" class="load-more-btn">
-                    Load More..
-                </button>
-            </div>
-        <?php endif; ?>
-
     </div>
 
+    <?php include "includes/bottom-bar.php"; ?>
+
     <script>
-        let visible = 3;
-        const step = 3;
-
-        document.getElementById("loadMoreBtn")?.addEventListener("click", function() {
-
-            const jobs = document.querySelectorAll(".job-item");
-
-            for (let i = visible; i < visible + step; i++) {
-                if (jobs[i]) {
-                    jobs[i].style.display = "block";
-                    jobs[i].style.opacity = "0";
-                    setTimeout(() => {
-                        jobs[i].style.transition = "0.3s";
-                        jobs[i].style.opacity = "1";
-                    }, 50);
-                }
-            }
-
-            visible += step;
-
-            // Hide button if all shown
-            if (visible >= jobs.length) {
-                this.style.display = "none";
-            }
-        });
-        window.scrollBy({
-            top: 200,
-            behavior: "smooth"
-        });
-
-        let selectedJobId = 0;
-
-        /* OPEN MODAL */
-        function openStatusModal(jobId) {
-            selectedJobId = jobId;
-            document.getElementById("statusModal").style.display = "flex";
-        }
-
-        /* CLOSE MODAL */
-        function closeStatusModal() {
-            document.getElementById("statusModal").style.display = "none";
-        }
-
-
-
-
-        // debug
-        // function updateJobStatus() {
-
-        //     const statusId = document.getElementById("jobStatusSelect").value;
-
-        //     const payload = {
-        //         id: selectedJobId,
-        //         job_status_id: statusId
-        //     };
-
-        //     console.log("API REQUEST DATA:", payload);
-
-        //     alert("Check console (F12) to see request data");
-
-        //     // ❌ DO NOT CALL API
-        //     return;
-        // }
-
-
-
-
-
-
-
-
-
-
-
-        /* UPDATE STATUS API CALL */
-        function updateJobStatus() {
-
-            const statusId = document.getElementById("jobStatusSelect").value;
-
-            fetch("/web_api/UpdateWalkininterviewstatus.php", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        id: selectedJobId,
-                        job_status_id: statusId
-                    })
-
-                })
-                .then(res => res.json())
-                .then(data => {
-
-                    if (data.status) {
-                        alert("Status Updated Successfully");
-                        location.reload();
-                    } else {
-                        alert(data.message);
-                    }
-
-                })
-                .catch(err => console.error(err));
-        }
+        window.onload = () => document.getElementById("global-preloader")?.remove();
     </script>
 </body>
-
 
 </html>

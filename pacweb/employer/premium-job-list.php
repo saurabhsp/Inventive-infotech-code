@@ -3,7 +3,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
-
+require_once "../web_api/includes/db_config.php";
 if (!isset($_SESSION['user'])) {
     header("Location: ../login.php");
     exit();
@@ -57,7 +57,7 @@ $filterStatus = $status_id;
 $pages = 1;
 $limit = 10;
 
-$url = "https://pacweb.inv11.in/web_api/getWalkinlist.php";
+$url = API_BASE_URL . "getWalkinlist.php";
 
 $payload = json_encode([
     "job_status_id"       => $filterStatus,
@@ -89,7 +89,7 @@ $jobs = $result['data'] ?? [];
 
 
 //status 
-$status_api = "https://pacweb.inv11.in/web_api/getJobstatus.php";
+$status_api = API_BASE_URL . "getJobstatus.php";
 $status_request = [
     "display_status" => 1,
 ];
@@ -930,6 +930,14 @@ function safe($v)
     <?php include "includes/preloader.php"; ?>
     <?php include "includes/header.php"; ?>
 
+    <div id="editErrorModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:white;padding:25px;border-radius:10px;width:350px;text-align:center">
+            <h3 style="margin-bottom:10px">Edit Not Allowed</h3>
+            <p id="editErrorMessage"></p>
+            <button onclick="closeEditModal()" style="margin-top:15px;padding:8px 20px;background:#2563eb;color:white;border:none;border-radius:6px">OK</button>
+        </div>
+    </div>
+
     <!-- STATUS MODAL -->
     <div class="status-modal-overlay" id="statusModal">
         <div class="status-modal-content">
@@ -1000,11 +1008,12 @@ function safe($v)
 
                 <div class="r-job-card job-item"
                     style="<?= $index >= $limit ? 'display:none;' : '' ?>">
-                    <div class="menu-dot-container">
-                        <div class="menu-dot-icon">
-                            <i class="fas fa-ellipsis-v"></i>
-                        </div>
-                    </div>
+                     <div class="menu-dot-container">
+                                <div class="menu-dot-icon" onclick="toggleCardMenu(event,this)"><i class="fas fa-ellipsis-v"></i></div>
+                                <div class="card-menu-dropdown">
+                                    <a href="javascript:void(0)" onclick="checkPremiumEdit(<?= $job['id'] ?>)"><i class="fas fa-edit"></i> Edit Job</a>
+                                </div>
+                            </div>
 
                     <div class="card-head">
                         <div class="logo-box">
@@ -1014,9 +1023,9 @@ function safe($v)
                         </div>
 
                         <div class="job-info">
-                            <div class="job-title"><?= htmlspecialchars($job['job_position']) ?></div>
-                            <div class="job-meta">Date: <?= htmlspecialchars($job['created_at']) ?></div>
-                            <div class="job-status">Status: <?= htmlspecialchars($job['job_status']) ?></div>
+                            <div class="job-title"><?= htmlspecialchars($job['job_position'] ?? '') ?></div>
+                            <div class="job-meta">Date: <?= htmlspecialchars($job['created_at'] ?? '')  ?></div>
+                            <div class="job-status">Status: <?= htmlspecialchars($job['job_status'] ?? '') ?></div>
                         </div>
                     </div>
 
@@ -1071,6 +1080,8 @@ function safe($v)
         <?php endif; ?>
 
     </div>
+    <?php include "includes/bottom-bar.php"; ?>
+
 
     <script>
         window.onload = () => document.getElementById("global-preloader")?.remove();
@@ -1119,26 +1130,65 @@ function safe($v)
 
 
 
+ function toggleCardMenu(event, element) {
+            event.stopPropagation();
+            const dropdown = element.nextElementSibling;
+            document.querySelectorAll('.card-menu-dropdown').forEach(menu => {
+                if (menu !== dropdown) menu.classList.remove('show');
+            });
+            dropdown.classList.toggle('show');
+        }
 
-        // debug
-        // function updateJobStatus() {
+         function checkPremiumEdit(jobId) {
+            fetch("/web_api/cehck24hrswalkinjobstatus.php", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        job_id: jobId
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === true && data.can_update === true) {
 
-        //     const statusId = document.getElementById("jobStatusSelect").value;
+                        // Create form dynamically
+                        let form = document.createElement("form");
+                        form.method = "POST";
+                        form.action = "add-premium-job.php";
 
-        //     const payload = {
-        //         id: selectedJobId,
-        //         job_status_id: statusId
-        //     };
+                        // job_id field
+                        let jobInput = document.createElement("input");
+                        jobInput.type = "hidden";
+                        jobInput.name = "job_id";
+                        jobInput.value = jobId;
 
-        //     console.log("API REQUEST DATA:", payload);
+                        // mode field
+                        let modeInput = document.createElement("input");
+                        modeInput.type = "hidden";
+                        modeInput.name = "mode";
+                        modeInput.value = "edit";
 
-        //     alert("Check console (F12) to see request data");
+                        // Append inputs to form
+                        form.appendChild(jobInput);
+                        form.appendChild(modeInput);
 
-        //     // ❌ DO NOT CALL API
-        //     return;
-        // }
+                        // Append form to body and submit
+                        document.body.appendChild(form);
+                        form.submit();
 
+                    } else {
+                        document.getElementById("editErrorMessage").innerText = data.message;
+                        document.getElementById("editErrorModal").style.display = "flex";
+                    }
+                })
+                .catch(err => console.error(err));
+        }
 
+function closeEditModal() {
+            document.getElementById("editErrorModal").style.display = "none";
+        }
 
 
 

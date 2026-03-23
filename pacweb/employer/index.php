@@ -2,6 +2,8 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
+$active = "home";
+require_once "../web_api/includes/db_config.php";
 
 if (!isset($_SESSION['user'])) {
     header("Location: ../login.php");
@@ -42,8 +44,8 @@ $job_status_list = $_SESSION['job_status_list'] ?? [];
 /* ================================================================
    STEP 2 — DASHBOARD + KYC via curl_multi with timeouts
    ================================================================ */
-$api_url     = "https://pacweb.inv11.in/web_api/getRecruiterdashboard.php";
-$kyc_api_url = "https://pacweb.inv11.in/web_api/checkRecruiterprofile.php";
+$api_url     = API_BASE_URL ."getRecruiterdashboard.php";
+$kyc_api_url = API_BASE_URL ."checkRecruiterprofile.php";
 
 function make_curl_handle(string $url, array $payload): \CurlHandle
 {
@@ -253,7 +255,7 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
 </style>
 
 <body>
-
+    <?php include "includes/preloader.php"; ?>
     <?php include "includes/header.php"; ?>
 
     <div id="editErrorModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
@@ -313,7 +315,7 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
 
         <div class="boxed-container section-header">
             <div class="section-title">Premium Jobs</div>
-            <?php if (!empty($premium_jobs)): ?><button class="btn-view-all">View All</button><?php endif; ?>
+            <?php if (!empty($premium_jobs)): ?><a href="premium-job-list.php" class="btn-view-all">View All</a><?php endif; ?>
         </div>
 
         <?php if (!empty($premium_jobs)): ?>
@@ -348,9 +350,9 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
                                     <div class="member-badge <?= $plan_class ?>"><?= $plan_text ?></div>
                                 </div>
                                 <div class="job-info">
-                                    <div class="job-title"><?= htmlspecialchars($job['job_position']) ?></div>
-                                    <div class="job-meta">Date: <?= htmlspecialchars($job['created_at']) ?></div>
-                                    <div class="job-status">Status: <?= htmlspecialchars($job['job_status']) ?></div>
+                                    <div class="job-title"><?= htmlspecialchars($job['job_position'] ?? '') ?></div>
+                                    <div class="job-meta">Date: <?= htmlspecialchars($job['created_at']) ?? '' ?></div>
+                                    <div class="job-status">Status: <?= htmlspecialchars($job['job_status']) ?? '' ?></div>
                                 </div>
                             </div>
                             <div class="emp-stats-row">
@@ -380,10 +382,15 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
             </div>
         <?php endif; ?>
 
-        <div class="boxed-container section-header" style="margin-top:20px;">
+        <div class="boxed-container section-header">
             <div class="section-title">Standard Jobs</div>
-            <?php if (!empty($standard_jobs)): ?><button class="btn-view-all">View All</button><?php endif; ?>
+            <?php if (!empty($standard_jobs)): ?><a href="standard-job-list.php" class="btn-view-all">View All</a><?php endif; ?>
         </div>
+
+        <!--<div class="boxed-container section-header" style="margin-top:20px;">-->
+        <!--    <div class="section-title">Standard Jobs</div>-->
+        <!--    <?php if (!empty($standard_jobs)): ?><button class="btn-view-all">View All</button><?php endif; ?>-->
+        <!--</div>-->
 
         <?php if (!empty($standard_jobs)): ?>
             <div class="boxed-container" style="margin-bottom:50px;">
@@ -469,7 +476,10 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
         </div>
     </div>
 
+    <?php include "includes/bottom-bar.php"; ?>
     <script>
+        window.onload = () => document.getElementById("global-preloader")?.remove();
+
         function scrollJobSlider(btn, direction) {
             const container = btn.parentElement.querySelector('.jobs-slider-container');
             container.scrollBy({
@@ -531,13 +541,41 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
                         job_id: jobId
                     })
                 })
-                .then(res => res.json()).then(data => {
-                    if (data.status === true && data.can_update === true) window.location.href = "edit-premium-jobs.php?id=" + jobId;
-                    else {
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === true && data.can_update === true) {
+
+                        // Create form dynamically
+                        let form = document.createElement("form");
+                        form.method = "POST";
+                        form.action = "add-premium-job.php";
+
+                        // job_id field
+                        let jobInput = document.createElement("input");
+                        jobInput.type = "hidden";
+                        jobInput.name = "job_id";
+                        jobInput.value = jobId;
+
+                        // mode field
+                        let modeInput = document.createElement("input");
+                        modeInput.type = "hidden";
+                        modeInput.name = "mode";
+                        modeInput.value = "edit";
+
+                        // Append inputs to form
+                        form.appendChild(jobInput);
+                        form.appendChild(modeInput);
+
+                        // Append form to body and submit
+                        document.body.appendChild(form);
+                        form.submit();
+
+                    } else {
                         document.getElementById("editErrorMessage").innerText = data.message;
                         document.getElementById("editErrorModal").style.display = "flex";
                     }
-                }).catch(err => console.error(err));
+                })
+                .catch(err => console.error(err));
         }
 
         function checkStandardEdit(jobId) {
@@ -550,13 +588,40 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
                         job_id: jobId
                     })
                 })
-                .then(res => res.json()).then(data => {
-                    if (data.status === true && data.can_update === true) window.location.href = "edit-standard-jobs.php?id=" + jobId;
-                    else {
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === true && data.can_update === true) {
+
+                        // Create form dynamically (same as premium)
+                        let form = document.createElement("form");
+                        form.method = "POST";
+                        form.action = "add-standard-job.php";
+
+                        // job_id field
+                        let jobInput = document.createElement("input");
+                        jobInput.type = "hidden";
+                        jobInput.name = "job_id";
+                        jobInput.value = jobId;
+
+                        // mode field
+                        let modeInput = document.createElement("input");
+                        modeInput.type = "hidden";
+                        modeInput.name = "mode";
+                        modeInput.value = "edit";
+
+                        // Append inputs
+                        form.appendChild(jobInput);
+                        form.appendChild(modeInput);
+
+                        document.body.appendChild(form);
+                        form.submit();
+
+                    } else {
                         document.getElementById("editErrorMessage").innerText = data.message;
                         document.getElementById("editErrorModal").style.display = "flex";
                     }
-                }).catch(err => console.error(err));
+                })
+                .catch(err => console.error(err));
         }
 
         function closeEditModal() {

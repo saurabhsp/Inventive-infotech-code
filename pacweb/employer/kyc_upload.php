@@ -3,6 +3,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
+require_once "../web_api/includes/db_config.php";
 
 if (!isset($_SESSION['user'])) {
     header("Location: ../login.php");
@@ -12,10 +13,10 @@ if (!isset($_SESSION['user'])) {
 $user = $_SESSION['user'];
 $userid = $user['id'];
 $profile_id = $user['profile_id'];
-//  print_r( $profile_id);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['docurl'])) {
 
-  $api_url = "https://pacweb.inv11.in/webservices/addRecruterkyc.php";
+  $api_url = API_BASE_URL . "addRecruterkyc.php";
 
   $recruiter_id = $profile_id;
   $kycdoctype_id = $_POST['kycdoctype_id'];
@@ -83,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['docurl'])) {
   <link
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     rel="stylesheet" />
+    <link rel="stylesheet" href="/style.css">
   <style>
     :root {
       /* Theme Colors matching Profile Page */
@@ -773,6 +775,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['docurl'])) {
 </head>
 
 <body>
+    <?php include "includes/preloader.php"; ?>
     <?php include "includes/header.php"; ?>
   <div class="mobile-header">
     <i
@@ -955,8 +958,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['docurl'])) {
 
     </div>
   </div>
-  <script></script>
+  <?php include "includes/bottom-bar.php"; ?>
+
   <script>
+    window.onload = () => document.getElementById("global-preloader")?.remove();
     const modal = document.getElementById("uploadModal");
     const modalTitle = document.getElementById("modalDocName");
 

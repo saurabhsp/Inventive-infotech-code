@@ -2,6 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
+require_once "../web_api/includes/db_config.php";
 
 /* ---------------------------------------------------------------
    AUTH CHECK
@@ -42,7 +43,7 @@ function make_json_curl(string $url, array $payload): \CurlHandle
 --------------------------------------------------------------- */
 if (isset($_POST['update_profile'])) {
 
-    $ch = make_json_curl("https://pacweb.inv11.in/web_api/updateRecruiter_profile.php", [
+    $ch = make_json_curl(API_BASE_URL . "updateRecruiter_profile.php", [
         "id"                  => $profile_id,
         "contact_person_name" => $_POST['contact_person_name'] ?? '',
         "designation"         => $_POST['designation']         ?? '',
@@ -146,12 +147,12 @@ if (isset($_FILES['company_logo']) && $_FILES['company_logo']['error'] === UPLOA
    FETCH PROFILE + KYC IN PARALLEL  (FIX: curl_multi)
 --------------------------------------------------------------- */
 $ch_profile = make_json_curl(
-    "https://pacweb.inv11.in/web_api/getRecruiter_profile.php",
+    API_BASE_URL . "getRecruiter_profile.php",
     ["id" => $profile_id]
 );
 
 $ch_kyc = make_json_curl(
-    "https://pacweb.inv11.in/web_api/getRecruiterkyclog.php",
+    API_BASE_URL . "getRecruiterkyclog.php",
     ["recruiter_id" => $profile_id]
 );
 
@@ -197,6 +198,7 @@ $kycList   = $kycResult['data'] ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employer Profile | Pacific iConnect</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!--<link rel="stylesheet" href="/style.css">-->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <style>
@@ -1083,6 +1085,8 @@ $kycList   = $kycResult['data'] ?? [];
 
 <body>
 
+
+<?php include "includes/preloader.php"; ?>
     <?php include "includes/header.php"; ?>
 
     <!-- Crop Modal -->
@@ -1300,6 +1304,8 @@ $kycList   = $kycResult['data'] ?? [];
     </div>
 
     <script>
+            window.onload = () => document.getElementById("global-preloader")?.remove();
+
         /* ---- Cropper / Logo Upload ---- */
         let cropper;
 

@@ -3,7 +3,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
-
+require_once "../web_api/includes/db_config.php";
 if (!isset($_SESSION['user'])) {
     header("Location: ../login.php");
     exit();
@@ -46,8 +46,7 @@ $filterStatus = $status_id;
 $pages = 1;
 $limit = 10;
 
-$url = "https://pacweb.inv11.in/web_api/getJobvacancylist.php";
-// $url = "pacificconnect2.0.inv51.in/webservices/getJobvacancylist.php";
+$url = API_BASE_URL . "getJobvacancylist.php";
 
 $payload = json_encode([
     "job_status_id"       => $filterStatus,
@@ -82,7 +81,7 @@ $jobs = $result['data'] ?? [];
 
 
 //status 
-$status_api = "https://pacweb.inv11.in/web_api/getJobstatus.php";
+$status_api = API_BASE_URL . "getJobstatus.php";
 $status_request = [
     "display_status" => 1,
 ];
@@ -847,21 +846,24 @@ function safe($v)
 
         /* Container */
         .filters {
-    display: flex;
-    justify-content: flex-start; /* important for scroll */
-    align-items: center;
-    gap: 12px;
-    margin: 20px auto 30px;
-    flex-wrap: nowrap; /* ❌ no wrapping */
-    overflow-x: auto; /* ✅ enable horizontal scroll */
-    max-width: 100%;
-    padding-bottom: 5px;
-}
+            display: flex;
+            justify-content: flex-start;
+            /* important for scroll */
+            align-items: center;
+            gap: 12px;
+            margin: 20px auto 30px;
+            flex-wrap: nowrap;
+            /* ❌ no wrapping */
+            overflow-x: auto;
+            /* ✅ enable horizontal scroll */
+            max-width: 100%;
+            padding-bottom: 5px;
+        }
 
-/* Hide scrollbar (optional clean UI) */
-.filters::-webkit-scrollbar {
-    display: none;
-}
+        /* Hide scrollbar (optional clean UI) */
+        .filters::-webkit-scrollbar {
+            display: none;
+        }
 
         /* Hide scrollbar */
         .filters::-webkit-scrollbar {
@@ -901,16 +903,20 @@ function safe($v)
             justify-content: center;
             width: 100%;
         }
+
         .filter-pill {
-    white-space: nowrap; /* prevent text breaking */
-    flex-shrink: 0; /* prevent shrinking */
-}
-@media (max-width: 576px) {
-    .filters {
-        justify-content: flex-start;
-        padding-left: 10px;
-    }
-}
+            white-space: nowrap;
+            /* prevent text breaking */
+            flex-shrink: 0;
+            /* prevent shrinking */
+        }
+
+        @media (max-width: 576px) {
+            .filters {
+                justify-content: flex-start;
+                padding-left: 10px;
+            }
+        }
     </style>
 
 
@@ -922,25 +928,13 @@ function safe($v)
     <?php include "includes/header.php"; ?>
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+<div id="editErrorModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:white;padding:25px;border-radius:10px;width:350px;text-align:center">
+            <h3 style="margin-bottom:10px">Edit Not Allowed</h3>
+            <p id="editErrorMessage"></p>
+            <button onclick="closeEditModal()" style="margin-top:15px;padding:8px 20px;background:#2563eb;color:white;border:none;border-radius:6px">OK</button>
+        </div>
+    </div>
 
 
 
@@ -1003,14 +997,9 @@ function safe($v)
                     style="<?= $index >= $limit ? 'display:none;' : '' ?>">
 
                     <div class="menu-dot-container">
-                        <div class="menu-dot-icon" onclick="toggleCardMenu(event,this)">
-                            <i class="fas fa-ellipsis-v"></i>
-                        </div>
-
+                        <div class="menu-dot-icon" onclick="toggleCardMenu(event,this)"><i class="fas fa-ellipsis-v"></i></div>
                         <div class="card-menu-dropdown">
-                            <a href="javascript:void(0)" onclick="checkStandardEdit(<?= $job['id'] ?>)">
-                                <i class="fas fa-edit"></i> Edit Job
-                            </a>
+                            <a href="javascript:void(0)" onclick="checkStandardEdit(<?= $job['id'] ?>)"><i class="fas fa-edit"></i> Edit Job</a>
                         </div>
                     </div>
 
@@ -1112,6 +1101,7 @@ function safe($v)
     <?php endif; ?>
 
     </div>
+    <?php include "includes/bottom-bar.php"; ?>
 
     <script>
         window.onload = () => document.getElementById("global-preloader")?.remove();
@@ -1161,26 +1151,66 @@ function safe($v)
 
 
 
-        // debug
-        // function updateJobStatus() {
+        function toggleCardMenu(event, element) {
+            event.stopPropagation();
+            const dropdown = element.nextElementSibling;
+            document.querySelectorAll('.card-menu-dropdown').forEach(menu => {
+                if (menu !== dropdown) menu.classList.remove('show');
+            });
+            dropdown.classList.toggle('show');
+        }
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.card-menu-dropdown').forEach(m => m.classList.remove('show'));
+        });
 
-        //     const statusId = document.getElementById("jobStatusSelect").value;
+        function checkStandardEdit(jobId) {
+            fetch("/web_api/check24hrsvacancyjobstatus.php", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        job_id: jobId
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === true && data.can_update === true) {
 
-        //     const payload = {
-        //         id: selectedJobId,
-        //         job_status_id: statusId
-        //     };
+                        // Create form dynamically (same as premium)
+                        let form = document.createElement("form");
+                        form.method = "POST";
+                        form.action = "add-standard-job.php";
 
-        //     console.log("API REQUEST DATA:", payload);
+                        // job_id field
+                        let jobInput = document.createElement("input");
+                        jobInput.type = "hidden";
+                        jobInput.name = "job_id";
+                        jobInput.value = jobId;
 
-        //     alert("Check console (F12) to see request data");
+                        // mode field
+                        let modeInput = document.createElement("input");
+                        modeInput.type = "hidden";
+                        modeInput.name = "mode";
+                        modeInput.value = "edit";
 
-        //     // ❌ DO NOT CALL API
-        //     return;
-        // }
+                        // Append inputs
+                        form.appendChild(jobInput);
+                        form.appendChild(modeInput);
 
+                        document.body.appendChild(form);
+                        form.submit();
 
-
+                    } else {
+                        document.getElementById("editErrorMessage").innerText = data.message;
+                        document.getElementById("editErrorModal").style.display = "flex";
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+function closeEditModal() {
+            document.getElementById("editErrorModal").style.display = "none";
+        }
 
 
 

@@ -1,31 +1,16 @@
 <?php
+
 session_start();
-$userid = 1;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+require_once "../web_api/includes/db_config.php";
+$user = $_SESSION['user'];
+$active = "applications";
+$userid = $user['id'];
 
 /* Example session */
-$recruiter_id = 1; // recruiter profile id
-$status_id = $_POST['status_id'] ?? 6;
+$recruiter_id = $userid ; // recruiter profile id
+$status_id = $_POST['status_id'];
 
-$api_url = "https://beta.inv51.in/webservices/getApplicationlist.php";
+$api_url = API_BASE_URL . "getApplicationlist.php";
 
 
 $request = [
@@ -60,15 +45,8 @@ $applications = $result['data'] ?? [];
 
 
 
-
-
-
-
-
-
-
 //status 
-$status_api = "https://beta.inv51.in/webservices/getApplicationstatus.php";
+$status_api = API_BASE_URL . "getApplicationstatus.php";
 $status_request = [
     "recruiter" => null,
 ];
@@ -93,7 +71,7 @@ $statuses = $status_result['data'] ?? [];
 
 
 // STATUS DROPDOWN FOR MODAL
-$status_modal_api = "https://beta.inv51.in/webservices/getApplicationstatus.php";
+$status_modal_api = API_BASE_URL . "getApplicationstatus.php";
 $status_modal_request = [
     "recruiter" => 1
 ];
@@ -117,7 +95,7 @@ $status_modal_dropdown = $status_modal_result['data'] ?? [];
 
 //INTERVIEW MODE DROPDOWN
 // interview types
-$interview_api = "https://beta.inv51.in/webservices/getInterviewTypes.php";
+$interview_api = API_BASE_URL . "getInterviewTypes.php";
 
 $ch = curl_init($interview_api);
 
@@ -148,7 +126,7 @@ if (isset($_POST['schedule_interview'])) {
     $interview_time = $_POST['interview_time'];
     $interview_type_id = $_POST['interview_type_id'];
 
-    $schedule_api = "https://beta.inv51.in/webservices/scheduleInterview.php";
+    $schedule_api = API_BASE_URL . "scheduleInterview.php";
 
     $schedule_request = [
         "application_id" => $application_id,
@@ -200,7 +178,7 @@ if (isset($_POST['update_status'])) {
     $application_id = $_POST['application_id'];
     $status_id = $_POST['status_id'];
 
-    $update_api = "https://beta.inv51.in/webservices/updateApplicationstatus.php";
+    $update_api = API_BASE_URL . "updateApplicationstatus.php";
 
     $update_payload = [
         "application_id" => $application_id,
@@ -254,6 +232,7 @@ if (isset($_POST['update_status'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Applications Received | Pacific iConnect</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
     <style>
         :root {
             /* Pacific iConnect Theme Colors */
@@ -808,22 +787,7 @@ if (isset($_POST['update_status'])) {
         }
 
 
-        /* --- 5. MOBILE NAV & RESPONSIVENESS --- */
-        .bottom-nav {
-            display: none;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: white;
-            height: 70px;
-            border-top: 1px solid #eee;
-            justify-content: space-around;
-            align-items: center;
-            z-index: 1000;
-            padding-bottom: 5px;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
-        }
+       
 
         .nav-icon {
             display: flex;
@@ -884,9 +848,6 @@ if (isset($_POST['update_status'])) {
                 display: flex;
             }
 
-            .bottom-nav {
-                display: flex;
-            }
 
             body {
                 padding-bottom: 80px;
@@ -936,33 +897,8 @@ if (isset($_POST['update_status'])) {
 </head>
 
 <body>
-
-    <header>
-        <div class="header-container">
-            <div class="brand-group">
-                <div class="brand">
-                    <i class="fas fa-user-tie"></i> <span>PACIFIC iCONNECT</span>
-                </div>
-            </div>
-
-            <nav class="desktop-nav">
-                <a href="#" class="nav-link">Find Jobs</a>
-                <a href="#" class="nav-link">Companies</a>
-                <a href="#" class="nav-link">For Employers</a>
-            </nav>
-
-            <div class="header-actions">
-                <div class="nav-action-icon" title="Notifications">
-                    <i class="fas fa-bell"></i>
-                    <span class="noti-badge">3</span>
-                </div>
-                <div class="user-profile">
-                    <div class="user-avatar">A</div>
-                    <span class="user-name">Ashwin Jawale <i class="fas fa-chevron-down" style="font-size:0.75rem;"></i></span>
-                </div>
-            </div>
-        </div>
-    </header>
+    <?php include "includes/preloader.php"; ?>
+    <?php include "includes/header.php"; ?>
 
     <div class="mobile-header">
         <i class="fas fa-arrow-left mobile-back"></i>
@@ -1114,24 +1050,8 @@ if (isset($_POST['update_status'])) {
 
     </div>
 
-    <div class="bottom-nav">
-        <a href="#" class="nav-icon">
-            <div class="icon-wrap"><i class="fas fa-home"></i></div>
-            Home
-        </a>
-        <a href="#" class="nav-icon">
-            <div class="icon-wrap"><i class="fas fa-plus-square"></i></div>
-            Post Jobs
-        </a>
-        <a href="#" class="nav-icon active">
-            <div class="icon-wrap"><i class="fas fa-file-alt"></i></div>
-            Applications
-        </a>
-        <a href="#" class="nav-icon">
-            <div class="icon-wrap"><i class="fas fa-user"></i></div>
-            Profile
-        </a>
-    </div>
+<?php include "includes/bottom-bar.php"; ?>
+
 
     <div class="modal-overlay" id="interviewModal">
         <div class="modal-content">
@@ -1287,6 +1207,8 @@ if (isset($_POST['update_status'])) {
     </div>
 
     <script>
+            window.onload = () => document.getElementById("global-preloader")?.remove();
+
         // Open Modal
         function openInterviewModal(modalId, application_id) {
             document.getElementById(modalId).classList.add('active');

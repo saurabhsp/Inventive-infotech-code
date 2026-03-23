@@ -2,7 +2,8 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
-
+require_once "../web_api/includes/db_config.php";
+ $active = "post"; 
 
 
 $user = $_SESSION['user'];
@@ -12,8 +13,7 @@ $userid = $user['id'];
 
 /* ================= USER SUBSCRIPTION CHECK ================= */
 
-$subscription_api = "https://pacweb.inv11.in/web_api/checkUsersubscription.php";
-// $subscription_api = "https://pacificconnect2.0.inv51.in/webservices/checkUsersubscription.php";
+$subscription_api = API_BASE_URL . "checkUsersubscription.php";
 
 $subscription_post = [
     "user_id" => $userid
@@ -86,6 +86,7 @@ $jobseeker_upgrade_cv_dialog = $subscription_data['jobseeker_upgrade_cv_dialog']
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Post Jobs | Pacific iConnect</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
     <style>
         :root {
             /* Pacific iConnect Theme Colors */
@@ -611,24 +612,8 @@ $jobseeker_upgrade_cv_dialog = $subscription_data['jobseeker_upgrade_cv_dialog']
 
     </div>
 
-    <div class="bottom-nav">
-        <a href="#" class="nav-icon">
-            <div class="icon-wrap"><i class="fas fa-home"></i></div>
-            Home
-        </a>
-        <a href="#" class="nav-icon active">
-            <div class="icon-wrap"><i class="fas fa-plus-square"></i></div>
-            Post Jobs
-        </a>
-        <a href="#" class="nav-icon">
-            <div class="icon-wrap"><i class="fas fa-file-alt"></i></div>
-            Applications
-        </a>
-        <a href="#" class="nav-icon">
-            <div class="icon-wrap"><i class="fas fa-user"></i></div>
-            Profile
-        </a>
-    </div>
+<?php include "includes/bottom-bar.php"; ?>
+
 
 </body>
 <script>

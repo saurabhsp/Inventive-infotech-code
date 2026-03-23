@@ -1,5 +1,6 @@
 <?php
 require_once "../web_api/includes/initialize.php";
+require_once "../../web_api/includes/db_config.php";
 
 $user = $_SESSION['user'] ?? null;
 $userid = $user['id'] ?? 0;
@@ -153,7 +154,7 @@ $valid_to = $user['valid_to'] ?? '';
         .header-actions {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
         }
 
         .nav-action-icon {
@@ -186,15 +187,23 @@ $valid_to = $user['valid_to'] ?? '';
             margin-bottom: -10px;
         }
 
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 15px 5px 5px;
-            background: var(--primary-light);
-            border-radius: 30px;
-            cursor: pointer;
-            transition: 0.2s;
+        @media (max-width: 900px) {
+
+            .desktop-nav,
+            .brand span {
+                display: none;
+            }
+
+            .user-profile {
+                display: flex;
+                padding: 5px;
+                background: transparent;
+            }
+
+            .user-name {
+                display: none;
+                /* hide text, keep icon only */
+            }
         }
 
         .user-profile:hover {
@@ -211,15 +220,15 @@ $valid_to = $user['valid_to'] ?? '';
         }
 
         .user-avatar {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             background: var(--primary);
             color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 700;
+            font-size: 16px;
         }
 
         .dropdown-menu {
@@ -227,7 +236,7 @@ $valid_to = $user['valid_to'] ?? '';
             top: 100%;
             right: 0;
             background: white;
-            min-width: 180px;
+            min-width: 200px;
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             border: 1px solid #eee;
@@ -237,9 +246,11 @@ $valid_to = $user['valid_to'] ?? '';
             transition: all 0.3s ease;
             z-index: 1000;
             padding: 10px 0;
+            z-index: 9999;
+
         }
 
-        .profile-dropdown-wrap:hover .dropdown-menu {
+        .profile-dropdown-wrap.active .dropdown-menu {
             opacity: 1;
             visibility: visible;
             transform: translateY(0);
@@ -464,21 +475,21 @@ $valid_to = $user['valid_to'] ?? '';
             background: #1d4ed8;
         }
 
+        /* --- 6. RECRUITER JOB CARD --- */
         .r-job-card {
-            background: #fff;
+            flex: 0 0 360px !important;
+            min-width: 360px;
+            max-width: 360px;
+            scroll-snap-align: start;
+            background: var(--white);
             border-radius: 16px;
-            padding: 18px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            border: 1px solid #eee;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            transition: 0.25s;
-        }
-
-        .r-job-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border-light);
+            position: relative;
+            user-select: none;
+            overflow: visible;
+            /* Prevents dropdown from hiding inside card */
         }
 
         /* 3 DOTS MENU (Dropdown - Removed Delete) */
@@ -871,7 +882,6 @@ $valid_to = $user['valid_to'] ?? '';
         @media (max-width: 900px) {
 
             .desktop-nav,
-            .user-profile,
             .brand span {
                 display: none;
             }
@@ -880,26 +890,10 @@ $valid_to = $user['valid_to'] ?? '';
                 padding: 0 15px;
             }
 
-            .header-actions {
-                gap: 15px;
-            }
+
 
             .nav-action-icon {
                 font-size: 1.6rem;
-            }
-
-            .jobs-slider-container::-webkit-scrollbar {
-                display: none;
-            }
-
-            @media(max-width:900px) {
-
-                .r-job-card {
-                    flex: 0 0 85vw;
-                    min-width: 85vw;
-                    max-width: 85vw;
-                }
-
             }
 
             .mob-profile {
@@ -1154,6 +1148,47 @@ $valid_to = $user['valid_to'] ?? '';
         .input-group {
             position: relative;
         }
+
+        .site-logo {
+            height: 40px;
+            width: auto;
+            display: block;
+        }
+
+
+        .mobile-avatar {
+            display: none;
+        }
+
+        @media (max-width: 900px) {
+            .mobile-avatar {
+                display: flex;
+                width: 36px;
+                height: 36px;
+                background: var(--primary);
+                color: white;
+                border-radius: 50%;
+                align-items: center;
+                justify-content: center;
+                font-size: 16px;
+                cursor: pointer;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .user-name {
+                display: none;
+                /* hide only text */
+            }
+
+            .user-profile {
+                padding: 5px;
+            }
+        }
+
+        .user-profile {
+            -webkit-tap-highlight-color: transparent;
+        }
     </style>
 
 </head>
@@ -1164,20 +1199,23 @@ $valid_to = $user['valid_to'] ?? '';
         <div class="header-container">
 
             <div class="brand-group">
+
                 <div class="brand">
-                    <i class="fas fa-user-tie"></i>
-                    <span><img src="https://pacweb.inv11.in/assets/pacific_iconnect.png" alt="PACIFIC iCONNECT"></span>
+                    <a href="index.php">
+                        <img src="/assets/pacific_iconnect.png" width="200" alt="Logo">
+                    </a>
                 </div>
 
                 <div class="location-pin" onclick="openLocationModal()">
                     <i class="fas fa-map-marker-alt"></i>
                     <span id="headerCity"><?php echo htmlspecialchars($city_name); ?></span>
                 </div>
+
             </div>
 
             <nav class="desktop-nav">
                 <a href="index.php" class="nav-link active">Dashboard</a>
-                <a href="post-jobs.php" class="nav-link">Post Jobs</a>
+                <a href="post-job.php" class="nav-link">Post Jobs</a>
                 <a href="applications.php" class="nav-link">Applications</a>
             </nav>
 
@@ -1187,6 +1225,9 @@ $valid_to = $user['valid_to'] ?? '';
                     <i class="fas fa-bell"></i>
                     <span class="noti-badge"><?= $notification_count ?></span>
                 </div>
+                <!-- <div class="mobile-avatar">
+                    <i class="fas fa-user"></i>
+                </div> -->
 
                 <div class="profile-dropdown-wrap">
                     <div class="user-profile">
@@ -1200,10 +1241,6 @@ $valid_to = $user['valid_to'] ?? '';
                     <div class="dropdown-menu">
                         <a href="my_profile.php" class="dropdown-item">
                             <i class="fas fa-building"></i> Company Profile
-                        </a>
-
-                        <a href="billing-wallet.php" class="dropdown-item">
-                            <i class="fas fa-wallet"></i> Billing & Wallet
                         </a>
 
                         <a href="../logout.php" class="dropdown-item">
@@ -1573,6 +1610,27 @@ $valid_to = $user['valid_to'] ?? '';
             });
 
     }
+
+    const profileWrap = document.querySelector(".profile-dropdown-wrap");
+    const profileBtn = document.querySelector(".user-profile");
+
+    // toggle dropdown (ONLY ONE EVENT)
+    profileBtn.addEventListener("click", function(e) {
+        e.stopPropagation();
+
+        if (profileWrap.classList.contains("active")) {
+            profileWrap.classList.remove("active");
+        } else {
+            profileWrap.classList.add("active");
+        }
+    });
+
+    // close on outside click (WORKS FOR BOTH MOBILE + DESKTOP)
+    document.addEventListener("click", function(e) {
+        if (!e.target.closest(".profile-dropdown-wrap")) {
+            profileWrap.classList.remove("active");
+        }
+    });
 </script>
 <script
     src="https://maps.googleapis.com/maps/api/js?key=

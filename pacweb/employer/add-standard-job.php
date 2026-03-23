@@ -2,10 +2,63 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
+require_once "../web_api/includes/db_config.php";
 
 date_default_timezone_set("Asia/Kolkata");
 
-$user = 741;
+
+$user         = $_SESSION['user'];
+$userid       = $user['id'];
+$recruiterid = $user['profile_id'];;
+
+
+
+
+//Array ( [job_id] => 23 [mode] => edit )
+$job_id = $_POST['job_id'] ?? null;
+$mode = $_POST['mode'] ?? null;
+$is_edit = ($mode === 'edit' && !empty($job_id));
+$editData = [];
+if ($is_edit) {
+    $postData = json_encode([
+        "id" => $job_id,
+        "userid" => $userid
+    ]);
+
+    $curl = curl_init();
+
+    curl_setopt_array($curl, [
+        CURLOPT_URL => API_BASE_URL . "getSinglejobvacany.php",
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $postData,
+        CURLOPT_HTTPHEADER => [
+            "Content-Type: application/json"
+        ]
+    ]);
+
+    $response = curl_exec($curl);
+    curl_close($curl);
+
+    $result = json_decode($response, true);
+    if (isset($result['status']) && $result['status'] === 'success') {
+        $editData = $result['data'];
+    } else {
+        $editData = [];
+    }
+    
+}
+
+
+
+
+
+
+
+
+
+
+
 
 $company_name = "";
 $contact_person = "";
@@ -15,13 +68,13 @@ $api_error = "";
 /* ====================1. Get Recruiter Details========================== */
 
 $post_user = json_encode([
-    "user_id" => $user
+    "user_id" => $userid
 ]);
 
 $curl = curl_init();
 
 curl_setopt_array($curl, [
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getRecuriterdetails.php",
+    CURLOPT_URL => API_BASE_URL . "getRecuriterdetails.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
     CURLOPT_POSTFIELDS => $post_user
@@ -48,13 +101,13 @@ if ($response) {
 $job_positions = [];
 
 $post_user = json_encode([
-    "user_id" => $user
+    "user_id" => $userid
 ]);
 
 $curl = curl_init();
 
 curl_setopt_array($curl, [
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getPosition.php",
+    CURLOPT_URL => API_BASE_URL . "getPosition.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
     CURLOPT_POSTFIELDS => $post_user
@@ -80,7 +133,7 @@ $degrees = [];
 $curl = curl_init();
 
 curl_setopt_array($curl, [
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getDegrees.php",
+    CURLOPT_URL => API_BASE_URL . "getDegrees.php",
     CURLOPT_RETURNTRANSFER => true
 ]);
 
@@ -104,7 +157,7 @@ $experience_list = [];
 $curl = curl_init();
 
 curl_setopt_array($curl, [
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getExperience_list.php",
+    CURLOPT_URL => API_BASE_URL . "getExperience_list.php",
     CURLOPT_RETURNTRANSFER => true
 ]);
 
@@ -132,7 +185,7 @@ $post_salary = json_encode([
 $curl = curl_init();
 
 curl_setopt_array($curl, [
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getSalaryrange.php",
+    CURLOPT_URL => API_BASE_URL . "getSalaryrange.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
     CURLOPT_POSTFIELDS => $post_salary
@@ -159,7 +212,7 @@ $genders = [];
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
-    CURLOPT_URL => "https://beta.inv51.in/webservices/getGender.php",
+    CURLOPT_URL => API_BASE_URL . "getGender.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
 ));
@@ -184,10 +237,9 @@ if (!$api_error && $getGender) {
 }
 /* ====================SUBMIT JOB========================== */
 
-if ($_SERVER['REQUEST_METHOD'] == "POST") {
-
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
     $postData = [
-        "recruiter_id" => $user,
+        "recruiter_id" => $recruiterid,
         "company_name" => $company_name,
         "job_position_id" => $_POST['job_position'],
         "city_id" => $_POST['city'],
@@ -208,13 +260,21 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
         "valid_till_date" => $_POST['valid_till_date'] ?? "",
         "valid_till_time" => "23:59:59",
 
-        "validity_apply" => "Online",
 
+        // "validity_apply" => "Online",
+        "validity_apply" => $_POST['validity_apply'] ?? 0,
         "country" => $_POST['country'] ?? "",
         "state" => $_POST['state'] ?? "",
         "district" => $_POST['city'] ?? ""
     ];
+    $postData = array_filter($postData, function ($value) {
+        return $value !== null && $value !== "";
+    });
 
+    // ✅ ADD ID BEFORE ENCODE
+    if ($is_edit && !empty($job_id)) {
+        $postData['id'] = (int)$job_id;
+    }
     $postjson = json_encode($postData);
     // print_r($postjson);
     // exit;
@@ -223,7 +283,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
     curl_setopt_array($curl, [
 
-        CURLOPT_URL => "https://beta.inv51.in/webservices/addJobvacancy.php",
+        CURLOPT_URL => API_BASE_URL . "addJobvacancy.php",
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $postjson,
@@ -234,27 +294,15 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
     $response = curl_exec($curl);
     curl_close($curl);
     $apiResult = json_decode($response, true);
-
     if ($apiResult['status'] == "success") {
-
         $_SESSION['success_message'] = $apiResult['message'];
     } else {
-
-        exit;
         $_SESSION['error_message'] = $apiResult['message'] ?? "Something went wrong";
     }
-
     header("Location: " . $_SERVER['PHP_SELF']);
     exit;
 }
 ?>
-
-
-
-
-
-
-
 
 
 
@@ -272,6 +320,8 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Post Standard Job | Pacific iConnect</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <style>
         :root {
             /* Pacific iConnect Theme Colors */
@@ -1065,7 +1115,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
 <body>
 
-    <?php  include "includes/header.php"; 
+    <?php include "includes/header.php";
     ?>
     <?php if (!empty($_SESSION['success_message'])): ?>
         <div class="modal-full-overlay active" id="successModal">
@@ -1120,7 +1170,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
 
 
-        <?php unset($_SESSION['success_message']); ?>
+        <?php unset($_SESSION['error_message']); ?>
     <?php endif; ?>
 
 
@@ -1135,12 +1185,15 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
             <h1 class="desktop-page-title">Post Standard Job</h1>
 
             <form method="POST">
+                <input type="hidden" name="job_id" value="<?php echo $job_id; ?>">
+                <input type="hidden" name="mode" value="<?php echo $mode; ?>">
+                <input type="hidden" name="form_submitted" value="1">
 
                 <div class="form-grid">
                     <div class="form-group">
                         <label class="form-label">Company Name</label>
                         <input type="text" class="form-control" name="company_name"
-                            value="<?php echo htmlspecialchars($company_name); ?>" readonly>
+                            value="<?php echo $is_edit ? htmlspecialchars($editData['company_name']) : htmlspecialchars($company_name); ?>" readonly>
                     </div>
 
                     <div class="form-group">
@@ -1149,7 +1202,8 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                             <option value="">Select Job Position</option>
                             <?php if (!empty($job_positions)) { ?>
                                 <?php foreach ($job_positions as $position) { ?>
-                                    <option value="<?php echo htmlspecialchars($position['id']); ?>">
+                                    <option value="<?php echo $position['id']; ?>"
+                                        <?php echo ($is_edit && $editData['job_position_id'] == $position['id']) ? 'selected' : ''; ?>>
                                         <?php echo htmlspecialchars($position['name']); ?>
                                     </option>
                                 <?php } ?>
@@ -1159,7 +1213,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
                     <div class="form-group">
                         <label class="form-label">District / Tehsil / City</label>
-                        <input type="text" name="city" id="cityInput" class="form-control" autocomplete="off">
+                        <input type="text" name="city" id="cityInput" class="form-control" autocomplete="off" value="<?php echo $is_edit ? htmlspecialchars($editData['city']) : ''; ?>">
                         <!-- hidden fields -->
                         <input type="hidden" id="stateInput" name="state">
                         <input type="hidden" id="countryInput" name="country">
@@ -1168,23 +1222,24 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
                     <div class="form-group">
                         <label class="form-label">Area / Locality / Village</label>
-                        <input type="text" id="localityInput" name="locality" class="form-control" autocomplete="off">
+                        <input type="text" id="localityInput" name="locality" class="form-control" value="<?php echo $is_edit ? htmlspecialchars($editData['locality']) : ''; ?>" autocomplete="off">
                         <div id="localitySuggestions" class="suggestion-box"></div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Gender</label>
                         <div class="toggle-container" id="genderToggle">
-                            <input type="hidden" name="gender" id="genderInput">
-                            <?php if (!empty($genders)) { ?>
+                            <input type="hidden" name="gender" id="genderInput"
+                                value="<?php echo $is_edit ? $editData['gender_id'] : ''; ?>"> <?php if (!empty($genders)) { ?>
                                 <?php foreach ($genders as $gender) { ?>
                                     <button
                                         type="button"
-                                        class="btn-toggle"
+                                        class="btn-toggle <?php echo ($is_edit && $editData['gender_id'] == $gender['id']) ? 'active' : ''; ?>"
                                         data-id="<?php echo $gender['id']; ?>"
                                         onclick="toggleGroup(this,'genderToggle')">
                                         <?php echo htmlspecialchars($gender['name']); ?>
                                     </button>
+
                                 <?php } ?>
                             <?php } ?>
                         </div>
@@ -1197,7 +1252,8 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                             <option value="">Choose Basic Qualification</option>
                             <?php if (!empty($degrees)) { ?>
                                 <?php foreach ($degrees as $degree) { ?>
-                                    <option value="<?php echo $degree['id']; ?>">
+                                    <option value="<?php echo $degree['id']; ?>"
+                                        <?php echo ($is_edit && $editData['qualification_id'] == $degree['id']) ? 'selected' : ''; ?>>
                                         <?php echo htmlspecialchars($degree['name']); ?>
                                     </option>
                                 <?php } ?>
@@ -1213,7 +1269,8 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                                     <option value="">From</option>
                                     <?php if (!empty($experience_list)) { ?>
                                         <?php foreach ($experience_list as $exp) { ?>
-                                            <option value="<?php echo $exp['id']; ?>">
+                                            <option value="<?php echo $exp['id']; ?>"
+                                                <?php echo ($is_edit && $editData['experience_from_id'] == $exp['id']) ? 'selected' : ''; ?>>
                                                 <?php echo htmlspecialchars($exp['name']); ?>
                                             </option>
                                         <?php } ?>
@@ -1227,7 +1284,8 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                                     <option value="">To</option>
                                     <?php if (!empty($experience_list)) { ?>
                                         <?php foreach ($experience_list as $exp) { ?>
-                                            <option value="<?php echo $exp['id']; ?>">
+                                            <option value="<?php echo $exp['id']; ?>"
+                                                <?php echo ($is_edit && $editData['experience_to_id'] == $exp['id']) ? 'selected' : ''; ?>>
                                                 <?php echo htmlspecialchars($exp['name']); ?>
                                             </option>
                                         <?php } ?>
@@ -1247,7 +1305,8 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                                     <option value="">From ₹</option>
                                     <?php if (!empty($salary_ranges)) { ?>
                                         <?php foreach ($salary_ranges as $salary) { ?>
-                                            <option value="<?php echo $salary['id']; ?>">
+                                            <option value="<?php echo $salary['id']; ?>"
+                                                <?php echo ($is_edit && $editData['salary_from_id'] == $salary['id']) ? 'selected' : ''; ?>>
                                                 ₹<?php echo number_format($salary['name']); ?>
                                             </option>
                                         <?php } ?>
@@ -1261,7 +1320,8 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                                     <option value="">To ₹</option>
                                     <?php if (!empty($salary_ranges)) { ?>
                                         <?php foreach ($salary_ranges as $salary) { ?>
-                                            <option value="<?php echo $salary['id']; ?>">
+                                            <option value="<?php echo $salary['id']; ?>"
+                                                <?php echo ($is_edit && $editData['salary_to_id'] == $salary['id']) ? 'selected' : ''; ?>>
                                                 ₹<?php echo number_format($salary['name']); ?>
                                             </option>
                                         <?php } ?>
@@ -1274,28 +1334,29 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
                     <div class="form-group">
                         <label class="form-label">Contact Person for Interview :</label>
-                        <input type="text" class="form-control" name="contact_person" value="<?php echo htmlspecialchars($contact_person); ?>" placeholder="Enter name">
+                        <input type="text" class="form-control" name="contact_person" value="<?php echo $is_edit ? htmlspecialchars($editData['contact_person']) : htmlspecialchars($contact_person); ?>" placeholder="Enter name">
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Interviewer/ HR Contact No</label>
-                        <input type="tel" class="form-control" name="contact_no" value="<?php echo htmlspecialchars($contact_mobile); ?>" placeholder="Enter contact number">
+                        <input type="tel" class="form-control" name="contact_no" value="<?php echo $is_edit ? htmlspecialchars($editData['mobile_no']) : htmlspecialchars($contact_mobile); ?>" placeholder="Enter contact number">
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Interview Location</label>
-                        <textarea class="form-control" name="interview_address"><?php echo htmlspecialchars($interview_address); ?></textarea>
+                        <textarea class="form-control" name="interview_address"><?php echo $is_edit ? htmlspecialchars($editData['interview_address']) : htmlspecialchars($interview_address); ?></textarea>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Does this Job have a deadline?</label>
+                        <input type="hidden" name="validity_apply" id="validityApplyInput" value="0">
                         <div class="toggle-container" id="deadlineToggle">
                             <button type="button" class="btn-toggle" onclick="handleDeadlineToggle(true, this)">Yes</button>
                             <button type="button" class="btn-toggle active" onclick="handleDeadlineToggle(false, this)">No</button>
                         </div>
 
                         <div class="deadline-date-wrapper" id="deadlineDateGroup">
-                            <input type="date" name="valid_till_date" class="form-control" placeholder="Select Date">
+                            <input type="text" name="valid_till_date" placeholder="DD-MM-YYYY" class="form-control datepicker" placeholder="Select Date">
                         </div>
                     </div>
                 </div>
@@ -1328,7 +1389,6 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
     </div>
 
     <script>
-        alert("Hii");
         // Logic for Yes/No Deadline toggle
         function toggleDeadline(isYes) {
             const btnYes = document.getElementById('btnYes');
@@ -1349,13 +1409,18 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
 
         // Specific Deadline Logic
-        function handleDeadlineToggle(isYes, clickedBtn) {
+       function handleDeadlineToggle(isYes, clickedBtn) {
             toggleGroup(clickedBtn, 'deadlineToggle');
+
             const dateGroup = document.getElementById('deadlineDateGroup');
+            const validityInput = document.getElementById('validityApplyInput');
+
             if (isYes) {
                 dateGroup.classList.add('active');
+                validityInput.value = 1; 
             } else {
                 dateGroup.classList.remove('active');
+                validityInput.value = 0; 
             }
         }
 
@@ -1588,6 +1653,15 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
             });
 
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            flatpickr(".datepicker", {
+                altInput: true,
+                altFormat: "d-m-Y",
+                dateFormat: "Y-m-d",
+                allowInput: false
+            });
         });
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCokcdTmQxRaopu75ourz-nNmZNie1wQkY&libraries=places&callback=initCityAutocomplete" async defer></script>
