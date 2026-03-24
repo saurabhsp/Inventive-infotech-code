@@ -30,7 +30,7 @@ if ($is_edit) {
     $curl = curl_init();
 
     curl_setopt_array($curl, [
-        CURLOPT_URL => API_BASE_URL ."getSinglewalkininterview.php",
+        CURLOPT_URL => API_BASE_URL . "getSinglewalkininterview.php",
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $postData,
@@ -504,48 +504,56 @@ if (!$api_error && $getGender) {
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
-  $postData = [
-    "recruiter_id" => $profile_id,
-    "company_name" => $company_name,
-    "job_position_id" => $_POST['job_position'] ?? "",
-    "state" => $_POST['state'] ?? "",
-    "country" => $_POST['country'] ?? "",
-    "city_id" => $_POST['city'] ?? "",
-    "locality_id" => $_POST['locality'] ?? "",
-    "number_of_openings" => $_POST['number_of_openings'] ?? "",
-    "job_type" => $_POST['job_type'] ?? "",
-    "work_model" => $_POST['work_model'] ?? "",
-    "field_work" => $_POST['fieldwork'] ?? "",
-    "work_shift" => "Morning",
-    "gender" => $_POST['gender'] ?? "",
-    "qualification" => $_POST['qualification'] ?? "",
-    "experience_from" => $_POST['experience_from'] ?? "",
-    "experience_to" => $_POST['experience_to'] ?? "",
-    "salary_from" => $_POST['salary_from'] ?? "",
-    "salary_to" => $_POST['salary_to'] ?? "",
-    "job_description" => $_POST['job_description'] ?? "",
-    "skills_required" => $_POST['skills_required'] ?? [],
-    "languages_required" => $_POST['languages_required'] ?? [],
-    "work_equipment" => $_POST['work_equipment'] ?? [],
-    "contact_person_name" => $_POST['contact_person_name'] ?? "",
-    "contact_no" => $_POST['contact_no'] ?? "",
-    "interview_address" => $_POST['interview_address'] ?? "",
-    "validity_apply" => ($_POST['validity_apply'] === "Yes") ? 1 : 0,
-    "valid_till_date" => $_POST['valid_till_date'] ?? "",
-    "job_status_id" => 1,
-    "lat" => $_POST['lat'] ?? "",
-    "lon" => $_POST['lon'] ?? "",
-];
+    $postData = [
+        "recruiter_id" => $profile_id,
+        "company_name" => $company_name,
+        "job_position_id" => $_POST['job_position'] ?? "",
+        "state" => $_POST['state'] ?? "",
+        "country" => $_POST['country'] ?? "",
+        "city_id" => $_POST['city'] ?? "",
+        "locality_id" => $_POST['locality'] ?? "",
+        "number_of_openings" => $_POST['number_of_openings'] ?? "",
+        "work_model" => !empty($_POST['work_model']) ? $_POST['work_model'] : ($editData['work_model_id'] ?? ""),
+        "work_shift" => !empty($_POST['work_shift']) ? $_POST['work_shift'] : ($editData['work_shift_id'] ?? ""),
+        "job_type" => !empty($_POST['job_type']) ? $_POST['job_type'] : ($editData['job_type_id'] ?? ""),
+        "gender" => !empty($_POST['gender']) ? $_POST['gender'] : ($editData['gender_id'] ?? ""),
+        "field_work" => !empty($_POST['fieldwork']) ? $_POST['fieldwork'] : ($editData['field_work_id'] ?? ""),
+        // "job_type" => $_POST['job_type'] ?? "",
+        // "work_model" => $_POST['work_model'] ?? "",
+        // "field_work" => $_POST['fieldwork'] ?? "",
+        // "work_shift" => $_POST['work_shift'] ?? "",
+        // "gender" => $_POST['gender'] ?? "",
+        "qualification" => $_POST['qualification'] ?? "",
+        "experience_from" => $_POST['experience_from'] ?? "",
+        "experience_to" => $_POST['experience_to'] ?? "",
+        "salary_from" => $_POST['salary_from'] ?? "",
+        "salary_to" => $_POST['salary_to'] ?? "",
+        "job_description" => $_POST['job_description'] ?? "",
+        "skills_required" => $_POST['skills_required'] ?? [],
+        "languages_required" => $_POST['languages_required'] ?? [],
+        "work_equipment" => $_POST['work_equipment'] ?? [],
+        "contact_person_name" => $_POST['contact_person_name'] ?? "",
+        "contact_no" => $_POST['contact_no'] ?? "",
+        "interview_address" => $_POST['interview_address'] ?? "",
+        "validity_apply" => $_POST['validity_apply'] ?? 0,
+        "valid_till_date" => $_POST['valid_till_date'] ?? "",
+        "job_status_id" => 1,
+        "lat" => $_POST['lat'] ?? "",
+        "lon" => $_POST['lon'] ?? "",
+    ];
 
+    // PRINT_R($postData);
+    // exit;
 
-// ✅ ADD ID BEFORE ENCODE
-if ($is_edit && !empty($job_id)) {
-    $postData['id'] = (int)$job_id;
-}
+    // ✅ ADD ID BEFORE ENCODE
+    if ($is_edit && !empty($job_id)) {
+        $postData['id'] = (int)$job_id;
+    }
 
-// NOW encode
-$jsonData = json_encode($postData);
+    // NOW encode
+    $jsonData = json_encode($postData);
     $api_url = API_BASE_URL . "addWalkininterview.php";
+    // $api_url = "https://beta.inv51.in/webservices/addWalkininterview.php";
 
 
 
@@ -1863,9 +1871,11 @@ $jsonData = json_encode($postData);
 </head>
 
 <body>
-   
 
-    <?php include "includes/preloader.php"; ?>
+
+    <?php if (empty($_SESSION['success_message'])) {
+        include "includes/preloader.php";
+    } ?>
     <?php include "includes/header.php";
     ?>
     <?php if (!empty($_SESSION['success_message'])): ?>
@@ -1983,11 +1993,12 @@ $jsonData = json_encode($postData);
                         <div>
                             <label class="form-label">Does this Job require Fieldwork?</label>
                             <div class="toggle-container" id="fieldworkToggle">
-                                <input type="hidden" name="fieldwork" id="fieldworkInput" value="Yes">
+                                <input type="hidden" name="fieldwork" id="fieldworkInput"
+                                    value="<?php echo $is_edit ? $editData['field_work_id'] : ''; ?>">
                                 <button
                                     type="button"
                                     class="btn-toggle"
-                                    data-value="Yes"
+                                    data-value="1"
                                     onclick="toggleGroup(this, 'fieldworkToggle')">
                                     Yes
                                 </button>
@@ -1995,7 +2006,7 @@ $jsonData = json_encode($postData);
                                 <button
                                     type="button"
                                     class="btn-toggle"
-                                    data-value="No"
+                                    data-value="0"
                                     onclick="toggleGroup(this, 'fieldworkToggle')">
                                     No
                                 </button>
@@ -2006,14 +2017,15 @@ $jsonData = json_encode($postData);
                     <div class="form-group">
                         <label class="form-label">Job Type</label>
                         <div class="toggle-container" id="jobTypeToggle">
-                            <input type="hidden" name="job_type" id="jobTypeInput">
+                            <input type="hidden" name="job_type" id="jobTypeInput"
+                                value="<?php echo $is_edit ? $editData['job_type_id'] : ''; ?>">
                             <?php if (!empty($job_types)) { ?>
                                 <?php foreach ($job_types as $index => $type) { ?>
                                     <button
                                         type="button"
                                         class="btn-toggle"
                                         onclick="toggleGroup(this, 'jobTypeToggle')"
-                                        data-name="<?php echo $type['name']; ?>">
+                                        data-id="<?php echo $type['id']; ?>">
                                         <?php echo htmlspecialchars($type['name']); ?>
                                     </button>
                                 <?php } ?>
@@ -2030,7 +2042,7 @@ $jsonData = json_encode($postData);
                                         <button
                                             type="button"
                                             class="btn-toggle"
-                                            data-name="<?php echo $model['name']; ?>"
+                                            data-id="<?php echo $model['id']; ?>"
                                             onclick="toggleGroup(this,'workModelToggle')">
                                             <?php echo htmlspecialchars($model['name']); ?>
                                         </button>
@@ -2039,7 +2051,8 @@ $jsonData = json_encode($postData);
 
                             </div>
 
-                            <input type="hidden" name="work_model" id="workModelInput">
+                            <input type="hidden" name="work_model" id="workModelInput"
+                                value="<?php echo $is_edit ? $editData['work_model_id'] : ''; ?>">
 
                         </div>
                     </div>
@@ -2055,14 +2068,15 @@ $jsonData = json_encode($postData);
                                         <button
                                             type="button"
                                             class="btn-toggle"
-                                            data-name="<?php echo $shift['shift_name']; ?>"
+                                            data-id="<?php echo $shift['id']; ?>"
                                             onclick="toggleGroup(this,'workShiftToggle')">
                                             <?php echo htmlspecialchars($shift['shift_name']); ?>
                                         </button>
                                     <?php } ?>
                                 <?php } ?>
                             </div>
-                            <input type="hidden" name="work_shift" id="workShiftInput">
+                            <input type="hidden" name="work_shift" id="workShiftInput"
+                                value="<?php echo $is_edit ? $editData['work_shift_id'] : ''; ?>">
                         </div>
                     </div>
 
@@ -2074,7 +2088,8 @@ $jsonData = json_encode($postData);
 
                         <div class="toggle-container" id="genderToggle">
 
-                            <input type="hidden" name="gender" id="genderInput">
+                            <input type="hidden" name="gender" id="genderInput"
+                                value="<?php echo $is_edit ? $editData['gender_id'] : ''; ?>">
 
                             <?php if (!empty($genders)) { ?>
                                 <?php foreach ($genders as $gender) { ?>
@@ -2082,7 +2097,7 @@ $jsonData = json_encode($postData);
                                     <button
                                         type="button"
                                         class="btn-toggle"
-                                        data-name="<?php echo $gender['name']; ?>"
+                                        data-id="<?php echo $gender['id']; ?>"
                                         onclick="toggleGroup(this,'genderToggle')">
 
                                         <?php echo htmlspecialchars($gender['name']); ?>
@@ -2273,9 +2288,7 @@ $jsonData = json_encode($postData);
 
                     <div style="display:flex; flex-direction:column; height: 100%;">
                         <label class="form-label">Job Description : (Optional)</label>
-                        <textarea class="form-control" name="job_description" placeholder="Enter Job Description" style="flex:1; min-height: 80px;">
-                        <?php echo $is_edit ? $editData['job_description'] : ''; ?>
-                        </textarea>
+                        <textarea class="form-control" name="job_description"><?= trim($editData['job_description'] ?? '') ?></textarea>
                     </div>
 
                     <div class="form-group">
@@ -2307,15 +2320,15 @@ $jsonData = json_encode($postData);
                     <!-- <div class="form-group full-width" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;"> -->
                     <div>
                         <label class="form-label">Does this Job have a deadline?</label>
+
                         <div class="toggle-container" id="deadlineToggle">
                             <button type="button" class="btn-toggle" onclick="handleDeadlineToggle(true, this)">Yes</button>
-                            <!-- <button type="button" class="btn-toggle active" onclick="handleDeadlineToggle(false, this)">No</button> -->
 
                             <button type="button" class="btn-toggle" onclick="handleDeadlineToggle(false, this)">No</button>
                         </div>
                         <div class="deadline-date-wrapper" id="deadlineDateGroup">
                             <input value="<?php echo ($is_edit && $editData['valid_till_date'] != '0000-00-00') ? $editData['valid_till_date'] : ''; ?>" type="text" placeholder="DD-MM-YYYY" name="valid_till_date" class="form-control datepicker" placeholder="Select Date">
-                            <input type="hidden" name="validity_apply" id="validityApplyInput" value="No">
+                            <input type="hidden" name="validity_apply" id="validityApplyInput" value="<?php echo $is_edit ? $editData['validity_apply_id'] : ''; ?>">
                         </div>
                     </div>
 
@@ -2388,13 +2401,33 @@ $jsonData = json_encode($postData);
 
     <script>
         // EDIT DATA SCRIPT
+        function setActiveToggle(groupId, selectedId) {
+
+            const container = document.getElementById(groupId);
+            const buttons = container.querySelectorAll('.btn-toggle');
+
+            buttons.forEach(btn => {
+
+                let btnId = btn.getAttribute('data-id') || btn.getAttribute('data-value');
+
+                if (btnId == selectedId) {
+                    btn.classList.add('active');
+
+                    let input = container.querySelector('input[type="hidden"]');
+                    if (input) input.value = btnId;
+
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
         <?php if ($is_edit): ?>
             document.addEventListener("DOMContentLoaded", function() {
-                setActiveToggle("jobTypeToggle", "<?php echo $editData['job_type']; ?>");
-                setActiveToggle("workModelToggle", "<?php echo $editData['work_model']; ?>");
-                setActiveToggle("workShiftToggle", "<?php echo $editData['work_shift']; ?>");
-                setActiveToggle("genderToggle", "<?php echo $editData['gender']; ?>");
-                setActiveToggle("fieldworkToggle", "<?php echo $editData['field_work']; ?>");
+                setActiveToggle("jobTypeToggle", "<?php echo $editData['job_type_id']; ?>");
+                setActiveToggle("workModelToggle", "<?php echo $editData['work_model_id']; ?>");
+                setActiveToggle("workShiftToggle", "<?php echo $editData['work_shift_id']; ?>");
+                setActiveToggle("genderToggle", "<?php echo $editData['gender_id']; ?>");
+                setActiveToggle("fieldworkToggle", "<?php echo $editData['field_work_id']; ?>");
                 // 🔥 ADD THESE
                 updateSelectedSkills();
                 updateSelectedLanguages();
@@ -2451,10 +2484,18 @@ $jsonData = json_encode($postData);
         window.onload = () => document.getElementById("global-preloader")?.remove();
         // Generic Toggle Logic for button groups
         function toggleGroup(clickedBtn, groupId) {
+
             const container = document.getElementById(groupId);
             const buttons = container.querySelectorAll('.btn-toggle');
+
             buttons.forEach(btn => btn.classList.remove('active'));
+
             clickedBtn.classList.add('active');
+
+            let value = clickedBtn.getAttribute('data-id') || clickedBtn.getAttribute('data-value');
+
+            let input = container.querySelector('input[type="hidden"]');
+            if (input) input.value = value;
         }
 
         // Specific Deadline Logic
@@ -2466,10 +2507,10 @@ $jsonData = json_encode($postData);
 
             if (isYes) {
                 dateGroup.classList.add('active');
-                validityInput.value = "Yes";
+                validityInput.value = 1;
             } else {
                 dateGroup.classList.remove('active');
-                validityInput.value = "No";
+                validityInput.value = 0;
             }
         }
 
@@ -2485,6 +2526,7 @@ $jsonData = json_encode($postData);
             const buttons = container.querySelectorAll('.btn-toggle');
 
             buttons.forEach(btn => btn.classList.remove('active'));
+
             clickedBtn.classList.add('active');
 
             // Fieldwork value
@@ -2496,43 +2538,26 @@ $jsonData = json_encode($postData);
             // Job Type value
             if (groupId === "jobTypeToggle") {
                 document.getElementById("jobTypeInput").value =
-                    clickedBtn.getAttribute("data-name");
+                    clickedBtn.getAttribute("data-id");
             }
 
             // Work Model value
             if (groupId === "workModelToggle") {
                 document.getElementById("workModelInput").value =
-                    clickedBtn.getAttribute("data-name");
+                    clickedBtn.getAttribute("data-id");
             }
             // Work Shift value
             if (groupId === "workShiftToggle") {
                 document.getElementById("workShiftInput").value =
-                    clickedBtn.getAttribute("data-name");
+                    clickedBtn.getAttribute("data-id");
             }
             // Gender value
             if (groupId === "genderToggle") {
                 document.getElementById("genderInput").value =
-                    clickedBtn.getAttribute("data-name");
+                    clickedBtn.getAttribute("data-id");
             }
         }
 
-        function setActiveToggle(groupId, value) {
-            const buttons = document.querySelectorAll(`#${groupId} .btn-toggle`);
-            buttons.forEach(btn => {
-                if (btn.getAttribute("data-name") === value || btn.getAttribute("data-value") === value) {
-                    btn.classList.add("active");
-
-                    let input = document.querySelector(`#${groupId} input[type="hidden"]`);
-                    if (input) input.value = value;
-                }
-            });
-        }
-
-        <?php if ($is_edit): ?>
-            document.addEventListener("DOMContentLoaded", function() {
-                setActiveToggle("jobTypeToggle", "<?php echo $editData['job_type']; ?>");
-            });
-        <?php endif; ?>
 
         function toggleSkillDropdown() {
             let dropdown = document.getElementById("skillDropdown");
