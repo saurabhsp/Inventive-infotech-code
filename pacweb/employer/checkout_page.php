@@ -22,7 +22,7 @@ $selectedPlanData = [];
 
 if (!empty($planName)) {
 
-    $getPlanUrl = API_BASE_URL ."getSubscriptionplans.php";
+    $getPlanUrl = API_BASE_URL . "getSubscriptionplans.php";
 
     $payload = json_encode([
         "profile_type" => $profile_type_id
@@ -52,6 +52,7 @@ if (!empty($planName)) {
         }
     }
 }
+$planid   = $selectedPlanData['id'] ?? 0;
 $amount   = $selectedPlanData['final_amount'] ?? 0;
 $validity = $selectedPlanData['validity_months'] ?? 0;
 $gst      = $selectedPlanData['gst'] ?? 0;
@@ -72,7 +73,7 @@ $gstno = '';
 
 if ($profile_type_id == 1) {
 
-    $getgstUrl = API_BASE_URL ."getGST.php";
+    $getgstUrl = API_BASE_URL . "getGST.php";
 
     $getgstPayload = json_encode([
         "profile_id" => $profile_id
@@ -101,7 +102,7 @@ if ($profile_type_id == 1) {
 
 
 //=============RAZORPAY KEYS==========
-$getKeyUrl = API_BASE_URL ."razorpay_keys.php";
+$getKeyUrl = "https://pacificconnect2.0.inv51.in/webservices/razorpay_keys.php";
 
 $ch = curl_init($getKeyUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -155,11 +156,9 @@ if (isset($_POST['upload_doc']) && $profile_type_id == 2) {
         "doc_img" => $cfile
     ];
 
-    // print_r($postData);
-    // exit;
 
 
-    $ch = curl_init(API_BASE_URL ."addDoc.php");
+    $ch = curl_init(API_BASE_URL . "addDoc.php");
 
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
@@ -204,9 +203,7 @@ if (!empty($_POST['coupon_code'])) {
         "profile_type_id" => $profile_type_id
     ]);
 
-    // print_r($couponPayload );
-    // exit;
-    $ch = curl_init(API_BASE_URL ."applyCoupon.php");
+    $ch = curl_init(API_BASE_URL . "applyCoupon.php");
 
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
@@ -224,8 +221,7 @@ if (!empty($_POST['coupon_code'])) {
     curl_close($ch);
 
     $couponResult = json_decode($couponResponse, true);
-    // print_r(   $couponResult);
-    // exit;
+
 
     // default
     if (!empty($couponResult) && $couponResult['status'] == true) {
@@ -257,14 +253,14 @@ if (isset($_POST['pay_now'])) {
     $gst_no = $_POST['gst_no'] ?? '';
 
     // ✅ ONLY FOR PROFILE TYPE 2
-    if ($profile_type_id == 2 && !empty($gst_no)) {
+    if ($profile_type_id == 1 && !empty($gst_no)) {
         $payload = json_encode([
             "profile_id" => $profile_id,
             "gstno" => $gst_no
         ]);
 
         //=============Update GST=========
-        $ch = curl_init(API_BASE_URL ."updateGST.php");
+        $ch = curl_init(API_BASE_URL . "updateGST.php");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
@@ -278,18 +274,18 @@ if (isset($_POST['pay_now'])) {
         $gstUpdate = json_decode($res, true);
 
         if (!empty($gstUpdate) && $gstUpdate['status'] == true) {
-            $successMsg = $gstUpdate['message'];
+            // $successMsg = $gstUpdate['message'];
         } else {
             $apierror = $gstUpdate['message'] ?? "GST update failed";
         }
     }
 
     // ✅ PAYMENT CONTINUES
-    $amount = $amount;
+    $amount = $finalAmount;
 
     $payload = json_encode([
         "receipt" => "ORD_" . time(),
-        "amount" => $amount,
+        "amount" => $finalAmount, // ✅ correct
         "notes" => [
             "user_id" => $userid,
             "plan" => $planName
@@ -309,13 +305,15 @@ if (isset($_POST['pay_now'])) {
     curl_close($ch);
 
     $orderData = json_decode($response, true);
-    // print_r($orderData );
-    // exit;
-      if (!empty($orderData) && $orderData['status'] == true) {
-            $successMsg = "Order Created Successfully ". $orderData['receipt'];
-        } else {
-            $apierror = $orderData['status'] ?? "Failed to Create Order";
-        }
+    if (!empty($orderData) && $orderData['status'] == true) {
+        // $successMsg = "Order Created Successfully " . $orderData['receipt'];
+        $amount_paise = $orderData['amount_paise']; //AMOUNT IN PAISE FOR RAZORPAY
+        $amount_rupees = $orderData['amount_rupees']; //AMOUNT IN PAISE FOR RAZORPAY
+        $status = $orderData['status'];
+        $order_id = $orderData['order_id'] ?? '';
+    } else {
+        $apierror = $orderData['status'] ?? "Failed to Create Order";
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -782,9 +780,9 @@ if (isset($_POST['pay_now'])) {
     </div>
     <?php unset($_SESSION['error_message']); ?>
 
-    <?php  include "includes/preloader.php"; 
+    <?php include "includes/preloader.php";
     ?>
-    <?php  include "includes/header.php"; 
+    <?php include "includes/header.php";
     ?>
 
     <div class="container">
@@ -909,7 +907,7 @@ if (isset($_POST['pay_now'])) {
 
         </div>
     </div>
-    <?php  include "includes/bottom-bar.php"; 
+    <?php include "includes/bottom-bar.php";
     ?>
 
     <script>
@@ -968,6 +966,85 @@ if (isset($_POST['pay_now'])) {
             });
         });
     </script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        const razorpay_key = "<?php echo $razorpay_key; ?>";
+        const order_id = "<?php echo $order_id; ?>";
+        const amount_paise = "<?php echo $amount_paise ?? 0; ?>"; // ✅ IMPORTANT
+        const user_name = "<?php echo $user['name'] ?? 'TEST'; ?>"; //not in session now
+        const user_email = "<?php echo $user['email'] ?? ''; ?>";
+        const user_contact = "<?php echo $user['mobile_no'] ?? ''; ?>";
+
+
+
+        function openRazorpay() {
+            if (!order_id || amount_paise == 0) {
+                alert("Order not created properly");
+                return;
+            }
+            console.log("KEY:", razorpay_key);
+            console.log("ORDER ID:", order_id);
+            console.log("AMOUNT:", amount_paise);
+            var options = {
+
+                "key": razorpay_key, // from API
+                "amount": amount_paise, // ✅ THIS IS YOUR ANSWER (IN PAISE)
+                "currency": "INR",
+                "name": "Pacific iConnect",
+                "description": "Subscription Payment",
+                "order_id": order_id, // from backend
+
+                "handler": function(response) {
+
+                    var form = document.createElement("form");
+                    form.method = "POST";
+                    form.action = "payment_status.php";
+
+                    function addField(name, value) {
+                        var input = document.createElement("input");
+                        input.type = "hidden";
+                        input.name = name;
+                        input.value = value;
+                        form.appendChild(input);
+                    }
+
+                    // ONLY SAFE DATA
+                    addField("payment_id", response.razorpay_payment_id);
+                    addField("order_id", response.razorpay_order_id);
+                    addField("signature", response.razorpay_signature);
+
+                    // YOUR DYNAMIC DATA (FROM PHP)
+                    addField("plan_id", "<?php echo $planid; ?>");
+                    addField("amount_paid", "<?php echo $finalAmount; ?>");
+                    addField("plan_amount", "<?php echo $amount; ?>");
+                    addField("discount", "<?php echo $discountAmount; ?>");
+                    addField("coupon_code", "<?php echo strtoupper($_POST['coupon_code'] ?? ''); ?>");
+
+                    document.body.appendChild(form);
+                    form.submit();
+                },
+
+                "prefill": {
+                    "name": user_name,
+                    "email": user_email,
+                    "contact": user_contact
+                },
+
+                "theme": {
+                    "color": "#1565c0"
+                }
+            };
+
+            var rzp = new Razorpay(options);
+            rzp.open();
+        }
+
+        <?php if (!empty($order_id) && !empty($amount_paise)) { ?>
+            setTimeout(function() {
+                openRazorpay();
+            }, 500);
+    </script>
+<?php } ?>
 </body>
 
 </html>
