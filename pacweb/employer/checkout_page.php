@@ -235,7 +235,33 @@ if (!empty($_POST['coupon_code'])) {
 }
 
 
+$recruiterData = [];
+$ch = curl_init(API_BASE_URL . "getRecruiter_profile.php");
+$recruiterPayload = json_encode([
+    "id" => $profile_id
+]);
 
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $recruiterPayload);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json"
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+$result = json_decode($response, true);
+
+if (!empty($result) && $result['status'] == true) {
+    $recruiterData = $result['data'];
+    $user_name = $recruiterData['contact_person_name'] ?? '';
+    $user_email = $recruiterData['email'] ?? '';
+    $user_contact = $recruiterData['mobile_no'] ?? '';
+    $user_company = $recruiterData['organization_name'] ?? '';
+} else {
+    $apierror = $result['message'] ?? "Unable to get recruiter Details";
+}
 
 
 
@@ -971,9 +997,10 @@ if (isset($_POST['pay_now'])) {
         const razorpay_key = "<?php echo $razorpay_key; ?>";
         const order_id = "<?php echo $order_id; ?>";
         const amount_paise = "<?php echo $amount_paise ?? 0; ?>"; // ✅ IMPORTANT
-        const user_name = "<?php echo $user['name'] ?? 'TEST'; ?>"; //not in session now
-        const user_email = "<?php echo $user['email'] ?? ''; ?>";
-        const user_contact = "<?php echo $user['mobile_no'] ?? ''; ?>";
+        const user_name = "<?php echo $user_name; ?>";
+        const user_email = "<?php echo $user_email; ?>";
+        const user_contact = "<?php echo $user_contact; ?>";
+        const user_company = "<?php echo $user_company; ?>";
 
 
 
@@ -982,15 +1009,12 @@ if (isset($_POST['pay_now'])) {
                 alert("Order not created properly");
                 return;
             }
-            console.log("KEY:", razorpay_key);
-            console.log("ORDER ID:", order_id);
-            console.log("AMOUNT:", amount_paise);
             var options = {
 
                 "key": razorpay_key, // from API
                 "amount": amount_paise, // ✅ THIS IS YOUR ANSWER (IN PAISE)
                 "currency": "INR",
-                "name": "Pacific iConnect",
+                "name": user_company,
                 "description": "Subscription Payment",
                 "order_id": order_id, // from backend
 
