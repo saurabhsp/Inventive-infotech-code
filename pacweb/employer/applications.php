@@ -5,22 +5,25 @@ require_once "../web_api/includes/db_config.php";
 $user = $_SESSION['user'];
 $active = "applications";
 $userid = $user['id'];
+$job_id = $_POST['job_id'] ?? 0;
+unset($_SESSION['candidate_id'], $_SESSION['application_id']);
 
 /* Example session */
-$recruiter_id = $userid ; // recruiter profile id
-$status_id = $_POST['status_id'];
+$recruiter_id = $user['profile_id']; // recruiter profile id
+$status_id = $_POST['status_id'] ?? 6;
 
 $api_url = API_BASE_URL . "getApplicationlist.php";
 
 
 $request = [
-    "job_id" => 0,
+    "job_id" => $job_id,
     "status_id" => $status_id,
-    "job_listing_type" => 1,
+    "job_listing_type" => null,
     "recruiter_id" => $recruiter_id,
     "page" => 1,
     "limit" => 10
 ];
+
 
 $ch = curl_init($api_url);
 
@@ -37,7 +40,6 @@ $response = curl_exec($ch);
 curl_close($ch);
 
 $result = json_decode($response, true);
-
 $applications = $result['data'] ?? [];
 
 
@@ -58,8 +60,6 @@ curl_setopt_array($ch, [
     CURLOPT_POSTFIELDS => json_encode($status_request)
 ]);
 $status_response = curl_exec($ch);
-// print_r($status_response);
-// exit;
 curl_close($ch);
 $status_result = json_decode($status_response, true);
 $statuses = $status_result['data'] ?? [];
@@ -123,10 +123,11 @@ if (isset($_POST['schedule_interview'])) {
 
     $application_id = $_POST['application_id'];
     $interview_date = date("d-m-Y", strtotime($_POST['interview_date']));
-    $interview_time = $_POST['interview_time'];
+    $interview_time = $_POST['interview_time'] . ":00";
     $interview_type_id = $_POST['interview_type_id'];
 
     $schedule_api = API_BASE_URL . "scheduleInterview.php";
+    // $schedule_api =  "https://beta.inv51.in/webservices/scheduleInterview.php";
 
     $schedule_request = [
         "application_id" => $application_id,
@@ -136,8 +137,6 @@ if (isset($_POST['schedule_interview'])) {
         "updated_by" => $userid
     ];
 
-    print_r($schedule_request);
-    exit;
 
     $ch = curl_init($schedule_api);
 
@@ -156,11 +155,9 @@ if (isset($_POST['schedule_interview'])) {
     $schedule_result = json_decode($schedule_response, true);
 
     if ($schedule_result['status'] == true) {
-
-        $_SESSION['success'] = "Interview Scheduled Successfully";
+        $_SESSION['success_message'] = $schedule_result['message'] ?? "Interview Scheduled Successfully";
     } else {
-
-        $_SESSION['error'] = $schedule_result['message'];
+        $_SESSION['error_message'] = $schedule_result['message'] ?? "Something went wrong";
     }
 
     header("Location: " . $_SERVER['PHP_SELF']);
@@ -201,24 +198,13 @@ if (isset($_POST['update_status'])) {
 
     $update_result = json_decode($update_response, true);
     if ($update_result['status'] == true) {
-        echo "<script>
-        window.onload = function(){
-            openStatusSuccessModal(
-                '" . addslashes($update_result['notification']['title']) . "',
-                '" . addslashes($update_result['notification']['message']) . "'
-            );
-        }
-        </script>";
+        $_SESSION['success_message'] = $update_result['notification']['message'] ?? "Success";
     } else {
-        echo "<script>
-        window.onload = function(){
-            openStatusSuccessModal(
-                'Error',
-                '" . addslashes($update_result['message']) . "'
-            );
-        }
-        </script>";
+        $_SESSION['error_message'] = $update_result['message'] ?? "Something went wrong";
     }
+
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit;
 }
 
 ?>
@@ -232,6 +218,8 @@ if (isset($_POST['update_status'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Applications Received | Pacific iConnect</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <link rel="stylesheet" href="/style.css">
     <style>
         :root {
@@ -787,7 +775,7 @@ if (isset($_POST['update_status'])) {
         }
 
 
-       
+
 
         .nav-icon {
             display: flex;
@@ -893,12 +881,187 @@ if (isset($_POST['update_status'])) {
                 justify-content: center;
             }
         }
+
+
+        /* ================= MODAL CSS START ================= */
+
+        /* Overlay */
+        .modal-full-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        /* Modal Card */
+        .success-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 480px;
+            border-radius: 16px;
+            padding: 40px 25px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        /* Animation */
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Icon */
+        .success-icon-wrap {
+            width: 90px;
+            height: 90px;
+            background: #10b981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .success-icon-wrap i {
+            color: #fff;
+            font-size: 36px;
+        }
+
+        /* Error Icon */
+        .error-icon {
+            background: #e53935 !important;
+        }
+
+        /* Title */
+        .success-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 10px;
+        }
+
+        /* Error Title */
+        .error-title {
+            color: #e53935;
+        }
+
+        /* Message */
+        .success-subtitle {
+            font-size: 15px;
+            color: #374151;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        /* Buttons container */
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        /* Primary Button */
+        .btn-primary {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        /* Outline Button */
+        .btn-outline {
+            background: #fff;
+            border: 1px solid #2563eb;
+            color: #2563eb;
+        }
+
+        .btn-outline:hover {
+            background: #eff6ff;
+        }
+
+        /* ================= MODAL CSS END ================= */
     </style>
 </head>
 
 <body>
     <?php include "includes/preloader.php"; ?>
     <?php include "includes/header.php"; ?>
+    <!--===================== Success MODAL======================== -->
+    <?php if (!empty($_SESSION['success_message'])): ?>
+        <div class="modal-full-overlay active">
+            <div class="success-card">
+                <div class="success-icon-wrap">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div class="success-title">Success</div>
+                <div class="success-subtitle">
+                    <?= $_SESSION['success_message']; ?>
+                </div>
+                <div class="action-buttons">
+                    <a href="<?= $_SERVER['PHP_SELF']; ?>" class="btn btn-primary">
+                        OK
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    <?php unset($_SESSION['success_message']);
+    endif; ?>
+
+
+    <!--==================== ERROR MODAL======================== -->
+    <?php if (!empty($_SESSION['error_message'])): ?>
+        <div class="modal-full-overlay active">
+            <div class="success-card" style="border:1px solid #e53935;">
+                <div class="success-icon-wrap error-icon" style="background:#e53935;">
+                    <i class="fas fa-times"></i>
+                </div>
+                <div class="success-title error-title" style="color:#e53935;">Error</div>
+                <div class="success-subtitle error-subtitle">
+                    <?= $_SESSION['error_message']; ?>
+                </div>
+                <div class="action-buttons">
+                    <a href="<?= $_SERVER['PHP_SELF']; ?>" class="btn btn-outline">
+                        Close
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    <?php unset($_SESSION['error_message']);
+    endif; ?>
+
+
+
+
 
     <div class="mobile-header">
         <i class="fas fa-arrow-left mobile-back"></i>
@@ -977,7 +1140,11 @@ if (isset($_POST['update_status'])) {
                     <div class="info-col">
                         <span class="info-label">Age</span>
                         <span class="info-val">
-                            <i class="fas fa-birthday-cake"></i> <?= $app['age'] ?> Yrs
+                            <?php if (!empty($app['age']) && $app['age'] != 0): ?>
+                                <i class="fas fa-birthday-cake"></i> <?= $app['age'] ?> Yrs
+                            <?php else: ?>
+                                -
+                            <?php endif; ?>
                         </span>
                     </div>
 
@@ -1016,13 +1183,18 @@ if (isset($_POST['update_status'])) {
                             <i class="fas fa-comment-dots"></i> Chat
                         </a>
 
-                        <a class="btn-action" href="view-profile.php?application_id=<?= $app['application_id'] ?>">
-                            <i class="fas fa-eye"></i> View
-                        </a>
+                        <form action="candidate_profile.php" method="POST" style="display:inline;">
+                            <input type="hidden" name="candidate_id" value="<?= $app['userid'] ?>">
+                            <input type="hidden" name="application_id" value="<?= $app['application_id'] ?>">
+                            <input type="hidden" name="job_cp_id" value="<?= $app['job_id'] ?>">
+                            <button type="submit" class="btn-action">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                        </form>
 
                         <button class="btn-action"
                             onclick="openInterviewModal('interviewModal', <?= $app['application_id'] ?>)">
-                            <i class="fas fa-users"></i> Interview
+                            <i class="fas fa-users"></i> Schedule Interview
                         </button>
 
                         <button class="btn-primary"
@@ -1050,7 +1222,7 @@ if (isset($_POST['update_status'])) {
 
     </div>
 
-<?php include "includes/bottom-bar.php"; ?>
+    <?php include "includes/bottom-bar.php"; ?>
 
 
     <div class="modal-overlay" id="interviewModal">
@@ -1059,20 +1231,15 @@ if (isset($_POST['update_status'])) {
                 <h3 class="modal-title">Schedule Interview</h3>
                 <button class="modal-close" onclick="closeInterviewModal('interviewModal')"><i class="fas fa-times"></i></button>
             </div>
-
-
-
-
             <!-- INTERVIEW STATUS MODAL -->
             <form method="POST">
-
                 <div class="modal-body">
 
                     <input type="hidden" name="application_id" id="application_id">
 
                     <div class="form-group">
                         <label class="form-label">Select Date *</label>
-                        <input type="date" name="interview_date" class="form-control" required>
+                        <input type="text" name="interview_date" placeholder="DD-MM-YYYY" class="form-control datepicker" required>
                     </div>
 
                     <div class="form-group">
@@ -1100,9 +1267,7 @@ if (isset($_POST['update_status'])) {
                     </div>
 
                 </div>
-
                 <div class="modal-footer">
-
                     <button type="button" class="btn-cancel"
                         onclick="closeInterviewModal('interviewModal')">
                         Cancel
@@ -1207,7 +1372,7 @@ if (isset($_POST['update_status'])) {
     </div>
 
     <script>
-            window.onload = () => document.getElementById("global-preloader")?.remove();
+        window.onload = () => document.getElementById("global-preloader")?.remove();
 
         // Open Modal
         function openInterviewModal(modalId, application_id) {
@@ -1263,6 +1428,16 @@ if (isset($_POST['update_status'])) {
         function closeStatusSuccessModal(modalId) {
             document.getElementById(modalId).classList.remove("active");
         }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            flatpickr(".datepicker", {
+                altInput: true,
+                altFormat: "d-m-Y",
+                dateFormat: "Y-m-d",
+                allowInput: false,
+                minDate: "today"
+            });
+        });
     </script>
 </body>
 

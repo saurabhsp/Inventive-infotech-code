@@ -109,7 +109,7 @@ if (isset($_FILES['company_logo']) && $_FILES['company_logo']['error'] === UPLOA
     // FIX: include userid in the multipart upload
     $cfile = new CURLFile($temp_file, 'image/png', 'logo.png');
 
-    $ch = curl_init("https://pacweb.inv11.in/webservices/addRecruiter_logo.php");
+    $ch = curl_init("https://pacificconnect2.0.inv51.in/webservices/addRecruiter_logo.php");
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST           => true,
@@ -1150,7 +1150,7 @@ $kycList   = $kycResult['data'] ?? [];
                             <span class="plan-info">Plan: <b><?= htmlspecialchars($subscription_plan_name) ?></b></span>
                             <span class="plan-info">Valid Till: <b><?= htmlspecialchars($subscription_valid_to) ?></b></span>
                         </div>
-                        <i class="fas fa-crown" style="color:var(--bronze); font-size:2rem;"></i>
+                        <!-- <i class="fas fa-crown" style="color:var(--bronze); font-size:2rem;"></i> -->
                     </div>
                     <div style="display:flex; flex-direction:column; gap:12px;">
                         <a href="upgrade.php" class="btn-primary" style="margin:0;">
@@ -1172,7 +1172,7 @@ $kycList   = $kycResult['data'] ?? [];
                         <span class="section-title" style="font-size:1.15rem;">Need Help?</span>
                     </div>
                     <div class="help-list">
-                        <a href="#">Change Password <i class="fas fa-chevron-right"></i></a>
+                        <a href="change_password.php">Change Password <i class="fas fa-chevron-right"></i></a>
                         <a href="#">Contact us <i class="fas fa-chevron-right"></i></a>
                         <a href="#">Frequently Asked Questions <i class="fas fa-chevron-right"></i></a>
                         <a href="#">Terms and Conditions <i class="fas fa-chevron-right"></i></a>

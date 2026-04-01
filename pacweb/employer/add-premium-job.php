@@ -2,6 +2,15 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
+if (!isset($_SESSION['user'])) {
+    header("Location: ../login.php");
+    exit();
+}
+if (!empty($_POST['from_page'])) {
+    $_SESSION['prev_page'] = $_POST['from_page'];
+} elseif (empty($_SESSION['prev_page'])) {
+    $_SESSION['prev_page'] = 'index.php';
+}
 require_once "../web_api/includes/db_config.php";
 
 $active = "post";
@@ -13,6 +22,55 @@ if (!isset($_SESSION['user'])) {
 $user = $_SESSION['user'] ?? null;
 $userid = $user['id'] ?? 0;
 $profile_id = $user['profile_id'];
+
+
+
+
+
+
+/* ================= SUBSCRIPTION CHECK FOR DIRECT URL ================= */
+
+$sub_api = API_BASE_URL . "checkUsersubscription.php";
+
+$sub_payload = json_encode([
+    "user_id" => $userid
+]);
+
+$ch = curl_init();
+
+curl_setopt_array($ch, [
+    CURLOPT_URL => $sub_api,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $sub_payload,
+    CURLOPT_HTTPHEADER => [
+        "Content-Type: application/json"
+    ]
+]);
+
+$sub_response = curl_exec($ch);
+curl_close($ch);
+
+$sub_result = json_decode($sub_response, true);
+
+// flags
+$premium_limit_dialog = $sub_result['walkin_limit_dialog'] ?? true;
+$premium_upgrade_dialog = $sub_result['walkin_upgrade_dialog'] ?? true;
+
+// condition
+if (($premium_limit_dialog == true || $premium_upgrade_dialog == true)) {
+    header("Location: upgrade.php");
+    exit();
+}
+/* ================= SUBSCRIPTION CHECK FOR DIRECT URLEND ================= */
+
+
+
+
+
+
+
+
 
 
 //Array ( [job_id] => 23 [mode] => edit )
@@ -552,8 +610,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
     // NOW encode
     $jsonData = json_encode($postData);
-    $api_url = API_BASE_URL . "addWalkininterview.php";
-    // $api_url = "https://beta.inv51.in/webservices/addWalkininterview.php";
+    // $api_url = API_BASE_URL . "addWalkininterview.php";
+    $api_url = "pacificconnect2.0.inv51.in/webservices/addWalkininterview.php";
 
 
 
@@ -576,7 +634,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
     $apiResult = json_decode($response, true);
 
     if ($apiResult['status'] == 1) {
-
+        // 🔥 ADD THIS
+        $_SESSION['last_job_id'] = $apiResult['data']['id'] ?? $job_id;
         $_SESSION['success_message'] = $apiResult['message'];
     } else {
 
@@ -1890,17 +1949,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
                 </div>
                 <div class="action-buttons">
                     <button class="btn btn-outline"
-                        onclick="closeSuccessModal()">
+                        onclick="goBackPage()">
                         Close
                     </button>
-                    <button class="btn btn-primary"
-                        onclick="window.location.href='view-job.php'">
-                        View Job Post
-                    </button>
+                    <form action="premium-job-details.php" method="POST">
+                        <input type="hidden" name="id"
+                            value="<?php echo $_SESSION['last_job_id'] ?? ''; ?>">
+
+                        <button type="submit" class="btn btn-primary">
+                            View Job
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
         <?php unset($_SESSION['success_message']); ?>
+        <?php unset($_SESSION['prev_page']); ?>
     <?php endif; ?>
 
 
@@ -1909,13 +1973,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
             <div class="modal-map-card" style="max-width:400px;height:auto;padding:30px;text-align:center;">
                 <h3 style="margin-bottom:15px;color:#e53935;">Error</h3>
                 <p><?php echo $_SESSION['error_message']; ?></p>
-                <button onclick="closeErrorModal()"
+                
+                <button  onclick="goBackPage()"
                     style="margin-top:20px;padding:10px 20px;background:#2563eb;color:white;border-radius:6px;border:none;">
                     OK
                 </button>
             </div>
         </div>
         <?php unset($_SESSION['error_message']); ?>
+        <?php unset($_SESSION['prev_page']); ?>
     <?php endif; ?>
 
     <!-- Error for all api message -->
@@ -1946,6 +2012,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
                 <input type="hidden" name="job_id" value="<?php echo $job_id; ?>">
                 <input type="hidden" name="mode" value="<?php echo $mode; ?>">
                 <input type="hidden" name="form_submitted" value="1">
+                <input type="hidden" name="from_page"
+                    value="<?php echo $_SESSION['prev_page'] ?? ''; ?>">
 
                 <div class="form-grid">
                     <div class="form-group">
@@ -2681,11 +2749,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
 
 
-        function closeSuccessModal() {
-            const modal = document.getElementById("successModal");
-            if (modal) {
-                modal.style.display = "none";
-            }
+        function goBackPage() {
+            let url = "<?php echo $_SESSION['prev_page'] ?? 'index.php'; ?>";
+
+            // session clear via redirect param
+            window.location.href = url;
         }
 
         function closeErrorModal() {

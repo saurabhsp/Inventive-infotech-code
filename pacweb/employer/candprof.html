@@ -1,0 +1,343 @@
+<?php
+session_start();
+if (!isset($_POST['candidate_id'])) {
+    header("Location: applications.php");
+    exit();
+}
+require_once "../web_api/includes/db_config.php";
+$candidate_id = $_POST['candidate_id'];
+
+// API call
+$url =  API_BASE_URL . "getCandidateprofile.php";
+
+
+$data = json_encode([
+    "userid" => $candidate_id
+]);
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json"
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+$result = json_decode($response, true);
+
+$candidate = $result['data'];
+?>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Applicant Profile | Pacific iConnect</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        :root {
+            --primary: #483EA8;
+            --primary-light: #eceaf9;
+            --primary-dark: #322b7a;
+            --blue-btn: #2563eb;
+            --blue-hover: #1d4ed8;
+            --text-dark: #1a1a1a;
+            --text-muted: #64748b;
+            --border-light: #cbd5e1;
+            --bg-body: #f8fafc;
+            --white: #ffffff;
+        }
+
+
+
+        /* --- CARD candidate-container --- */
+        /* .candidate-container {
+            max-width: 900px;
+            margin: 20px auto;
+        } */
+        .candidate-container {
+            max-width: 900px;
+            /* increase width */
+            width: 100%;
+            margin: 20px auto;
+        }
+
+        .candidate-card {
+            background: var(--white);
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        /* --- CARD HEADER WITH BACK BUTTON --- */
+        .card-header-nav {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #fafafa;
+        }
+
+        .btn-back {
+            background: none;
+            border: none;
+            color: var(--text-dark);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: color 0.2s;
+        }
+
+        .btn-back:hover {
+            color: var(--primary);
+        }
+
+        /* --- USER PROFILE SECTION --- */
+        .profile-main {
+            display: flex;
+            padding: 25px;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .avatar-circle {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: #e0e7ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .avatar-circle i {
+            font-size: 2rem;
+            color: var(--primary);
+        }
+
+        .user-meta h2 {
+            font-size: 1.25rem;
+            color: var(--primary-dark);
+            margin-bottom: 2px;
+        }
+
+        .user-meta p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* --- DETAILS SECTION --- */
+        .details-section {
+            padding: 0 25px 20px 25px;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .data-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        /* --- ACTION BUTTONS (MATCHING SCREENSHOT) --- */
+        .card-actions {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .btn {
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-outline {
+            background: white;
+            border: 1.5px solid var(--blue-btn);
+            color: var(--blue-btn);
+        }
+
+        .btn-outline:hover {
+            background: #f0f7ff;
+        }
+
+        .btn-full-width {
+            grid-column: 1 / -1;
+        }
+
+        .btn-primary {
+            background: var(--blue-btn);
+            color: white;
+            border: none;
+            font-size: 1rem;
+        }
+
+        .btn-primary:hover {
+            background: var(--blue-hover);
+        }
+
+        /* --- DESKTOP VIEW --- */
+        @media (min-width: 768px) {
+            .data-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .card-actions {
+                display: flex;
+                justify-content: flex-end;
+            }
+
+            .btn {
+                width: auto;
+                min-width: 140px;
+            }
+
+            .btn-full-width {
+                grid-column: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <?php
+    include "includes/header.php";
+    include "includes/preloader.php";
+    ?>
+
+
+    <div class="candidate-container">
+        <div class="candidate-card">
+
+            <div class="card-header-nav">
+                <button class="btn-back" onclick="window.history.back()">
+                    <i class="fas fa-arrow-left"></i> Back to List
+                </button>
+            </div>
+
+            <div class="profile-main">
+                <div class="avatar-circle">
+                    <!-- <i class="fas fa-user-tie"></i> -->
+                    <img src="<?= $candidate['profile_photo'] ?>" width="70" height="70" style="border-radius:50%;">
+                </div>
+                <div class="user-meta">
+                    <h2><?= $candidate['candidate_name'] ?></h2>
+                    <p>Job Seeker</p>
+                </div>
+            </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            <div class="details-section">
+                <span class="section-title">Personal Details</span>
+                <div class="data-grid">
+                    <div class="data-item"><span class="label">Mobile No</span> <span class="value"><?= $candidate['mobile_no'] ?></span></div>
+                    <div class="data-item"><span class="label">Gender</span> <span class="value"><?= $candidate['gender'] ?></span>
+                    </div>
+                    <div class="data-item"><span class="label">Birthdate</span> <span class="value"><?= $candidate['birthdate'] ?></span>
+                    </div>
+                    <div class="data-item"><span class="label">Email</span> <span class="value"><?= $candidate['email'] ?></span></div>
+                    <div class="data-item" style="grid-column: 1 / -1;"><span class="label">Address</span> <span class="value"><?= $candidate['address'] ?></span>
+                    </div>
+                    <div class="data-item"><span class="label">City</span><span class="value"><?= $candidate['city_id'] ?></span></div>
+                    <div class="data-item"><span class="label">Locality</span><span class="value"><?= $candidate['locality_id'] ?></span>
+                    </div>
+                </div>
+
+                <span class="section-title">Job Preferences</span>
+                <div class="data-grid">
+                    <div class="data-item" style="grid-column: 1 / -1;">
+                        <span class="label">Job Positions</span>
+                        <span class="value">
+                            <?= !empty($candidate['job_positions']) ? $candidate['job_positions'] : 'N/A' ?>
+                        </span>
+                    </div>
+                    <div class="data-item">
+                        <span class="label">Experience Type</span><span class="value"><?= $candidate['experience_type_name'] ?></span>
+
+                    </div>
+                    <div class="data-item">
+                        <span class="label">Experience</span><span class="value"><?= $candidate['experience_period_name'] ?></span>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="card-actions">
+                <button class="btn btn-outline"><i class="fas fa-phone-alt"></i> Call</button>
+                <button class="btn btn-outline"><i class="fas fa-comment-dots"></i> Chat</button>
+                <button class="btn btn-outline btn-full-width"><i class="fas fa-users"></i> Schedule Interview</button>
+                <button class="btn btn-primary btn-full-width">Update Status</button>
+            </div>
+
+        </div>
+    </div>
+    <?php include "includes/bottom-bar.php"; ?>
+    <script>
+        window.onload = () => document.getElementById("global-preloader")?.remove();
+    </script>
+</body>
+
+</html>

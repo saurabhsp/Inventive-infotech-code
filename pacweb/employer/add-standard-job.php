@@ -2,6 +2,15 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
+if (!isset($_SESSION['user'])) {
+    header("Location: ../login.php");
+    exit();
+}
+if (!empty($_POST['from_page'])) {
+    $_SESSION['prev_page'] = $_POST['from_page'];
+} elseif (empty($_SESSION['prev_page'])) {
+    $_SESSION['prev_page'] = 'index.php';
+}
 require_once "../web_api/includes/db_config.php";
 
 date_default_timezone_set("Asia/Kolkata");
@@ -11,11 +20,49 @@ $user         = $_SESSION['user'];
 $userid       = $user['id'];
 $recruiterid = $user['profile_id'];;
 
+/* ================= SUBSCRIPTION CHECK FOR DIRECT URL ================= */
+
+$sub_api = API_BASE_URL . "checkUsersubscription.php";
+
+$sub_payload = json_encode([
+    "user_id" => $userid
+]);
+
+$ch = curl_init();
+
+curl_setopt_array($ch, [
+    CURLOPT_URL => $sub_api,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $sub_payload,
+    CURLOPT_HTTPHEADER => [
+        "Content-Type: application/json"
+    ]
+]);
+
+$sub_response = curl_exec($ch);
+curl_close($ch);
+
+$sub_result = json_decode($sub_response, true);
+
+// flags
+$standard_limit_dialog = $sub_result['vacancy_limit_dialog'] ?? true;
+$standard_upgrade_dialog = $sub_result['vacancy_upgrade_dialog'] ?? true;
+
+// condition
+if (($standard_limit_dialog == true || $standard_upgrade_dialog == true)) {
+    header("Location: upgrade.php");
+    exit();
+}
+
+/* ================= SUBSCRIPTION CHECK FOR DIRECT URLEND ================= */
 
 
 
 //Array ( [job_id] => 23 [mode] => edit )
 $job_id = $_POST['job_id'] ?? null;
+// print_r($job_id);
+// exit;
 $mode = $_POST['mode'] ?? null;
 $is_edit = ($mode === 'edit' && !empty($job_id));
 $editData = [];
@@ -28,7 +75,7 @@ if ($is_edit) {
     $curl = curl_init();
 
     curl_setopt_array($curl, [
-        CURLOPT_URL => API_BASE_URL . "getSinglejobvacany.php",
+        CURLOPT_URL => API_BASE_URL . "getSinglejobvacancy.php",
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $postData,
@@ -39,6 +86,8 @@ if ($is_edit) {
 
     $response = curl_exec($curl);
     curl_close($curl);
+    // print_r( $response );
+    // exit;
 
     $result = json_decode($response, true);
     if (isset($result['status']) && $result['status'] === 'success') {
@@ -46,7 +95,6 @@ if ($is_edit) {
     } else {
         $editData = [];
     }
-    
 }
 
 
@@ -283,7 +331,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
     curl_setopt_array($curl, [
 
-        CURLOPT_URL => API_BASE_URL . "addJobvacancy.php",
+        // CURLOPT_URL => API_BASE_URL . "addJobvacancy.php",
+        CURLOPT_URL => "pacificconnect2.0.inv51.in/webservices/addJobvacancy.php",
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $postjson,
@@ -294,8 +343,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
     $response = curl_exec($curl);
     curl_close($curl);
     $apiResult = json_decode($response, true);
+
     if ($apiResult['status'] == "success") {
         $_SESSION['success_message'] = $apiResult['message'];
+        $_SESSION['last_job_id'] = $apiResult['job_data']['id'] ?? $job_id;
     } else {
         $_SESSION['error_message'] = $apiResult['message'] ?? "Something went wrong";
     }
@@ -1132,10 +1183,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
                         onclick="closeSuccessModal()">
                         Close
                     </button>
-                    <button class="btn btn-primary"
-                        onclick="window.location.href='view-job.php'">
-                        View Job Post
-                    </button>
+                    <form action="standard-job-details.php" method="POST">
+                        <input type="hidden" name="id"
+                            value="<?php echo $_SESSION['last_job_id'] ?? ''; ?>">
+
+                        <button type="submit" class="btn btn-primary">
+                            View Job
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -1188,6 +1243,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
                 <input type="hidden" name="job_id" value="<?php echo $job_id; ?>">
                 <input type="hidden" name="mode" value="<?php echo $mode; ?>">
                 <input type="hidden" name="form_submitted" value="1">
+                <input type="hidden" name="from_page"
+                    value="<?php echo $_SESSION['prev_page'] ?? ''; ?>">
 
                 <div class="form-grid">
                     <div class="form-group">
@@ -1215,8 +1272,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
                         <label class="form-label">District / Tehsil / City</label>
                         <input type="text" name="city" id="cityInput" class="form-control" autocomplete="off" value="<?php echo $is_edit ? htmlspecialchars($editData['city']) : ''; ?>">
                         <!-- hidden fields -->
-                        <input type="hidden" id="stateInput" name="state">
-                        <input type="hidden" id="countryInput" name="country">
+                        <input type="hidden" id="stateInput" value="<?php echo $is_edit ? htmlspecialchars($editData['state']) : ''; ?>" name="state">
+                        <input type="hidden" id="countryInput" value="<?php echo $is_edit ? htmlspecialchars($editData['country']) : ''; ?>" name="country">
                         <div id="citySuggestions" class="suggestion-box"></div>
                     </div>
 
@@ -1349,14 +1406,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
                     <div class="form-group">
                         <label class="form-label">Does this Job have a deadline?</label>
-                        <input type="hidden" name="validity_apply" id="validityApplyInput" value="0">
+                        <input type="hidden" name="validity_apply" id="validityApplyInput"
+                            value="<?php echo $is_edit ? ($editData['validity_apply'] ?? 0) : 0; ?>">
                         <div class="toggle-container" id="deadlineToggle">
-                            <button type="button" class="btn-toggle" onclick="handleDeadlineToggle(true, this)">Yes</button>
-                            <button type="button" class="btn-toggle active" onclick="handleDeadlineToggle(false, this)">No</button>
+                            <button type="button"
+                                class="btn-toggle <?php echo ($is_edit && ($editData['validity_apply'] ?? 0) == 1) ? 'active' : ''; ?>"
+                                onclick="handleDeadlineToggle(true, this)">Yes</button>
+
+                            <button type="button"
+                                class="btn-toggle <?php echo (!$is_edit || ($editData['validity_apply'] ?? 0) == 0) ? 'active' : ''; ?>"
+                                onclick="handleDeadlineToggle(false, this)">No</button>
                         </div>
 
-                        <div class="deadline-date-wrapper" id="deadlineDateGroup">
-                            <input type="text" name="valid_till_date" placeholder="DD-MM-YYYY" class="form-control datepicker" placeholder="Select Date">
+                        <div class="deadline-date-wrapper <?php echo ($is_edit && ($editData['validity_apply'] ?? 0) == 1) ? 'active' : ''; ?>" id="deadlineDateGroup">
+                            <input type="text" name="valid_till_date" placeholder="DD-MM-YYYY" class="form-control datepicker" placeholder="Select Date" value="<?php echo ($is_edit && !empty($editData['valid_till_date'])) ? $editData['valid_till_date'] : ''; ?>">
                         </div>
                     </div>
                 </div>
@@ -1409,7 +1472,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
 
         // Specific Deadline Logic
-       function handleDeadlineToggle(isYes, clickedBtn) {
+        function handleDeadlineToggle(isYes, clickedBtn) {
             toggleGroup(clickedBtn, 'deadlineToggle');
 
             const dateGroup = document.getElementById('deadlineDateGroup');
@@ -1417,10 +1480,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
             if (isYes) {
                 dateGroup.classList.add('active');
-                validityInput.value = 1; 
+                validityInput.value = 1;
             } else {
                 dateGroup.classList.remove('active');
-                validityInput.value = 0; 
+                validityInput.value = 0;
             }
         }
 
@@ -1441,10 +1504,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
         //success modal close 
         function closeSuccessModal() {
-            const modal = document.getElementById("successModal");
-            if (modal) {
-                modal.style.display = "none";
-            }
+            let url = "<?php echo $_SESSION['prev_page'] ?? 'index.php'; ?>";
+
+            // session clear via redirect param
+            window.location.href = url;
         }
 
         function closeErrorModal() {

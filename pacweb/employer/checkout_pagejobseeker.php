@@ -133,15 +133,12 @@ if (isset($_POST['upload_doc']) && $profile_type_id == 2) {
 
 
 
-    // $ch = curl_init(API_BASE_URL . "addDoc.php");
-    $ch = curl_init("https://pacificconnect2.0.inv51.in/webservices/addJobvacancy.php/addDoc.php");
+    $ch = curl_init("https://pacificconnect2.0.inv51.in/webservices/addDoc.php");
+
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-
     $response = curl_exec($ch);
-
-
     if (curl_errno($ch)) {
         echo "Curl error: " . curl_error($ch);
     }
@@ -285,8 +282,8 @@ if (isset($_POST['pay_now'])) {
         ]
     ]);
 
-    // $ch = curl_init(API_BASE_URL ."create_order.php");
-    $ch = curl_init("https://pacificconnect2.0.inv51.in/webservices/create_order.php");
+    $ch = curl_init(API_BASE_URL . "create_order.php");
+    // $ch = curl_init("https://pacificconnect2.0.inv51.in/webservices/create_order.php");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);

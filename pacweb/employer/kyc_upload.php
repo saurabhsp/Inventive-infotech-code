@@ -16,7 +16,8 @@ $profile_id = $user['profile_id'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['docurl'])) {
 
-  $api_url = API_BASE_URL . "addRecruterkyc.php";
+  // $api_url = API_BASE_URL . "addRecruterkyc.php";
+  $api_url = "https://pacificconnect2.0.inv51.in/webservices/addRecruterkyc.php";
 
   $recruiter_id = $profile_id;
   $kycdoctype_id = $_POST['kycdoctype_id'];

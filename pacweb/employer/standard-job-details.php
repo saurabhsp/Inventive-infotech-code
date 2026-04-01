@@ -14,8 +14,15 @@ $user = $_SESSION['user'];
 $userid = $user['id'];
 $jobid = $_POST['id'] ?? '';
 
+// ✅ IF job id not present → redirect
+if (empty($jobid)) {
+    header("Location: index.php"); // ya ../index.php as per path
+    exit();
+}
 
-$url = API_BASE_URL . "getSinglejobvacany.php";
+
+
+$url = API_BASE_URL . "getSinglejobvacancy.php";
 
 $data = [
     "id" => $jobid,
@@ -353,7 +360,7 @@ body {
 <div class="container main-content">
 
 <div style="margin-bottom:20px;color:#666;font-size:.9rem;">
-<a href="/">Home</a> â€º <?= safe($job['job_position']); ?>
+<a href="index.php">Home</a> > <?= safe($job['job_position']); ?>
 </div>
 
 <!-- HEADER -->
@@ -457,7 +464,7 @@ onclick="logAction(3)">
             <div>
                 <span class="stat-label">Salary:</span>
                 <span class="stat-text">
-                    â‚¹<?= safe($job['salary_from']); ?> â€“ <?= safe($job['salary_to']); ?>
+                    ₹<?= safe($job['salary_from']); ?> ₹ <?= safe($job['salary_to']); ?>
                 </span>
             </div>
         </div>
@@ -467,7 +474,7 @@ onclick="logAction(3)">
             <div>
                 <span class="stat-label">Experience:</span>
                 <span class="stat-text">
-                    <?= safe($job['experience_from']); ?> â€“ <?= safe($job['experience_to']); ?>
+                    <?= safe($job['experience_from']); ?> - <?= safe($job['experience_to']); ?>
                 </span>
             </div>
         </div>

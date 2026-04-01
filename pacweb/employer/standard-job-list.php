@@ -917,6 +917,14 @@ function safe($v)
                 padding-left: 10px;
             }
         }
+
+        .page-heading {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 15px;
+        }
     </style>
 
 
@@ -928,7 +936,7 @@ function safe($v)
     <?php include "includes/header.php"; ?>
 
 
-<div id="editErrorModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div id="editErrorModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
         <div style="background:white;padding:25px;border-radius:10px;width:350px;text-align:center">
             <h3 style="margin-bottom:10px">Edit Not Allowed</h3>
             <p id="editErrorMessage"></p>
@@ -965,6 +973,8 @@ function safe($v)
         <form id="statusForm" method="POST">
             <input type="hidden" name="status" id="statusInput">
         </form>
+
+        <h1 class="page-heading">Standard Job List</h1>
 
         <div class="filters-wrapper">
 
@@ -1054,9 +1064,12 @@ function safe($v)
                     <!-- ACTIONS -->
                     <div class="card-actions">
 
-                        <a href="applications.php?job_id=<?= $job['id'] ?>" class="btn-card">
-                            View<br>Applications
-                        </a>
+                        <form action="applications.php" method="POST" style="flex:1;display:flex;">
+                            <input type="hidden" name="job_id" value="<?= $job['id'] ?>">
+                            <button type="submit" class="btn-card">
+                                View<br>Applications
+                            </button>
+                        </form>
 
                         <form action="standard-job-details.php" method="POST" style="flex:1;display:flex;">
                             <input type="hidden" name="id" value="<?= $job['id'] ?>">
@@ -1194,9 +1207,15 @@ function safe($v)
                         modeInput.name = "mode";
                         modeInput.value = "edit";
 
-                        // Append inputs
+                        // detect current page dynamically
+                        let fromInput = document.createElement("input");
+                        fromInput.type = "hidden";
+                        fromInput.name = "from_page";
+                        fromInput.value = window.location.pathname.split("/").pop(); // standard-job-list.php
+
                         form.appendChild(jobInput);
                         form.appendChild(modeInput);
+                        form.appendChild(fromInput);
 
                         document.body.appendChild(form);
                         form.submit();
@@ -1208,7 +1227,8 @@ function safe($v)
                 })
                 .catch(err => console.error(err));
         }
-function closeEditModal() {
+
+        function closeEditModal() {
             document.getElementById("editErrorModal").style.display = "none";
         }
 

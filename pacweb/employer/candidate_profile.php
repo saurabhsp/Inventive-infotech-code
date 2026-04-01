@@ -18,6 +18,7 @@ $job_cp_id = $_POST['job_cp_id'] ?? $_SESSION['job_cp_id'] ?? null;
 if (isset($_POST['candidate_id'])) {
     $_SESSION['candidate_id'] = $candidate_id;
     $_SESSION['application_id'] = $application_id;
+    $_SESSION['job_cp_id'] = $job_cp_id; // ✅ ADD THIS
 }
 
 if (!$candidate_id && !$application_id) {
@@ -44,6 +45,7 @@ if (isset($_POST['call_action']) || isset($_POST['chat_action'])) {
         "job_listing_type" => $job_listing_type, //1 for walking and 2 for job vacancy
         "application_id" => $application_id
     ];
+    print_r(json_encode($payload));exit;
 
     $ch = curl_init($action_api);
 

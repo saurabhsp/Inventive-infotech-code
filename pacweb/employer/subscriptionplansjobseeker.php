@@ -1,11 +1,12 @@
 <?php
 
+require_once __DIR__ . '/includes/session.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-session_start();
-require_once "../web_api/includes/db_config.php";
+
+// require_once "web_api/includes/db_config.php";
 if (!isset($_SESSION['user'])) {
-    header("Location: ../login.php");
+    header("Location: login.php");
     exit();
 }
 unset($_SESSION['payment_done']);
@@ -21,7 +22,7 @@ $profile_type_id = $user['profile_type_id'];
 $jobid = $_POST['id'] ?? '';
 // print_r($user);
 
-$checkurl = API_BASE_URL . "checkUsersubscription.php";
+$checkurl = "https://pacificiconnect.com/web_api/checkUsersubscription.php";
 
 $data = json_encode([
     "user_id" => $userid
@@ -52,7 +53,7 @@ $result = json_decode($responseone, true);
 
 
 //=============2.Get subscriptionplans==========
-$getPlanUrl = API_BASE_URL . "getSubscriptionplans.php";
+$getPlanUrl =  "https://pacificiconnect.com/web_api/getSubscriptionplans.php";
 $getDataPayload = json_encode([
     "profile_type" => $profile_type_id
 ]);
@@ -74,15 +75,8 @@ curl_close($ch);
 
 $subplanresult = json_decode($responsetwo, true);
 
-
-$bronze = $silver = $gold = [];
-
 $plans = $subplanresult['data'] ?? [];
-// echo "<pre>";
-// print_r($bronze['features']);
-// print_r($silver['features']);
-// print_r($gold['features']);
-// exit;
+
 ?>
 
 <!DOCTYPE html>
@@ -481,7 +475,6 @@ $plans = $subplanresult['data'] ?? [];
                     </p>
                 </div>
                 <?php
-                $status = strtolower($result['subscription_status'] ?? 'Not Active');
 
                 if ($status === 'active') {
                     $badgeClass = 'badge-active';
@@ -549,7 +542,7 @@ $plans = $subplanresult['data'] ?? [];
 
                         <form method="POST" action="checkout-plans.php">
                             <input type="hidden" name="plan_name" value="<?= $plan['plan_name'] ?>">
-
+                            <input type="hidden" name="plan_id" value="<?= $plan['id'] ?>">
                             <button type="submit" class="btn-plan <?= $isRecommended ? 'filled' : '' ?>">
                                 Choose <?= $plan['plan_name'] ?>
                             </button>
@@ -563,7 +556,6 @@ $plans = $subplanresult['data'] ?? [];
         </div>
 
     </div>
-    <?php include "includes/bottom-bar.php"; ?>
     <script>
         window.onload = () => document.getElementById("global-preloader")?.remove();
     </script>

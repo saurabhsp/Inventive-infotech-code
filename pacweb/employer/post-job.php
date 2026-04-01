@@ -617,25 +617,26 @@ $jobseeker_upgrade_cv_dialog = $subscription_data['jobseeker_upgrade_cv_dialog']
 
 </body>
 <script>
+  
+
     window.onload = () => document.getElementById("global-preloader")?.remove();
 
+    const premiumLimitDialog = <?= json_encode((bool)$premium_limit_dialog) ?>;
+    const premiumUpgradeDialog = <?= json_encode((bool)$premium_upgrade_dialog) ?>;
 
-    const premiumLimitDialog = <?= $premium_limit_dialog ? 'true' : 'false' ?>;
-    const premiumUpgradeDialog = <?= $premium_upgrade_dialog ? 'true' : 'false' ?>;
-
-    const standardLimitDialog = <?= $standard_limit_dialog ? 'true' : 'false' ?>;
-    const standardUpgradeDialog = <?= $standard_upgrade_dialog ? 'true' : 'false' ?>;
-
+    const standardLimitDialog = <?= json_encode((bool)$standard_limit_dialog) ?>;
+    const standardUpgradeDialog = <?= json_encode((bool)$standard_upgrade_dialog) ?>;
 
     /* PREMIUM JOB POST */
     function handlePremiumPost() {
         if (!premiumLimitDialog && !premiumUpgradeDialog) {
+            // ✅ both false → allow
             window.location.href = "add-premium-job.php";
         } else {
+            // ❌ any true → upgrade
             window.location.href = "upgrade.php";
         }
     }
-
 
     /* STANDARD JOB POST */
     function handleStandardPost() {

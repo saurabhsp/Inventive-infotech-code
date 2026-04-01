@@ -1,6 +1,5 @@
 <?php
 require_once "../web_api/includes/initialize.php";
-require_once "../../web_api/includes/db_config.php";
 
 $user = $_SESSION['user'] ?? null;
 $userid = $user['id'] ?? 0;
@@ -1221,10 +1220,11 @@ $valid_to = $user['valid_to'] ?? '';
 
             <div class="header-actions">
 
+            <a href="notifications.php">
                 <div class="nav-action-icon">
                     <i class="fas fa-bell"></i>
                     <span class="noti-badge"><?= $notification_count ?></span>
-                </div>
+                </div></a>
                 <!-- <div class="mobile-avatar">
                     <i class="fas fa-user"></i>
                 </div> -->
@@ -1532,8 +1532,15 @@ $valid_to = $user['valid_to'] ?? '';
 
                 if (data.status === "success") {
 
-                    document.getElementById("headerCityInput").value = data.data.city_name ?? "";
-                    document.getElementById("headerLocalityInput").value = data.data.locality_name ?? "";
+                    const city = data.data.city_name ?? "";
+                    const locality = data.data.locality_name ?? "";
+
+                    // set input values
+                    document.getElementById("headerCityInput").value = city;
+                    document.getElementById("headerLocalityInput").value = locality;
+
+                    // ✅ ADD THIS LINE (MAIN FIX)
+                    headerSelectedCity = city;
 
                 } else {
                     console.log(data.message);

@@ -1121,8 +1121,8 @@ if (isset($_POST['pay_now'])) {
                     // YOUR DYNAMIC DATA (FROM PHP)
                     addField("plan_id", "<?php echo $planid; ?>");
                     addField("plan_amount", "<?php echo $amount; ?>");
+                    // addField("amount_paid", "<?php echo $_POST['discount'] ? ($amount - $_POST['discount']) : $amount; ?>");
                     addField("amount_paid", "<?php echo $finalAmount; ?>");
-                    addField("coupon_code", "<?php echo $_POST['coupon_code'] ?? ''; ?>");
                     addField("discount", "<?php echo $_POST['discount'] ?? 0; ?>");
                     addField("payment_status", "success");
 

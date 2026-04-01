@@ -843,7 +843,7 @@ function safe($v)
 
 
 
-        
+
         /* Filters */
         /* ================= FILTER UI (MATCH APPLICATION PAGE) ================= */
 
@@ -855,23 +855,26 @@ function safe($v)
             --border-light: #e5e7eb;
         }
 
-               /* Container */
+        /* Container */
         .filters {
-    display: flex;
-    justify-content: flex-start; /* important for scroll */
-    align-items: center;
-    gap: 12px;
-    margin: 20px auto 30px;
-    flex-wrap: nowrap; /* ❌ no wrapping */
-    overflow-x: auto; /* ✅ enable horizontal scroll */
-    max-width: 100%;
-    padding-bottom: 5px;
-}
+            display: flex;
+            justify-content: flex-start;
+            /* important for scroll */
+            align-items: center;
+            gap: 12px;
+            margin: 20px auto 30px;
+            flex-wrap: nowrap;
+            /* ❌ no wrapping */
+            overflow-x: auto;
+            /* ✅ enable horizontal scroll */
+            max-width: 100%;
+            padding-bottom: 5px;
+        }
 
-/* Hide scrollbar (optional clean UI) */
-.filters::-webkit-scrollbar {
-    display: none;
-}
+        /* Hide scrollbar (optional clean UI) */
+        .filters::-webkit-scrollbar {
+            display: none;
+        }
 
         /* Hide scrollbar */
         .filters::-webkit-scrollbar {
@@ -911,16 +914,28 @@ function safe($v)
             justify-content: center;
             width: 100%;
         }
+
         .filter-pill {
-    white-space: nowrap; /* prevent text breaking */
-    flex-shrink: 0; /* prevent shrinking */
-}
-@media (max-width: 576px) {
-    .filters {
-        justify-content: flex-start;
-        padding-left: 10px;
-    }
-}
+            white-space: nowrap;
+            /* prevent text breaking */
+            flex-shrink: 0;
+            /* prevent shrinking */
+        }
+
+        @media (max-width: 576px) {
+            .filters {
+                justify-content: flex-start;
+                padding-left: 10px;
+            }
+        }
+
+        .page-heading {
+            /*text-align: center;*/
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 15px;
+        }
     </style>
 
 
@@ -962,9 +977,11 @@ function safe($v)
 
     <div class="container main-content">
 
-       <form id="statusForm" method="POST">
+        <form id="statusForm" method="POST">
             <input type="hidden" name="status" id="statusInput">
         </form>
+
+        <h1 class="page-heading">Premium Job List</h1>
 
         <div class="filters-wrapper">
 
@@ -1008,12 +1025,12 @@ function safe($v)
 
                 <div class="r-job-card job-item"
                     style="<?= $index >= $limit ? 'display:none;' : '' ?>">
-                     <div class="menu-dot-container">
-                                <div class="menu-dot-icon" onclick="toggleCardMenu(event,this)"><i class="fas fa-ellipsis-v"></i></div>
-                                <div class="card-menu-dropdown">
-                                    <a href="javascript:void(0)" onclick="checkPremiumEdit(<?= $job['id'] ?>)"><i class="fas fa-edit"></i> Edit Job</a>
-                                </div>
-                            </div>
+                    <div class="menu-dot-container">
+                        <div class="menu-dot-icon" onclick="toggleCardMenu(event,this)"><i class="fas fa-ellipsis-v"></i></div>
+                        <div class="card-menu-dropdown">
+                            <a href="javascript:void(0)" onclick="checkPremiumEdit(<?= $job['id'] ?>)"><i class="fas fa-edit"></i> Edit Job</a>
+                        </div>
+                    </div>
 
                     <div class="card-head">
                         <div class="logo-box">
@@ -1041,9 +1058,12 @@ function safe($v)
                     </div>
 
                     <div class="card-actions">
-                        <a href="applications.php?job_id=<?= $job['id'] ?>" class="btn-card">
-                            View<br>Applications
-                        </a>
+                        <form action="applications.php" method="POST" style="flex:1;display:flex;">
+                            <input type="hidden" name="job_id" value="<?= $job['id'] ?>">
+                            <button type="submit" class="btn-card">
+                                View<br>Applications
+                            </button>
+                        </form>
 
                         <form action="premium-job-details.php" method="POST" style="flex:1;display:flex;">
                             <input type="hidden" name="id" value="<?= $job['id'] ?>">
@@ -1058,19 +1078,19 @@ function safe($v)
 
             <?php endforeach; ?>
         </div>
-                     <?php if (empty($jobs)) { ?>
+        <?php if (empty($jobs)) { ?>
 
-        <div style="
+            <div style="
         text-align:center;
         padding:50px 20px;
         color:#64748b;
         font-size:16px;
         font-weight:600;
     ">
-            No jobs found
-        </div>
+                No jobs found
+            </div>
 
-    <?php } ?>
+        <?php } ?>
         <?php if ($total > $limit): ?>
             <div class="load-more-wrapper">
                 <button id="loadMoreBtn" class="load-more-btn">
@@ -1130,7 +1150,7 @@ function safe($v)
 
 
 
- function toggleCardMenu(event, element) {
+        function toggleCardMenu(event, element) {
             event.stopPropagation();
             const dropdown = element.nextElementSibling;
             document.querySelectorAll('.card-menu-dropdown').forEach(menu => {
@@ -1139,7 +1159,7 @@ function safe($v)
             dropdown.classList.toggle('show');
         }
 
-         function checkPremiumEdit(jobId) {
+        function checkPremiumEdit(jobId) {
             fetch("/web_api/cehck24hrswalkinjobstatus.php", {
                     method: "POST",
                     headers: {
@@ -1170,9 +1190,17 @@ function safe($v)
                         modeInput.name = "mode";
                         modeInput.value = "edit";
 
+                        // 🔥 ADD THIS (MOST IMPORTANT)
+                        let fromInput = document.createElement("input");
+                        fromInput.type = "hidden";
+                        fromInput.name = "from_page";
+                        fromInput.value = "premium-job-list.php";
+
                         // Append inputs to form
                         form.appendChild(jobInput);
                         form.appendChild(modeInput);
+                        form.appendChild(fromInput);
+
 
                         // Append form to body and submit
                         document.body.appendChild(form);
@@ -1186,7 +1214,7 @@ function safe($v)
                 .catch(err => console.error(err));
         }
 
-function closeEditModal() {
+        function closeEditModal() {
             document.getElementById("editErrorModal").style.display = "none";
         }
 
@@ -1227,7 +1255,8 @@ function closeEditModal() {
                 })
                 .catch(err => console.error(err));
         }
-          function applyFilter(statusId) {
+
+        function applyFilter(statusId) {
             document.getElementById("statusInput").value = statusId;
             document.getElementById("statusForm").submit();
         }
