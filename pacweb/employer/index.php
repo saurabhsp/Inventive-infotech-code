@@ -14,8 +14,17 @@ $profile_type = $user['profile_type_id'];
 $city         = $user['city_id'] ?? "";
 $locality     = "";
 
+
+$subscription_status  = $user['subscription_status'] ?? 'none';
+$subscription_message =  'Your Subscription has expired. Please upgrade to continue';
+// Capitalize first letter
+$subscription_title = ucfirst($subscription_status);
+// Show modal only if NOT active
+$show_subscription_modal = ($subscription_status !== 'active');
+
 $fcm_token  = $user['fcm_token'] ?? '';
 $fcm_status = empty($fcm_token) ? "missing" : "valid";
+
 
 
 /* ================================================================
@@ -123,6 +132,7 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
     <title>Pacific iConnect â€“ Hire or Get Hired</title>
     <link rel="stylesheet" href="/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <style>
@@ -274,6 +284,9 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
             </div>
         </div>
     </div>
+
+    <!-- //Subscription modal -->
+
 
     <div class="boxed-container welcome-text"><?php echo $welcome_message; ?></div>
 
@@ -724,6 +737,27 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
         <?php if ($show_kyc_modal): ?>
             document.addEventListener("DOMContentLoaded", function() {
                 document.getElementById("kycModal").style.display = "flex";
+            });
+        <?php endif; ?>
+
+        <?php if ($show_subscription_modal): ?>
+            document.addEventListener("DOMContentLoaded", function() {
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Subscription <?= $subscription_title ?>',
+                    text: '<?= addslashes($subscription_message) ?>',
+                    confirmButtonText: 'Upgrade Plan',
+                    confirmButtonColor: '#16a34a',
+                    showCancelButton: true,
+                    cancelButtonText: 'Close',
+                    cancelButtonColor: '#2563eb'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = "subscription_plans.php";
+                    }
+                });
+
             });
         <?php endif; ?>
     </script>
