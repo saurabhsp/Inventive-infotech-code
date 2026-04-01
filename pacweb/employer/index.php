@@ -4,12 +4,10 @@ ini_set('display_errors', 1);
 session_start();
 $active = "home";
 require_once "../web_api/includes/db_config.php";
-
 if (!isset($_SESSION['user'])) {
     header("Location: ../login.php");
     exit();
 }
-
 $user         = $_SESSION['user'];
 $userid       = $user['id'];
 $profile_type = $user['profile_type_id'];
@@ -21,7 +19,7 @@ $fcm_status = empty($fcm_token) ? "missing" : "valid";
 
 
 /* ================================================================
-   STEP 1 — JOB STATUS: Direct DB call — NO curl, NO HTTP
+   STEP 1 â€” JOB STATUS: Direct DB call â€” NO curl, NO HTTP
    Cached in session for 1 hour so DB is hit only once per hour
    ================================================================ */
 $need_status_fetch = (
@@ -42,10 +40,10 @@ $job_status_list = $_SESSION['job_status_list'] ?? [];
 
 
 /* ================================================================
-   STEP 2 — DASHBOARD + KYC via curl_multi with timeouts
+   STEP 2 â€” DASHBOARD + KYC via curl_multi with timeouts
    ================================================================ */
-$api_url     = API_BASE_URL ."getRecruiterdashboard.php";
-$kyc_api_url = API_BASE_URL ."checkRecruiterprofile.php";
+$api_url     = API_BASE_URL . "getRecruiterdashboard.php";
+$kyc_api_url = API_BASE_URL . "checkRecruiterprofile.php";
 
 function make_curl_handle(string $url, array $payload): \CurlHandle
 {
@@ -122,7 +120,7 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pacific iConnect – Hire or Get Hired</title>
+    <title>Pacific iConnect â€“ Hire or Get Hired</title>
     <link rel="stylesheet" href="/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -363,7 +361,12 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
                             </div>
                             <div class="apps-count">Applications <span class="apps-num"><?= $job['application_count'] ?></span></div>
                             <div class="card-actions">
-                                <a href="applications.php?job_id=<?= $job['id'] ?>" class="btn-card">View<br>Applications</a>
+                                <form action="applications.php" method="POST" style="flex:1;display:flex;">
+                                    <input type="hidden" name="job_id" value="<?= $job['id'] ?>">
+                                    <button type="submit" class="btn-card">
+                                        View<br>Applications
+                                    </button>
+                                </form>
                                 <form action="premium-job-details.php" method="POST" style="flex:1;display:flex;">
                                     <input type="hidden" name="id" value="<?= $job['id'] ?>">
                                     <input type="hidden" name="plan_display_status" value="<?= htmlspecialchars($job['plan_display_status'] ?? 3) ?>">
@@ -422,7 +425,13 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
                             </div>
                             <div class="apps-count">Applications <span class="apps-num"><?= intval($job['application_count']) ?></span></div>
                             <div class="card-actions">
-                                <a href="applications.php?job_id=<?= $job['id'] ?>" class="btn-card">View<br>Applications</a>
+                                <form action="applications.php" method="POST" style="flex:1;display:flex;">
+                                    <input type="hidden" name="job_id" value="<?= $job['id'] ?>">
+                                    <button type="submit" class="btn-card">
+                                        View<br>Applications
+                                    </button>
+                                </form>
+
                                 <form action="standard-job-details.php" method="POST" style="flex:1;display:flex;">
                                     <input type="hidden" name="id" value="<?= $job['id'] ?>">
                                     <button type="submit" class="btn-card">View Job</button>
@@ -562,9 +571,17 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
                         modeInput.name = "mode";
                         modeInput.value = "edit";
 
+                        // ðŸ”¥ ADD THIS (MOST IMPORTANT)
+                        let fromInput = document.createElement("input");
+                        fromInput.type = "hidden";
+                        fromInput.name = "from_page";
+                        fromInput.value = "index.php";
+
                         // Append inputs to form
                         form.appendChild(jobInput);
                         form.appendChild(modeInput);
+                        form.appendChild(fromInput);
+
 
                         // Append form to body and submit
                         document.body.appendChild(form);
@@ -609,9 +626,15 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
                         modeInput.name = "mode";
                         modeInput.value = "edit";
 
-                        // Append inputs
+                        // detect current page dynamically
+                        let fromInput = document.createElement("input");
+                        fromInput.type = "hidden";
+                        fromInput.name = "from_page";
+                        fromInput.value = window.location.pathname.split("/").pop(); // index.php OR standard-job-list.php
+
                         form.appendChild(jobInput);
                         form.appendChild(modeInput);
+                        form.appendChild(fromInput);
 
                         document.body.appendChild(form);
                         form.submit();
