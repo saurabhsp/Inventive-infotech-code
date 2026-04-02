@@ -30,8 +30,6 @@ $ch = curl_init($api_url);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
-    CURLOPT_CONNECTTIMEOUT => 5,
-    CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER => [
         "Content-Type: application/json"
     ],
@@ -58,8 +56,6 @@ $ch = curl_init($status_api);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
-    CURLOPT_CONNECTTIMEOUT => 5,
-    CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
     CURLOPT_POSTFIELDS => json_encode($status_request)
 ]);
@@ -83,8 +79,6 @@ $ch = curl_init($status_modal_api);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
-    CURLOPT_CONNECTTIMEOUT => 5,
-    CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
     CURLOPT_POSTFIELDS => json_encode($status_modal_request)
 ]);
@@ -108,8 +102,6 @@ $ch = curl_init($interview_api);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
-    CURLOPT_CONNECTTIMEOUT => 5,
-    CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
     CURLOPT_POSTFIELDS => json_encode([])
 ]);
@@ -135,7 +127,8 @@ if (isset($_POST['schedule_interview'])) {
     $interview_type_id = $_POST['interview_type_id'];
 
     // $schedule_api = API_BASE_URL . "scheduleInterview.php";
-    $schedule_api =  "https://pacificconnect2.0.inv51.in/webservices/scheduleInterview.php";
+    // $schedule_api =  "https://pacificconnect2.0.inv51.in/webservices/scheduleInterview.php";
+    $schedule_api =  "https://beta.inv51.in/webservices/scheduleInterview.php";
 
     $schedule_request = [
         "application_id" => $application_id,
@@ -151,8 +144,6 @@ if (isset($_POST['schedule_interview'])) {
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
-        CURLOPT_CONNECTTIMEOUT => 5,
-        CURLOPT_TIMEOUT        => 10,
         CURLOPT_HTTPHEADER => [
             "Content-Type: application/json"
         ],
@@ -198,8 +189,6 @@ if (isset($_POST['update_status'])) {
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
-        CURLOPT_CONNECTTIMEOUT => 5,
-        CURLOPT_TIMEOUT        => 10,
         CURLOPT_HTTPHEADER => [
             "Content-Type: application/json"
         ],
@@ -1417,12 +1406,21 @@ if (isset($_POST['update_status'])) {
             const form = document.createElement("form");
             form.method = "POST";
 
-            const input = document.createElement("input");
-            input.type = "hidden";
-            input.name = "status_id";
-            input.value = status_id;
+            // status_id
+            const statusInput = document.createElement("input");
+            statusInput.type = "hidden";
+            statusInput.name = "status_id";
+            statusInput.value = status_id;
 
-            form.appendChild(input);
+            // job_id (IMPORTANT)
+            const jobInput = document.createElement("input");
+            jobInput.type = "hidden";
+            jobInput.name = "job_id";
+            jobInput.value = "<?= $job_id ?>"; // preserve current job_id
+
+            form.appendChild(statusInput);
+            form.appendChild(jobInput);
+
             document.body.appendChild(form);
             form.submit();
         }
