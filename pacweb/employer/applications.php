@@ -30,6 +30,8 @@ $ch = curl_init($api_url);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER => [
         "Content-Type: application/json"
     ],
@@ -56,6 +58,8 @@ $ch = curl_init($status_api);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
     CURLOPT_POSTFIELDS => json_encode($status_request)
 ]);
@@ -79,6 +83,8 @@ $ch = curl_init($status_modal_api);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
     CURLOPT_POSTFIELDS => json_encode($status_modal_request)
 ]);
@@ -102,6 +108,8 @@ $ch = curl_init($interview_api);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
     CURLOPT_POSTFIELDS => json_encode([])
 ]);
@@ -126,8 +134,8 @@ if (isset($_POST['schedule_interview'])) {
     $interview_time = $_POST['interview_time'] . ":00";
     $interview_type_id = $_POST['interview_type_id'];
 
-    $schedule_api = API_BASE_URL . "scheduleInterview.php";
-    // $schedule_api =  "https://beta.inv51.in/webservices/scheduleInterview.php";
+    // $schedule_api = API_BASE_URL . "scheduleInterview.php";
+    $schedule_api =  "https://pacificconnect2.0.inv51.in/webservices/scheduleInterview.php";
 
     $schedule_request = [
         "application_id" => $application_id,
@@ -143,6 +151,8 @@ if (isset($_POST['schedule_interview'])) {
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 10,
         CURLOPT_HTTPHEADER => [
             "Content-Type: application/json"
         ],
@@ -188,6 +198,8 @@ if (isset($_POST['update_status'])) {
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 10,
         CURLOPT_HTTPHEADER => [
             "Content-Type: application/json"
         ],
@@ -1239,7 +1251,7 @@ if (isset($_POST['update_status'])) {
 
                     <div class="form-group">
                         <label class="form-label">Select Date *</label>
-                        <input type="text" name="interview_date" placeholder="DD-MM-YYYY" class="form-control datepicker" required>
+                        <input type="text" name="interview_date" placeholder="DD-MM-YYYY" class="form-control interviewdatepicker" required>
                     </div>
 
                     <div class="form-group">
@@ -1372,8 +1384,14 @@ if (isset($_POST['update_status'])) {
     </div>
 
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const preloader = document.getElementById("global-preloader");
+            // If success or error modal is present → remove preloader
+            if (document.querySelector(".modal-full-overlay.active")) {
+                preloader?.remove();
+            }
+        });
         window.onload = () => document.getElementById("global-preloader")?.remove();
-
         // Open Modal
         function openInterviewModal(modalId, application_id) {
             document.getElementById(modalId).classList.add('active');
@@ -1430,7 +1448,7 @@ if (isset($_POST['update_status'])) {
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            flatpickr(".datepicker", {
+            flatpickr(".interviewdatepicker", {
                 altInput: true,
                 altFormat: "d-m-Y",
                 dateFormat: "Y-m-d",
