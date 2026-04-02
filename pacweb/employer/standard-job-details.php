@@ -33,6 +33,8 @@ $ch = curl_init($url);
 
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "Content-Type: application/json"
 ]);
@@ -464,7 +466,7 @@ onclick="logAction(3)">
             <div>
                 <span class="stat-label">Salary:</span>
                 <span class="stat-text">
-                    ₹<?= safe($job['salary_from']); ?> ₹ <?= safe($job['salary_to']); ?>
+                    ₹<?= safe($job['salary_from']); ?> - ₹<?= safe($job['salary_to']); ?>
                 </span>
             </div>
         </div>
