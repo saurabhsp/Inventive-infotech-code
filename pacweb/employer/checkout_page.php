@@ -38,6 +38,8 @@ if (!empty($planName)) {
     $ch = curl_init($getPlanUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         "Content-Type: application/json"
@@ -89,6 +91,8 @@ if ($profile_type_id == 1) {
     $ch = curl_init($getgstUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $getgstPayload);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         "Content-Type: application/json"
@@ -114,6 +118,8 @@ $getKeyUrl = "https://pacificconnect2.0.inv51.in/webservices/razorpay_keys.php";
 $ch = curl_init($getKeyUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "Content-Type: application/json"
 ]);
@@ -169,6 +175,8 @@ if (isset($_POST['upload_doc']) && $profile_type_id == 2) {
 
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
 
     $response = curl_exec($ch);
@@ -214,6 +222,8 @@ if (isset($_POST['coupon_code']) && !isset($_POST['pay_now'])) {
 
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $couponPayload);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         "Content-Type: application/json"
@@ -250,6 +260,8 @@ $recruiterPayload = json_encode([
 
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_POSTFIELDS, $recruiterPayload);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "Content-Type: application/json"
@@ -296,6 +308,8 @@ if (isset($_POST['pay_now'])) {
         $ch = curl_init(API_BASE_URL . "updateGST.php");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             "Content-Type: application/json"
@@ -339,6 +353,8 @@ if (isset($_POST['pay_now'])) {
     $ch = curl_init("https://pacificconnect2.0.inv51.in/webservices/create_order.php");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         "Content-Type: application/json"
@@ -1038,35 +1054,34 @@ if (isset($_POST['pay_now'])) {
     </script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
-
         function redirectToStatus(status, error = null) {
 
-    var form = document.createElement("form");
-    form.method = "POST";
-    form.action = "payment_status.php";
+            var form = document.createElement("form");
+            form.method = "POST";
+            form.action = "payment_status.php";
 
-    function addField(name, value) {
-        var input = document.createElement("input");
-        input.type = "hidden";
-        input.name = name;
-        input.value = value;
-        form.appendChild(input);
-    }
+            function addField(name, value) {
+                var input = document.createElement("input");
+                input.type = "hidden";
+                input.name = name;
+                input.value = value;
+                form.appendChild(input);
+            }
 
-    addField("payment_status", status);
+            addField("payment_status", status);
 
-    if (status === "failed") {
-        addField("error_message", error?.description || "Payment failed");
-    }
+            if (status === "failed") {
+                addField("error_message", error?.description || "Payment failed");
+            }
 
-    addField("plan_id", "<?php echo $planid; ?>");
-    addField("plan_amount", "<?php echo $amount; ?>");
-    addField("amount_paid", "<?php echo $finalAmount; ?>");
-    addField("discount", "<?php echo $_POST['discount'] ?? 0; ?>");
+            addField("plan_id", "<?php echo $planid; ?>");
+            addField("plan_amount", "<?php echo $amount; ?>");
+            addField("amount_paid", "<?php echo $finalAmount; ?>");
+            addField("discount", "<?php echo $_POST['discount'] ?? 0; ?>");
 
-    document.body.appendChild(form);
-    form.submit();
-}
+            document.body.appendChild(form);
+            form.submit();
+        }
         const razorpay_key = "<?php echo $razorpay_key; ?>";
         const order_id = "<?php echo $order_id; ?>";
         const amount_paise = "<?php echo $amount_paise ?? 0; ?>"; // ✅ IMPORTANT
