@@ -198,7 +198,7 @@ $kycList   = $kycResult['data'] ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employer Profile | Pacific iConnect</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!--<link rel="stylesheet" href="/style.css">-->
+    <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <style>
@@ -215,220 +215,12 @@ $kycList   = $kycResult['data'] ?? [];
             --danger-red: #e53935;
             --bronze: #cd7f32;
         }
+      
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
+      
 
-        body {
-            background-color: var(--bg-body);
-            color: var(--text-dark);
-            font-size: 15px;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-        }
-
-        a {
-            text-decoration: none;
-            transition: 0.3s;
-            color: inherit;
-        }
-
-        button {
-            cursor: pointer;
-            outline: none;
-        }
-
-        header {
-            background: var(--white);
-            height: 70px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-        }
-
-        .header-container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .brand-group {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--primary);
-            font-weight: 800;
-            font-size: 1.3rem;
-        }
-
-        .location-pin {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            color: var(--primary);
-            font-weight: 700;
-            font-size: 1.1rem;
-            cursor: pointer;
-            padding: 5px 10px;
-            border-radius: 8px;
-            transition: 0.2s;
-        }
-
-        .location-pin:hover {
-            background: var(--primary-light);
-        }
-
-        .location-pin i {
-            color: var(--danger-red);
-        }
-
-        .desktop-nav {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .nav-link {
-            font-weight: 600;
-            color: #555;
-            font-size: 1rem;
-            padding: 5px 10px;
-        }
-
-        .nav-link:hover,
-        .nav-link.active {
-            color: var(--primary);
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .nav-action-icon {
-            position: relative;
-            cursor: pointer;
-            font-size: 1.5rem;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            transition: 0.2s;
-        }
-
-        .noti-badge {
-            position: absolute;
-            top: -5px;
-            right: -8px;
-            background: var(--danger-red);
-            color: white;
-            font-size: 0.65rem;
-            font-weight: 800;
-            padding: 2px 6px;
-            border-radius: 10px;
-            border: 2px solid white;
-            line-height: 1.1;
-        }
-
-        .profile-dropdown-wrap {
-            position: relative;
-            padding-bottom: 10px;
-            margin-bottom: -10px;
-        }
-
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 15px 5px 5px;
-            background: var(--primary-light);
-            border-radius: 30px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .user-profile:hover {
-            background: #e0dcf5;
-        }
-
-        .user-name {
-            font-weight: 700;
-            color: var(--primary);
-            font-size: 0.95rem;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            background: var(--primary);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-        }
-
-        .dropdown-menu {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background: white;
-            min-width: 180px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            border: 1px solid #eee;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(10px);
-            transition: all 0.3s ease;
-            z-index: 1000;
-            padding: 10px 0;
-        }
-
-        .profile-dropdown-wrap:hover .dropdown-menu {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
-        .dropdown-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 20px;
-            color: #555;
-            font-weight: 600;
-            font-size: 0.95rem;
-            transition: 0.2s;
-        }
-
-        .dropdown-item:hover {
-            background: #f8f9fa;
-            color: var(--primary);
-        }
+       
+      
 
         .text-danger {
             color: #d32f2f;
@@ -439,7 +231,7 @@ $kycList   = $kycResult['data'] ?? [];
             background: #ffebee;
         }
 
-        .container {
+        .profile-container {
             max-width: 1200px;
             margin: 30px auto 60px;
             padding: 0 20px;
@@ -454,7 +246,7 @@ $kycList   = $kycResult['data'] ?? [];
             align-items: start;
         }
 
-        .card {
+        .profile-card {
             background: var(--white);
             border-radius: 16px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
@@ -833,7 +625,7 @@ $kycList   = $kycResult['data'] ?? [];
                 display: flex;
             }
 
-            .container {
+            .profile-container {
                 padding: 15px;
                 margin: 0 auto;
                 width: 100%;
@@ -847,7 +639,7 @@ $kycList   = $kycResult['data'] ?? [];
                 width: 100%;
             }
 
-            .card {
+            .profile-card {
                 width: 100%;
             }
 
@@ -856,17 +648,17 @@ $kycList   = $kycResult['data'] ?? [];
                 display: contents;
             }
 
-            .card-logo {
+            .profile-card-logo {
                 order: 1;
                 margin-bottom: 0;
             }
 
-            .card-company-info {
+            .profile-card-company-info {
                 order: 2;
                 margin-bottom: 0;
             }
 
-            .card-kyc {
+            .profile-card-kyc {
                 order: 3;
                 margin-bottom: 0;
             }
@@ -877,12 +669,12 @@ $kycList   = $kycResult['data'] ?? [];
                 margin-bottom: 10px;
             }
 
-            .card-subscription {
+            .profile-card-subscription {
                 order: 5;
                 margin-bottom: 0;
             }
 
-            .card-help {
+            .profile-card-help {
                 order: 6;
                 margin-bottom: 30px;
             }
@@ -1115,13 +907,13 @@ $kycList   = $kycResult['data'] ?? [];
         <i class="fas fa-user-circle mobile-user"></i>
     </div>
 
-    <div class="container">
+    <div class="profile-container">
         <div class="profile-grid">
 
             <div class="column-left">
 
-                <!-- Logo Card -->
-                <div class="card card-logo">
+                <!-- Logo profile-card -->
+                <div class="profile-card profile-card-logo">
                     <a href="#" class="section-edit" style="position:absolute; top:20px; right:25px;">Edit</a>
                     <div class="profile-top-row" style="margin-bottom:0;">
                         <div class="avatar-container">
@@ -1140,8 +932,8 @@ $kycList   = $kycResult['data'] ?? [];
                     </div>
                 </div>
 
-                <!-- Subscription Card -->
-                <div class="card card-subscription">
+                <!-- Subscription profile-card -->
+                <div class="profile-card profile-card-subscription">
                     <div class="section-header" style="margin-bottom:15px;">
                         <span class="section-title" style="font-size:1.15rem;">Your Subscription</span>
                     </div>
@@ -1157,7 +949,7 @@ $kycList   = $kycResult['data'] ?? [];
                             Upgrade Now
                         </a>
 
-                        <a href="#" class="btn-outline" style="margin:0;">
+                        <a href="transactions.php" class="btn-outline" style="margin:0;">
                             Transaction History
                         </a>
                     </div>
@@ -1166,8 +958,8 @@ $kycList   = $kycResult['data'] ?? [];
                 <a href="post-job.php" class="btn-primary btn-post-job" style="padding:16px; font-size:1.1rem;">
                     Start Job Posting
                 </a>
-                <!-- Help Card -->
-                <div class="card card-help">
+                <!-- Help profile-card -->
+                <div class="profile-card profile-card-help">
                     <div class="section-header" style="margin-bottom:10px;">
                         <span class="section-title" style="font-size:1.15rem;">Need Help?</span>
                     </div>
@@ -1184,8 +976,8 @@ $kycList   = $kycResult['data'] ?? [];
 
             <div class="column-right">
 
-                <!-- Company Info Card -->
-                <div class="card card-company-info">
+                <!-- Company Info profile-card -->
+                <div class="profile-card profile-card-company-info">
                     <div class="section-header">
                         <span class="section-title">Company Info</span>
                         <a href="#" class="section-edit" onclick="openModal('editOwnerModal'); return false;">Edit</a>
@@ -1210,8 +1002,8 @@ $kycList   = $kycResult['data'] ?? [];
                     </div>
                 </div>
 
-                <!-- KYC Card -->
-                <div class="card card-kyc">
+                <!-- KYC profile-card -->
+                <div class="profile-card profile-card-kyc">
                     <div class="section-header">
                         <span class="section-title">KYC Status</span>
                         <a href="kyc_upload.php" class="section-edit">Edit Documents</a>
