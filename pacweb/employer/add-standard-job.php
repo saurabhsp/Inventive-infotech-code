@@ -2,6 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
+ $active = "post"; 
 if (!isset($_SESSION['user'])) {
     header("Location: ../login.php");
     exit();
@@ -35,6 +36,8 @@ curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
     CURLOPT_POSTFIELDS => $sub_payload,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER => [
         "Content-Type: application/json"
     ]
@@ -78,6 +81,8 @@ if ($is_edit) {
         CURLOPT_URL => API_BASE_URL . "getSinglejobvacancy.php",
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 10,
         CURLOPT_POSTFIELDS => $postData,
         CURLOPT_HTTPHEADER => [
             "Content-Type: application/json"
@@ -124,6 +129,8 @@ $curl = curl_init();
 curl_setopt_array($curl, [
     CURLOPT_URL => API_BASE_URL . "getRecuriterdetails.php",
     CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_POST => true,
     CURLOPT_POSTFIELDS => $post_user
 ]);
@@ -157,6 +164,8 @@ $curl = curl_init();
 curl_setopt_array($curl, [
     CURLOPT_URL => API_BASE_URL . "getPosition.php",
     CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_POST => true,
     CURLOPT_POSTFIELDS => $post_user
 ]);
@@ -182,7 +191,9 @@ $curl = curl_init();
 
 curl_setopt_array($curl, [
     CURLOPT_URL => API_BASE_URL . "getDegrees.php",
-    CURLOPT_RETURNTRANSFER => true
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
 ]);
 
 $response = curl_exec($curl);
@@ -206,7 +217,9 @@ $curl = curl_init();
 
 curl_setopt_array($curl, [
     CURLOPT_URL => API_BASE_URL . "getExperience_list.php",
-    CURLOPT_RETURNTRANSFER => true
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
 ]);
 
 $response = curl_exec($curl);
@@ -236,6 +249,8 @@ curl_setopt_array($curl, [
     CURLOPT_URL => API_BASE_URL . "getSalaryrange.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_POSTFIELDS => $post_salary
 ]);
 
@@ -262,7 +277,8 @@ $curl = curl_init();
 curl_setopt_array($curl, array(
     CURLOPT_URL => API_BASE_URL . "getGender.php",
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
 ));
 
 $getGender = curl_exec($curl);
@@ -336,6 +352,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $postjson,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 10,
         CURLOPT_HTTPHEADER => [
             "Content-Type: application/json"
         ]
@@ -373,6 +391,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <link rel="stylesheet" href="/style.css">
+
     <style>
         :root {
             /* Pacific iConnect Theme Colors */
@@ -1167,6 +1187,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 <body>
 
     <?php include "includes/header.php";
+ include "includes/preloader.php"; 
     ?>
     <?php if (!empty($_SESSION['success_message'])): ?>
         <div class="modal-full-overlay active" id="successModal">
@@ -1419,7 +1440,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
                         </div>
 
                         <div class="deadline-date-wrapper <?php echo ($is_edit && ($editData['validity_apply'] ?? 0) == 1) ? 'active' : ''; ?>" id="deadlineDateGroup">
-                            <input type="text" name="valid_till_date" placeholder="DD-MM-YYYY" class="form-control datepicker" placeholder="Select Date" value="<?php echo ($is_edit && !empty($editData['valid_till_date'])) ? $editData['valid_till_date'] : ''; ?>">
+                            <input type="text" name="valid_till_date" placeholder="DD-MM-YYYY" class="form-control validity-datepicker" placeholder="Select Date" value="<?php echo ($is_edit && !empty($editData['valid_till_date'])) ? $editData['valid_till_date'] : ''; ?>">
                         </div>
                     </div>
                 </div>
@@ -1432,26 +1453,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
         </div>
     </main>
 
-    <div class="bottom-nav">
-        <a href="#" class="nav-icon">
-            <div class="icon-wrap"><i class="fas fa-home"></i></div>
-            Home
-        </a>
-        <a href="#" class="nav-icon active">
-            <div class="icon-wrap"><i class="fas fa-plus-square"></i></div>
-            Post Jobs
-        </a>
-        <a href="#" class="nav-icon">
-            <div class="icon-wrap"><i class="fas fa-file-alt"></i></div>
-            Applications
-        </a>
-        <a href="#" class="nav-icon">
-            <div class="icon-wrap"><i class="fas fa-user"></i></div>
-            Profile
-        </a>
-    </div>
 
+<?php include "includes/bottom-bar.php"; ?>
     <script>
+          window.onload = () => document.getElementById("global-preloader")?.remove();
         // Logic for Yes/No Deadline toggle
         function toggleDeadline(isYes) {
             const btnYes = document.getElementById('btnYes');
@@ -1719,7 +1724,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
         });
 
         document.addEventListener("DOMContentLoaded", function() {
-            flatpickr(".datepicker", {
+            flatpickr(".validity-datepicker", {
                 altInput: true,
                 altFormat: "d-m-Y",
                 dateFormat: "Y-m-d",
