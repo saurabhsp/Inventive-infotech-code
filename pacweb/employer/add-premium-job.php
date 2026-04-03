@@ -45,7 +45,9 @@ curl_setopt_array($ch, [
     CURLOPT_POSTFIELDS => $sub_payload,
     CURLOPT_HTTPHEADER => [
         "Content-Type: application/json"
-    ]
+    ],
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
 ]);
 
 $sub_response = curl_exec($ch);
@@ -92,6 +94,8 @@ if ($is_edit) {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $postData,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 10,
         CURLOPT_HTTPHEADER => [
             "Content-Type: application/json"
         ]
@@ -158,6 +162,8 @@ curl_setopt_array($curl, array(
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
     CURLOPT_POST => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_POSTFIELDS => $post_user_data1,
 ));
 
@@ -200,7 +206,8 @@ $curl = curl_init();
 curl_setopt_array($curl, array(
     CURLOPT_URL => API_BASE_URL . "getPosition.php",
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_POST => true,
     CURLOPT_POSTFIELDS => $post_user_data2,
 ));
@@ -228,7 +235,8 @@ $curl = curl_init();
 curl_setopt_array($curl, array(
     CURLOPT_URL => API_BASE_URL . "getJobtype.php",
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
 ));
 $getJobTypes = curl_exec($curl);
 
@@ -259,7 +267,8 @@ $curl = curl_init();
 curl_setopt_array($curl, array(
     CURLOPT_URL => API_BASE_URL . "getWorkmodel.php",
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
 ));
 
 $getWorkModels = curl_exec($curl);
@@ -299,7 +308,8 @@ $curl = curl_init();
 curl_setopt_array($curl, array(
     CURLOPT_URL => API_BASE_URL . "getDegrees.php",
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
 ));
 
 $getDegrees = curl_exec($curl);
@@ -339,7 +349,8 @@ $curl = curl_init();
 curl_setopt_array($curl, array(
     CURLOPT_URL => API_BASE_URL . "getSalaryrange.php",
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_POST => true,
     CURLOPT_POSTFIELDS => $post_salary,
 ));
@@ -374,7 +385,8 @@ $curl = curl_init();
 curl_setopt_array($curl, array(
     CURLOPT_URL => API_BASE_URL . "getExperience_list.php",
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
 ));
 
 $getExperience = curl_exec($curl);
@@ -410,7 +422,8 @@ $curl = curl_init();
 curl_setopt_array($curl, array(
     CURLOPT_URL => API_BASE_URL . "getMskill_list.php",
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_POSTFIELDS => $position_post,
 
 ));
@@ -446,7 +459,8 @@ $curl = curl_init();
 curl_setopt_array($curl, array(
     CURLOPT_URL => API_BASE_URL . "getMLanguage_list.php",
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_POST => true
 ));
 
@@ -475,7 +489,8 @@ $curl = curl_init();
 curl_setopt_array($curl, array(
     CURLOPT_URL => API_BASE_URL . "getWorkequipments.php",
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_POST => true,
 ));
 
@@ -504,7 +519,8 @@ $curl = curl_init();
 curl_setopt_array($curl, array(
     CURLOPT_URL => API_BASE_URL . "getWorkshift.php",
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
 ));
 
 $getWorkShifts = curl_exec($curl);
@@ -535,7 +551,8 @@ $curl = curl_init();
 curl_setopt_array($curl, array(
     CURLOPT_URL => API_BASE_URL . "getGender.php",
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
 ));
 
 $getGender = curl_exec($curl);
@@ -621,6 +638,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
         CURLOPT_URL =>  $api_url,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 10,
         CURLOPT_POSTFIELDS => $jsonData,
         CURLOPT_HTTPHEADER => [
             "Content-Type: application/json"
@@ -1973,8 +1992,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
             <div class="modal-map-card" style="max-width:400px;height:auto;padding:30px;text-align:center;">
                 <h3 style="margin-bottom:15px;color:#e53935;">Error</h3>
                 <p><?php echo $_SESSION['error_message']; ?></p>
-                
-                <button  onclick="goBackPage()"
+
+                <button onclick="goBackPage()"
                     style="margin-top:20px;padding:10px 20px;background:#2563eb;color:white;border-radius:6px;border:none;">
                     OK
                 </button>
