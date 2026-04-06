@@ -302,6 +302,33 @@ if (!$api_error && $getGender) {
 /* ====================SUBMIT JOB========================== */
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
+    // $postData = [
+    //     "recruiter_id" => $recruiterid,
+    //     "company_name" => $company_name,
+    //     "job_position_id" => $_POST['job_position'],
+    //     "city_id" => $_POST['city'],
+    //     "locality_id" => $_POST['locality'],
+    //     "gender_id" => $_POST['gender'],
+    //     "qualification_id" => $_POST['qualification'],
+    //     "experience_from" => $_POST['experience_from'],
+    //     "experience_to" => $_POST['experience_to'],
+    //     "salary_from" => $_POST['salary_from'],
+    //     "salary_to" => $_POST['salary_to'],
+    //     "contact_person" => $_POST['contact_person'],
+    //     "contact_no" => $_POST['contact_no'],
+    //     "interview_address" => $_POST['interview_address'],
+
+    //     "created_date" => date("Y-m-d"),
+    //     "created_time" => date("H:i:s"),
+
+    //     "valid_till_date" => $_POST['valid_till_date'] ?? "",
+    //     "valid_till_time" => "23:59:59",
+    //     "validity_apply" => $_POST['validity_apply'] ?? 0,
+    //     "country" => $_POST['country'] ?? "",
+    //     "state" => $_POST['state'] ?? "",
+    //     "district" => $_POST['city'] ?? ""
+    // ];
+
     $postData = [
         "recruiter_id" => $recruiterid,
         "company_name" => $company_name,
@@ -344,7 +371,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
     }
     $postjson = json_encode($postData);
 
-   
     $curl = curl_init();
 
     curl_setopt_array($curl, [
@@ -1183,65 +1209,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
                 /* Slightly taller for touch */
             }
         }
-
-        .req {
-            color: red;
-            margin-left: 3px;
-        }
-
-        .error {
-            border: 1px solid red !important;
-        }
-
-        .custom-dropdown {
-            position: relative;
-        }
-
-        .dropdown-box {
-            border: 1px solid #cbd5e1;
-            padding: 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            background: #fff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .dropdown-list {
-            display: none;
-            position: absolute;
-            width: 100%;
-            background: #fff;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            max-height: 250px;
-            overflow-y: auto;
-            z-index: 999;
-            margin-top: 5px;
-        }
-
-        .dropdown-search {
-            width: 100%;
-            padding: 8px;
-            border: none;
-            border-bottom: 1px solid #eee;
-            outline: none;
-        }
-
-        .dropdown-item {
-            padding: 10px;
-            cursor: pointer;
-        }
-
-        .dropdown-item:hover {
-            background: #f1f5ff;
-        }
-
-        .dropdown-item.active {
-            background: #e0e7ff;
-            font-weight: bold;
-        }
     </style>
 </head>
 
@@ -1321,7 +1288,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
         <div class="form-card">
             <h1 class="desktop-page-title">Post Standard Job</h1>
 
-           <form method="POST" class="job-form">
+            <form method="POST">
                 <input type="hidden" name="job_id" value="<?php echo $job_id; ?>">
                 <input type="hidden" name="mode" value="<?php echo $mode; ?>">
                 <input type="hidden" name="form_submitted" value="1">
@@ -1330,53 +1297,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
                 <div class="form-grid">
                     <div class="form-group">
-                        <label class="form-label">Company Name<span class="req">*</span></label>
+                        <label class="form-label">Company Name</label>
                         <input type="text" class="form-control" name="company_name"
                             value="<?php echo $is_edit ? htmlspecialchars($editData['company_name']) : htmlspecialchars($company_name); ?>" readonly>
                     </div>
-  <div class="form-group">
-                        <label class="form-label">Job Position<span class="req">*</span></label>
-                        <div class="custom-dropdown">
-                            <!-- ✅ VALUE AUTO SET (EDIT MODE) -->
-                            <input type="hidden" name="job_position" id="jobPositionValue"
-                                value="<?php echo ($is_edit) ? $editData['job_position_id'] : ''; ?>">
-                            <!-- ✅ TEXT AUTO SET (EDIT MODE) -->
-                            <div class="dropdown-box" onclick="toggleJobDropdown()">
-                                <span id="selectedJobText">
-                                    <?php
-                                    if ($is_edit) {
-                                        foreach ($job_positions as $position) {
-                                            if ($editData['job_position_id'] == $position['id']) {
-                                                echo htmlspecialchars($position['name']);
-                                                break;
-                                            }
-                                        }
-                                    } else {
-                                        echo "Select Job Position";
-                                    }
-                                    ?>
-                                </span>
-                                <i class="fas fa-chevron-down"></i>
-                            </div>
-                            <div class="dropdown-list" id="jobDropdown">
-                                <!-- 🔍 SEARCH -->
-                                <input type="text" id="jobSearch" placeholder="Search job..." onkeyup="filterJobs()" class="dropdown-search">
-                                <!-- OPTIONS -->
-                                <?php foreach ($job_positions as $position) { ?>
-                                    <div class="dropdown-item
-                <?php echo ($is_edit && $editData['job_position_id'] == $position['id']) ? 'active' : ''; ?>"
 
-                                        data-id="<?php echo $position['id']; ?>"
-                                        data-name="<?php echo strtolower($position['name']); ?>"
-                                        onclick="selectJob(this)">
-                                        <?php echo htmlspecialchars($position['name']); ?>
-                                    </div>
-                                <?php } ?>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- <div class="form-group">
-                        <label class="form-label">Job Position <span class="req">*</span></label>
+                    <div class="form-group">
+                        <label class="form-label">Job Position</label>
                         <select class="form-control" name="job_position">
                             <option value="">Select Job Position</option>
                             <?php if (!empty($job_positions)) { ?>
@@ -1388,10 +1315,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
                                 <?php } ?>
                             <?php } ?>
                         </select>
-                    </div> -->
+                    </div>
 
                     <div class="form-group">
-                        <label class="form-label">District / Tehsil / City<span class="req">*</span></label>
+                        <label class="form-label">District / Tehsil / City</label>
                         <input type="text" name="city" id="cityInput" class="form-control" autocomplete="off" value="<?php echo $is_edit ? htmlspecialchars($editData['city']) : ''; ?>">
                         <!-- hidden fields -->
                         <input type="hidden" id="stateInput" value="<?php echo $is_edit ? htmlspecialchars($editData['state']) : ''; ?>" name="state">
@@ -1400,13 +1327,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Area / Locality / Village<span class="req">*</span></label>
+                        <label class="form-label">Area / Locality / Village</label>
                         <input type="text" id="localityInput" name="locality" class="form-control" value="<?php echo $is_edit ? htmlspecialchars($editData['locality']) : ''; ?>" autocomplete="off">
                         <div id="localitySuggestions" class="suggestion-box"></div>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Gender<span class="req">*</span></label>
+                        <label class="form-label">Gender</label>
                         <div class="toggle-container" id="genderToggle">
                             <input type="hidden" name="gender" id="genderInput"
                                 value="<?php echo $is_edit ? $editData['gender_id'] : ''; ?>"> <?php if (!empty($genders)) { ?>
@@ -1426,7 +1353,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
 
                     <div class="form-group">
-                        <label class="form-label">Basic Qualification<span class="req">*</span></label>
+                        <label class="form-label">Basic Qualification</label>
                         <select class="form-control" name="qualification">
                             <option value="">Choose Basic Qualification</option>
                             <?php if (!empty($degrees)) { ?>
@@ -1441,7 +1368,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Experience<span class="req">*</span></label>
+                        <label class="form-label">Experience</label>
                         <div class="form-row">
                             <div class="form-col">
                                 <select class="form-control" name="experience_from">
@@ -1475,7 +1402,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Monthly Salary Range<span class="req">*</span></label>
+                        <label class="form-label">Monthly Salary Range</label>
 
                         <div class="form-row">
 
@@ -1512,22 +1439,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Contact Person for Interview :<span class="req">*</span></label>
+                        <label class="form-label">Contact Person for Interview :</label>
                         <input type="text" class="form-control" name="contact_person" value="<?php echo $is_edit ? htmlspecialchars($editData['contact_person']) : htmlspecialchars($contact_person); ?>" placeholder="Enter name">
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Interviewer/ HR Contact No<span class="req">*</span></label>
+                        <label class="form-label">Interviewer/ HR Contact No</label>
                         <input type="tel" class="form-control" name="contact_no" value="<?php echo $is_edit ? htmlspecialchars($editData['mobile_no']) : htmlspecialchars($contact_mobile); ?>" placeholder="Enter contact number">
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Interview Location<span class="req">*</span></label>
+                        <label class="form-label">Interview Location</label>
                         <textarea class="form-control" name="interview_address"><?php echo $is_edit ? htmlspecialchars($editData['interview_address']) : htmlspecialchars($interview_address); ?></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Does this Job have a deadline?<span class="req">*</span></label>
+                        <label class="form-label">Does this Job have a deadline?</label>
                         <input type="hidden" name="validity_apply" id="validityApplyInput"
                             value="<?php echo $is_edit ? ($editData['validity_apply'] ?? 0) : 0; ?>">
                         <div class="toggle-container" id="deadlineToggle">
@@ -1557,123 +1484,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
     <?php include "includes/bottom-bar.php"; ?>
     <script>
-          function toggleJobDropdown() {
-            document.getElementById("jobDropdown").style.display = "block";
-        }
-
-        function selectJob(el) {
-            let id = el.getAttribute("data-id");
-            let text = el.innerText;
-
-            document.getElementById("jobPositionValue").value = id;
-            document.getElementById("selectedJobText").innerText = text;
-
-            document.getElementById("jobDropdown").style.display = "none";
-        }
-
-        function filterJobs() {
-            let input = document.getElementById("jobSearch").value.toLowerCase();
-            let items = document.querySelectorAll("#jobDropdown .dropdown-item");
-
-            items.forEach(item => {
-                let name = item.getAttribute("data-name");
-
-                if (name.includes(input)) {
-                    item.style.display = "block";
-                } else {
-                    item.style.display = "none";
-                }
-            });
-        }
-
-        // click outside close
-        document.addEventListener("click", function(e) {
-            if (!e.target.closest(".custom-dropdown")) {
-                document.getElementById("jobDropdown").style.display = "none";
-            }
-        });
-
-
-
-
-
-
-
-
-       document.querySelector(".job-form").addEventListener("submit", function(e) {
-            // remove old errors
-            document.querySelectorAll(".form-control").forEach(el => {
-                el.classList.remove("error");
-            });
-            document.getElementById("genderToggle").style.border = "";
-
-            function showError(field, message) {
-                e.preventDefault();
-                if (field) field.classList.add("error");
-                alert(message);
-                field?.focus();
-                throw "stop"; // 🔥 stops execution (important)
-            }
-
-            function checkField(name, message) {
-                let field = document.querySelector(`[name="${name}"]`);
-                if (!field || field.value.trim() === "") {
-                    showError(field, message);
-                }
-            }
-
-            try {
-
-                // ✅ ONE BY ONE VALIDATION (ORDER MATTERS)
-
-                checkField("job_position", "Job Position is required");
-                checkField("city", "City is required");
-                checkField("locality", "Locality is required");
-
-                // Gender (special)
-                let gender = document.getElementById("genderInput").value;
-                if (!gender) {
-                    document.getElementById("genderToggle").style.border = "1px solid red";
-                    showError(null, "Gender is required");
-                }
-
-                checkField("qualification", "Qualification is required");
-                checkField("experience_from", "Experience From is required");
-                checkField("experience_to", "Experience To is required");
-                checkField("salary_from", "Salary From is required");
-                checkField("salary_to", "Salary To is required");
-                checkField("contact_person", "Contact Person is required");
-                checkField("contact_no", "Contact Number is required");
-                checkField("interview_address", "Interview Address is required");
-
-                // Deadline
-                let validity = document.getElementById("validityApplyInput").value;
-                let dateField = document.querySelector("[name='valid_till_date']");
-
-                if (validity == "1" && (!dateField.value || dateField.value.trim() === "")) {
-                    showError(dateField, "Valid Till Date is required");
-                }
-
-            } catch (err) {
-                return false; // stops form submit
-            }
-
-        });
-        // REMOVE ERROR ON INPUT CHANGE
-        document.querySelectorAll(".form-control").forEach(field => {
-
-            field.addEventListener("input", function() {
-                this.classList.remove("error");
-            });
-
-            field.addEventListener("change", function() {
-                this.classList.remove("error");
-            });
-
-        });
         window.onload = () => document.getElementById("global-preloader")?.remove();
-
-
         // Logic for Yes/No Deadline toggle
         function toggleDeadline(isYes) {
             const btnYes = document.getElementById('btnYes');

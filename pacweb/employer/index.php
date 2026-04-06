@@ -285,9 +285,6 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
         </div>
     </div>
 
-    <!-- //Subscription modal -->
-
-
     <div class="boxed-container welcome-text"><?php echo $welcome_message; ?></div>
 
     <?php if (!empty($slider_list)): ?>
@@ -320,7 +317,7 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
     <?php if (empty($premium_jobs) && empty($standard_jobs)): ?>
         <div class="empty-state-wrapper">
             <div class="empty-state-text"><?php echo $combined_message; ?></div>
-            <button class="btn-post-job-empty">Post Jobs</button>
+                <a href="post-job.php"><button class="btn-post-job-empty">Post Jobs</button></a>
         </div>
     <?php else: ?>
 
@@ -394,7 +391,7 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
         <?php else: ?>
             <div class="empty-state-wrapper">
                 <div class="empty-state-text"><?php echo $data['walkin_message'] ?? ''; ?></div>
-                <button class="btn-post-job-empty">Post Jobs</button>
+                <a href="post-job.php"><button class="btn-post-job-empty">Post Jobs</button></a>
             </div>
         <?php endif; ?>
 
@@ -458,7 +455,7 @@ if ($kyc_data && isset($kyc_data['status']) && $kyc_data['status'] === false) {
         <?php else: ?>
             <div class="empty-state-wrapper">
                 <div class="empty-state-text"><?php echo $data['vacancy_message'] ?? ''; ?></div>
-                <button class="btn-post-job-empty">Post Jobs</button>
+                <a href="post-job.php"><button class="btn-post-job-empty">Post Jobs</button></a>
             </div>
         <?php endif; ?>
 

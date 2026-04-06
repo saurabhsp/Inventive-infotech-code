@@ -6,8 +6,8 @@ session_start();
 require_once "../web_api/includes/db_config.php";
 
 if (!isset($_SESSION['user'])) {
-    header("Location: ../login.php");
-    exit();
+  header("Location: ../login.php");
+  exit();
 }
 
 $user = $_SESSION['user'];
@@ -41,6 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['docurl'])) {
   curl_setopt($ch, CURLOPT_URL, $api_url);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
   curl_setopt($ch, CURLOPT_POST, true);
+  curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+  curl_setopt($ch, CURLOPT_TIMEOUT, 10);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
 
   $response = curl_exec($ch);
@@ -85,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['docurl'])) {
   <link
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     rel="stylesheet" />
-    <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style.css">
   <style>
     :root {
       /* Theme Colors matching Profile Page */
@@ -776,8 +778,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['docurl'])) {
 </head>
 
 <body>
-    <?php include "includes/preloader.php"; ?>
-    <?php include "includes/header.php"; ?>
+  <?php include "includes/preloader.php"; ?>
+  <?php include "includes/header.php"; ?>
   <div class="mobile-header">
     <i
       class="fas fa-arrow-left mobile-back"

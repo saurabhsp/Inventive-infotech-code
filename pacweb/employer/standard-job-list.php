@@ -59,6 +59,8 @@ $ch = curl_init($url);
 
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Content-Type: application/json'
@@ -89,6 +91,8 @@ $ch = curl_init($status_api);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
     CURLOPT_POSTFIELDS => json_encode($status_request)
 ]);
@@ -919,7 +923,7 @@ function safe($v)
         }
 
         .page-heading {
-            text-align: center;
+            /*text-align: center;*/
             font-size: 2rem;
             font-weight: 800;
             color: var(--text-dark);

@@ -18,7 +18,7 @@ $job_cp_id = $_POST['job_cp_id'] ?? $_SESSION['job_cp_id'] ?? null;
 if (isset($_POST['candidate_id'])) {
     $_SESSION['candidate_id'] = $candidate_id;
     $_SESSION['application_id'] = $application_id;
-    $_SESSION['job_cp_id'] = $job_cp_id; // ✅ ADD THIS
+    $_SESSION['job_cp_id'] = $job_cp_id; // âœ… ADD THIS
 }
 
 if (!$candidate_id && !$application_id) {
@@ -33,7 +33,7 @@ if (isset($_POST['call_action']) || isset($_POST['chat_action'])) {
 
     $action_type = isset($_POST['call_action']) ? 1 : 2;
 
-    // 🔧 You must have these values (set properly)
+    // ðŸ”§ You must have these values (set properly)
     $job_listing_type = $_POST['job_listing_type'] ?? 1;
 
     $action_api = API_BASE_URL . "addAppactionlog.php";
@@ -41,17 +41,20 @@ if (isset($_POST['call_action']) || isset($_POST['chat_action'])) {
     $payload = [
         "action_type" => $action_type,
         "userid" => $userid,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 10,
         "job_id" => $job_cp_id,
         "job_listing_type" => $job_listing_type, //1 for walking and 2 for job vacancy
         "application_id" => $application_id
     ];
-    print_r(json_encode($payload));exit;
 
     $ch = curl_init($action_api);
 
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 10,
         CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
         CURLOPT_POSTFIELDS => json_encode($payload)
     ]);
@@ -61,7 +64,7 @@ if (isset($_POST['call_action']) || isset($_POST['chat_action'])) {
 
     $result = json_decode($api_response, true);
 
-    // ✅ HANDLE RESPONSE
+    // âœ… HANDLE RESPONSE
     if (!empty($result['status'])) {
         $_SESSION['success_message'] = $result['message'] ?? "Action completed";
         //APACTION ADD
@@ -88,6 +91,8 @@ $ch = curl_init($status_modal_api);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
     CURLOPT_POSTFIELDS => json_encode($status_modal_request)
 ]);
@@ -111,6 +116,8 @@ $data = json_encode([
 $ch = curl_init($url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "Content-Type: application/json"
@@ -136,6 +143,8 @@ $ch = curl_init($interview_api);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
     CURLOPT_POSTFIELDS => json_encode([])
 ]);
@@ -159,7 +168,7 @@ if (isset($_POST['schedule_interview'])) {
     $interview_type_id = $_POST['interview_type_id'];
 
     // $schedule_api = API_BASE_URL . "scheduleInterview.php";
-    $schedule_api =  "https://beta.inv51.in/webservices/scheduleInterview.php";
+    $schedule_api =  "https://pacificconnect2.0.inv51.in/webservices/scheduleInterview.php";
 
     $schedule_request = [
         "application_id" => $application_id,
@@ -175,6 +184,8 @@ if (isset($_POST['schedule_interview'])) {
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 10,
         CURLOPT_HTTPHEADER => [
             "Content-Type: application/json"
         ],
@@ -222,6 +233,8 @@ if (isset($_POST['update_status'])) {
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 10,
         CURLOPT_HTTPHEADER => [
             "Content-Type: application/json"
         ],
@@ -943,8 +956,14 @@ if (isset($_POST['update_status'])) {
 
     <?php include "includes/bottom-bar.php"; ?>
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const preloader = document.getElementById("global-preloader");
+            // If success or error modal is present → remove preloader
+            if (document.querySelector(".modal-full-overlay.active")) {
+                preloader?.remove();
+            }
+        });
         window.onload = () => document.getElementById("global-preloader")?.remove();
-
         // Open Modal
         function openInterviewModal(modalId, application_id) {
             document.getElementById(modalId).classList.add('active');

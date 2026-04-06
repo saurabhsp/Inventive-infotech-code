@@ -16,8 +16,7 @@ $jobid = $_POST['id'] ?? '';
 
 // ✅ IF job id not present → redirect
 if (empty($jobid)) {
-    header("Location: index.php"); // ya ../index.php as per path
-    exit();
+    header("Location: standard-job-list.php"); 
 }
 
 

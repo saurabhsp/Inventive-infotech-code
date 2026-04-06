@@ -40,6 +40,8 @@ if (!empty($planId)) {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         "Content-Type: application/json"
     ]);
@@ -82,6 +84,8 @@ $getKeyUrl = "https://pacificconnect2.0.inv51.in/webservices/razorpay_keys.php";
 $ch = curl_init($getKeyUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "Content-Type: application/json"
 ]);
@@ -137,8 +141,14 @@ if (isset($_POST['upload_doc']) && $profile_type_id == 2) {
 
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+
     $response = curl_exec($ch);
+
+    // print_r($response );exit;
+
     if (curl_errno($ch)) {
         echo "Curl error: " . curl_error($ch);
     }
@@ -181,6 +191,8 @@ if (isset($_POST['coupon_code']) && (isset($_POST['apply_coupon']) || isset($_PO
 
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $couponPayload);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         "Content-Type: application/json"
@@ -226,6 +238,8 @@ $recruiterPayload = json_encode([
 
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_POSTFIELDS, $recruiterPayload);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "Content-Type: application/json"
@@ -245,15 +259,6 @@ if (!empty($result) && $result['status'] == true) {
 } else {
     $apierror = $result['message'] ?? "Unable to get recruiter Details";
 }
-
-
-
-
-
-
-
-
-
 
 $orderData = null;
 
@@ -282,10 +287,12 @@ if (isset($_POST['pay_now'])) {
         ]
     ]);
 
-    $ch = curl_init(API_BASE_URL . "create_order.php");
-    // $ch = curl_init("https://pacificconnect2.0.inv51.in/webservices/create_order.php");
+    // $ch = curl_init(API_BASE_URL ."create_order.php");
+    $ch = curl_init("https://pacificconnect2.0.inv51.in/webservices/create_order.php");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         "Content-Type: application/json"
@@ -331,9 +338,6 @@ if (isset($_POST['pay_now'])) {
             --plan-border: #fbc02d;
             --green: #25D366;
         }
-
-
-
 
 
         /* --- CHECKOUT LAYOUT --- */

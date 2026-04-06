@@ -1,0 +1,198 @@
+<?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+session_start();
+require_once __DIR__ . '/includes/session.php';
+require_once __DIR__ . '/includes/db_config.php';
+
+if (empty($_SESSION['user_id']) || empty($_SESSION['is_logged_in'])) {
+    header("Location: login.php");
+    exit();
+}
+$profile_type_id = (int)$_SESSION['user']['profile_type_id']
+
+?>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wallet Withdrawal</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+
+    <style>
+
+
+      .bank-container {
+        max-width: 1100px;
+        margin: auto;
+      }
+
+      .bank-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        margin-bottom: 20px;
+      }
+
+      .bank-header {
+        background: #dce6f5;
+        text-align: center;
+        font-weight: bold;
+        font-size: 20px;
+        padding: 20px;
+        border-radius: 12px;
+        color: #1a3d7c;
+        margin: 20px 0;
+      }
+
+      .notice {
+        background: #fff6d9;
+        border-radius: 10px;
+        padding: 15px;
+        color: #6b5500;
+        border: 1px solid #f0d98c;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+      }
+
+      input {
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        font-size: 14px;
+      }
+
+      .tips {
+        background: #fff6d9;
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #f0d98c;
+        color: #6b5500;
+      }
+
+      .tips ul {
+        padding-left: 18px;
+        margin: 10px 0;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+
+      .btn-primary {
+        background: #3b63b5;
+        color: white;
+      }
+
+      .btn-secondary {
+        background: #fff;
+        border: 2px solid #3b63b5;
+        color: #3b63b5;
+      }
+
+      .section-title {
+        text-align: center;
+        background: #e5edf8;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: bold;
+        margin-top: 20px;
+      }
+
+      /* ✅ Desktop Layout */
+      @media (min-width: 768px) {
+        .flex {
+          display: flex;
+          gap: 20px;
+        }
+
+        .left,
+        .right {
+          flex: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <?php include "includes/preloader.php"; ?> <?php if ($profile_type_id == 3)
+    { include "includes/promoter_header.php"; } else { include
+    "includes/header.php"; } ?>
+    <div class="bank-container">
+      <div class="bank-header">Your Wallet Balance</div>
+
+      <div class="bank-card notice">
+        <h3>Minimum Withdrawal Amount</h3>
+        <p>
+          Withdrawals are allowed only if your wallet balance meets the minimum
+          limit set by admin.
+        </p>
+        <p>
+          <strong
+            >If minimum withdrawal is ₹200, requests below ₹200 will be
+            rejected.</strong
+          >
+        </p>
+      </div>
+
+      <div class="flex">
+        <!-- LEFT SIDE -->
+        <div class="left bank-card">
+          <div class="form-group">
+            <input type="text" placeholder="Enter withdrawal amount" />
+          </div>
+
+          <div class="form-group">
+            <label>PAN Number :</label>
+            <input type="text" placeholder="Enter PAN Number" />
+          </div>
+
+          <div class="form-group">
+            <label>Choose a account For Withdrawal</label>
+            <input type="text" placeholder="Select account" />
+          </div>
+
+          <button class="btn btn-primary">Proceed to Withdraw</button>
+          <button class="btn btn-secondary">+ Add New Beneficiary</button>
+        </div>
+
+        <!-- RIGHT SIDE -->
+        <div class="right bank-card">
+          <div class="tips">
+            <h3>Withdrawal Tips</h3>
+            <ul>
+              <li>Double-check beneficiary details before withdrawing.</li>
+              <li>Bank transfers may take 1–24 working hours.</li>
+              <li>UPI payouts are usually faster.</li>
+              <li>Wrong IFSC/account number may cause failures.</li>
+            </ul>
+            <p><strong>UPI example:</strong> ravikumar@upi</p>
+            <p><strong>IFSC example:</strong> HDFC0001234</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Transaction History</div>
+    </div>
+  </body>
+</html>

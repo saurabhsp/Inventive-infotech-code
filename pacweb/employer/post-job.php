@@ -4,7 +4,10 @@ ini_set('display_errors', 1);
 session_start();
 require_once "../web_api/includes/db_config.php";
  $active = "post"; 
-
+if (!isset($_SESSION['user'])) {
+    header("Location: ../login.php");
+    exit();
+}
 
 $user = $_SESSION['user'];
 
@@ -23,6 +26,8 @@ $sub_ch = curl_init($subscription_api);
 
 curl_setopt($sub_ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($sub_ch, CURLOPT_POST, true);
+curl_setopt($sub_ch, CURLOPT_CONNECTTIMEOUT, 5);
+curl_setopt($sub_ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($sub_ch, CURLOPT_POSTFIELDS, json_encode($subscription_post));
 
 curl_setopt($sub_ch, CURLOPT_HTTPHEADER, [

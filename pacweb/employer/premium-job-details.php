@@ -9,6 +9,10 @@ if (!isset($_SESSION['user'])) {
     header("Location: ../login.php");
     exit();
 }
+if (!isset( $_POST['id'])) {
+    header("Location: premium-job-list.php");
+    exit();
+}
 
 $user = $_SESSION['user'];
 
@@ -29,6 +33,8 @@ $ch = curl_init($url);
 
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Content-Type: application/json'
@@ -813,7 +819,7 @@ function safe($v)
                         <div>
                             <span class="ov-label">Salary</span>
                             <span class="ov-value">
-                                ₹<?= safe($job['salary_from']); ?> – <?= safe($job['salary_to']); ?>
+                                ₹<?= safe($job['salary_from']); ?> – ₹<?= safe($job['salary_to']); ?>
                             </span>
                         </div>
                     </div>

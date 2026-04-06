@@ -2,11 +2,6 @@
 session_start();
 $_SESSION['payment_done'] = true;
 
-
-// if (empty($_POST['payment_id'])) {
-//     header("Location: subscription_plans.php");
-//     exit;
-// }
 $payment_status = $_POST['payment_status'] ?? 'failed';
 if ($payment_status == "success") {
     // existing success logic
@@ -39,6 +34,8 @@ $ch = curl_init(API_BASE_URL . "renewSubscription.php");
 
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "Content-Type: application/json"
@@ -65,8 +62,9 @@ if (!empty($result) && $result['status'] == true) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Status | Pacific iConnect</title>
+    <title>Checkout | Pacific iConnect</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
     <style>
         :root {
             /* Pacific iConnect Theme Colors */
@@ -83,155 +81,7 @@ if (!empty($result) && $result['status'] == true) {
             --border-light: #e2e8f0;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
 
-        body {
-            background-color: var(--bg-body);
-            color: var(--text-dark);
-            line-height: 1.5;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        a {
-            text-decoration: none;
-            transition: 0.3s;
-            color: inherit;
-        }
-
-        button {
-            cursor: pointer;
-            outline: none;
-            border: none;
-            font-family: inherit;
-        }
-
-        /* --- 1. UNIFIED DESKTOP HEADER --- */
-        header {
-            background: var(--white);
-            height: 70px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-        }
-
-        .header-container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .brand-group {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--primary);
-            font-weight: 800;
-            font-size: 1.3rem;
-        }
-
-        .desktop-nav {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .nav-link {
-            font-weight: 600;
-            color: #555;
-            font-size: 1rem;
-            padding: 5px 10px;
-        }
-
-        .nav-link:hover,
-        .nav-link.active {
-            color: var(--primary);
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .nav-action-icon {
-            position: relative;
-            cursor: pointer;
-            font-size: 1.5rem;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            transition: 0.2s;
-        }
-
-        .noti-badge {
-            position: absolute;
-            top: -5px;
-            right: -8px;
-            background: var(--danger-red);
-            color: white;
-            font-size: 0.65rem;
-            font-weight: 800;
-            padding: 2px 6px;
-            border-radius: 10px;
-            border: 2px solid white;
-            line-height: 1.1;
-        }
-
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 15px 5px 5px;
-            background: var(--primary-light);
-            border-radius: 30px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .user-profile:hover {
-            background: #e0dcf5;
-        }
-
-        .user-name {
-            font-weight: 700;
-            color: var(--primary);
-            font-size: 0.95rem;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            background: var(--primary);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-        }
 
         /* --- 2. MAIN CONTENT AREA --- */
         .main-wrapper {
@@ -557,7 +407,10 @@ if (!empty($result) && $result['status'] == true) {
 <body>
 
 
-
+    <?php include "includes/preloader.php";
+    ?>
+    <?php include "includes/header.php";
+    ?>
     <main class="main-wrapper">
 
         <div class="status-grid">
@@ -641,7 +494,7 @@ if (!empty($result) && $result['status'] == true) {
 
                         <div class="invoice-row">
                             <span class="invoice-label">Status:</span>
-                            <span class="text-danger"><?= $responseData['payment_status']  ?? 'Failed'?></span>
+                            <span class="text-danger"><?= $responseData['payment_status']  ?? 'Failed' ?></span>
                         </div>
 
                         <div class="invoice-row">
@@ -649,7 +502,7 @@ if (!empty($result) && $result['status'] == true) {
                             <?= $responseData['start_date'] ?> to <?= $responseData['end_date'] ?? 'N/A' ?>
                         </div>
 
-                      <a href="subscription_plans.php">  <button class="btn-retry">Try Again</button></a>
+                        <a href="subscription_plans.php"> <button class="btn-retry">Try Again</button></a>
                     </div>
 
                     <button class="btn-back" onclick="window.location.href='index.php'">Back to Home</button>
@@ -662,13 +515,20 @@ if (!empty($result) && $result['status'] == true) {
 
     </main>
 
+    <?php include "includes/bottom-bar.php";
+    ?>
+
 
     <script>
-        const isSuccess = <?php echo json_encode($isSuccess); ?>;
-        const message = <?php echo json_encode($message); ?>;
-
         window.onload = function() {
+            // Remove preloader
+            document.getElementById("global-preloader")?.remove();
 
+            // PHP variables
+            const isSuccess = <?php echo json_encode($isSuccess); ?>;
+            const message = <?php echo json_encode($message); ?>;
+
+            // Show modal based on result
             if (isSuccess) {
                 document.getElementById("successModal").style.display = "flex";
                 document.getElementById("successText").innerText = message;

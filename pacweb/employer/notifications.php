@@ -3,11 +3,14 @@ session_start();
 require_once "../web_api/includes/db_config.php";
 $user = $_SESSION['user'];
 $userid = $user['id'];
-$userid = 741;
+if (!isset($_SESSION['user'])) {
+    header("Location: ../login.php");
+    exit();
+}
 
 
-// $url = API_BASE_URL . "getNotificationlist.php";
-$url = "https://pacificconnect2.0.inv51.in/webservices/getNotificationlist.php";
+$url = API_BASE_URL . "getNotificationlist.php";
+// $url = "https://pacificconnect2.0.inv51.in/webservices/getNotificationlist.php";
 
 $data = [
     "userid" => $userid
