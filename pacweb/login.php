@@ -28,7 +28,8 @@ function verify_csrf(string $token): bool {
 }*/
 
 /* ---------------- Normalize ---------------- */
-function normalize_nulls($row) {
+function normalize_nulls($row)
+{
     if (!is_array($row)) return [];
     foreach ($row as $k => $v) {
         if ($v === null) $row[$k] = "";
@@ -37,12 +38,14 @@ function normalize_nulls($row) {
 }
 
 /* ---------------- Messages ---------------- */
-function set_message(string $text, string $type = 'error'): void {
+function set_message(string $text, string $type = 'error'): void
+{
     $_SESSION['message'] = $text;
     $_SESSION['message_type'] = $type;
 }
 
-function get_message(): array {
+function get_message(): array
+{
     $msg = $_SESSION['message'] ?? '';
     $type = $_SESSION['message_type'] ?? 'error';
     unset($_SESSION['message'], $_SESSION['message_type']);
@@ -50,8 +53,9 @@ function get_message(): array {
 }
 
 /* ---------------- OTP FUNCTION ---------------- */
-function send_otp($mobile_no) {
-    $url = API_BASE_URL ."generate_otp.php";
+function send_otp($mobile_no)
+{
+    $url = API_BASE_URL . "generate_otp.php";
 
     $postData = [
         'mobile_number' => $mobile_no,
@@ -60,28 +64,28 @@ function send_otp($mobile_no) {
 
     $ch = curl_init($url);
 
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_POST => true,
-    CURLOPT_POSTFIELDS => http_build_query($postData),
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => http_build_query($postData),
 
-    // ✅ ADD HERE (THIS IS THE MAIN FIX)
-    CURLOPT_CONNECTTIMEOUT => 5,
-    CURLOPT_TIMEOUT => 10,
+        // ✅ ADD HERE (THIS IS THE MAIN FIX)
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => 10,
 
-    CURLOPT_FAILONERROR => true
-]);
+        CURLOPT_FAILONERROR => true
+    ]);
 
-$response = curl_exec($ch);
+    $response = curl_exec($ch);
 
-// ✅ ERROR HANDLING (ADD THIS)
-if (curl_errno($ch)) {
-    error_log("cURL Error: " . curl_error($ch));
+    // ✅ ERROR HANDLING (ADD THIS)
+    if (curl_errno($ch)) {
+        error_log("cURL Error: " . curl_error($ch));
+        curl_close($ch);
+        return false;
+    }
+
     curl_close($ch);
-    return false;
-}
-
-curl_close($ch);
 
     $result = json_decode($response, true);
 
@@ -89,11 +93,13 @@ curl_close($ch);
 }
 
 /* ---------------- HELPERS FOR REF URL ---------------- */
-function current_referral_qs(): string {
+function current_referral_qs(): string
+{
     return !empty($_SESSION['referral_code']) ? 'ref=' . urlencode($_SESSION['referral_code']) : '';
 }
 
-function self_url(array $params = []): string {
+function self_url(array $params = []): string
+{
     $base = $_SERVER['PHP_SELF'];
     $query = [];
 
@@ -108,7 +114,8 @@ function self_url(array $params = []): string {
     return $base . (!empty($query) ? '?' . http_build_query($query) : '');
 }
 
-function verify_otp_url(): string {
+function verify_otp_url(): string
+{
     $base = 'verify_otp.php';
     $query = [];
 
@@ -282,19 +289,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user'] = $user;
 
         /* FETCH CANDIDATE NAME */
-        $stmt = $con->prepare("
-            SELECT candidate_name 
-            FROM jos_app_candidate_profile 
-            WHERE id = ?
-            LIMIT 1
-        ");
+        $profile_id = (int)$user['profile_id'];
+        $profile_type = (int)$user['profile_type_id'];
+
+        if ($profile_type === 3) {
+            // ✅ PROMOTER
+            $stmt = $con->prepare("
+        SELECT promoter_name 
+        FROM jos_app_promoter_profile
+        WHERE id = ?
+        LIMIT 1
+    ");
+        } else {
+            // ✅ CANDIDATE
+            $stmt = $con->prepare("
+        SELECT candidate_name 
+        FROM jos_app_candidate_profile
+        WHERE id = ?
+        LIMIT 1
+    ");
+        }
+
+        $stmt->bind_param("i", $profile_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+
+        $_SESSION['username'] = $row['name'] ?? 'User';
 
         $stmt->bind_param("i", $user['profile_id']);
         $stmt->execute();
         $result = $stmt->get_result();
         $row = $result->fetch_assoc();
 
-        $_SESSION['username'] = $row['candidate_name'] ?? 'User';
+        if ($profile_type === 3) {
+            $_SESSION['username'] = $row['promoter_name'] ?? 'User';
+        } else {
+            $_SESSION['username'] = $row['candidate_name'] ?? 'User';
+        }
 
         unset($_SESSION['temp_mobile']);
 
@@ -316,7 +348,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($type === 2) {
             header("Location: /jobseeker/index.php");  // candidate_profile
         } elseif ($type === 3) {
-            header("Location: /promoter_dashboard.php");// promoter_profile
+            header("Location: /promoter_dashboard.php"); // promoter_profile
         } else {
             header("Location: /index.php");
         }
@@ -339,6 +371,7 @@ $ref_qs = !empty($_SESSION['referral_code']) ? '?ref=' . urlencode($_SESSION['re
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -348,10 +381,10 @@ $ref_qs = !empty($_SESSION['referral_code']) ? '?ref=' . urlencode($_SESSION['re
     <style>
         :root {
             /* Brand Colors */
-            --primary: #483EA8;       
+            --primary: #483EA8;
             --primary-dark: #322b7a;
             --primary-light: #eceaf9;
-            --bg-body: #f4f6f9;       
+            --bg-body: #f4f6f9;
             --white: #ffffff;
             --text-dark: #1a1a1a;
             --text-grey: #666666;
@@ -360,62 +393,133 @@ $ref_qs = !empty($_SESSION['referral_code']) ? '?ref=' . urlencode($_SESSION['re
             --error: #ef4444;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-        
-        body { 
-            background-color: var(--bg-body); 
-            color: var(--text-dark); 
-            font-size: 15px; 
-            line-height: 1.5;
-            display: flex; flex-direction: column; min-height: 100vh;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
-        a { text-decoration: none; transition: 0.3s; color: inherit; }
-        button { cursor: pointer; }
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-dark);
+            font-size: 15px;
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
 
-        .container { max-width: 1150px; margin: 0 auto; padding: 0 15px; }
+        a {
+            text-decoration: none;
+            transition: 0.3s;
+            color: inherit;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        .container {
+            max-width: 1150px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
 
         /* --- HEADER --- */
         header {
-            background: var(--white); height: 70px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            position: sticky; top: 0; z-index: 1000;
+            background: var(--white);
+            height: 70px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
-        .nav-wrapper { display: flex; justify-content: space-between; align-items: center; height: 100%; }
-        
-        .brand { display: flex; align-items: center; gap: 8px; color: var(--primary); font-weight: 800; font-size: 1.3rem; }
-        .brand i { font-size: 1.5rem; }
 
-        .nav-right { display: flex; gap: 15px; align-items: center; }
-        .register-text { font-size: 0.95rem; color: var(--text-grey); font-weight: 600; }
-        .btn-header-cta { 
-            background: var(--primary); color: white; padding: 8px 25px; 
-            border-radius: 30px; font-weight: 700; font-size: 0.9rem; border: none;
+        .nav-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 100%;
         }
-        .btn-header-cta:hover { background: var(--primary-dark); transform: translateY(-2px); }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary);
+            font-weight: 800;
+            font-size: 1.3rem;
+        }
+
+        .brand i {
+            font-size: 1.5rem;
+        }
+
+        .nav-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .register-text {
+            font-size: 0.95rem;
+            color: var(--text-grey);
+            font-weight: 600;
+        }
+
+        .btn-header-cta {
+            background: var(--primary);
+            color: white;
+            padding: 8px 25px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            border: none;
+        }
+
+        .btn-header-cta:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
 
         /* --- LOGIN HERO SECTION --- */
         .login-hero {
             flex: 1;
-            background: linear-gradient(135deg, rgba(72, 62, 168, 0.95) 0%, rgba(42, 34, 114, 0.9) 100%), 
-                        url('https://images.unsplash.com/photo-1521737604893-d14cc237f11d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80');
-            background-size: cover; background-position: center;
-            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, rgba(72, 62, 168, 0.95) 0%, rgba(42, 34, 114, 0.9) 100%),
+                url('https://images.unsplash.com/photo-1521737604893-d14cc237f11d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 60px 20px;
         }
 
         /* --- LOGIN CARD --- */
         .login-card {
             background: var(--white);
-            width: 100%; max-width: 420px;
-            border-radius: 16px; padding: 40px 35px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+            width: 100%;
+            max-width: 420px;
+            border-radius: 16px;
+            padding: 40px 35px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
             text-align: center;
             position: relative;
         }
 
-        .form-header h2 { font-size: 1.8rem; color: var(--text-dark); margin-bottom: 5px; font-weight: 800; }
-        .form-header p { color: var(--text-grey); font-size: 0.95rem; margin-bottom: 30px; }
+        .form-header h2 {
+            font-size: 1.8rem;
+            color: var(--text-dark);
+            margin-bottom: 5px;
+            font-weight: 800;
+        }
+
+        .form-header p {
+            color: var(--text-grey);
+            font-size: 0.95rem;
+            margin-bottom: 30px;
+        }
 
         /* Message Box */
         .message-box {
@@ -426,11 +530,13 @@ $ref_qs = !empty($_SESSION['referral_code']) ? '?ref=' . urlencode($_SESSION['re
             font-weight: 600;
             text-align: left;
         }
+
         .message-success {
             background: #d1fae5;
             color: #065f46;
             border: 1px solid #10b981;
         }
+
         .message-error {
             background: #fee2e2;
             color: #991b1b;
@@ -438,9 +544,19 @@ $ref_qs = !empty($_SESSION['referral_code']) ? '?ref=' . urlencode($_SESSION['re
         }
 
         /* Form Styling */
-        .form-group { margin-bottom: 20px; text-align: left; }
-        .form-label { display: block; font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; color: var(--text-dark); }
-        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+        }
+
         /* Mobile Input with Fixed +91 */
         .mobile-input-group {
             position: relative;
@@ -452,11 +568,13 @@ $ref_qs = !empty($_SESSION['referral_code']) ? '?ref=' . urlencode($_SESSION['re
             transition: 0.3s;
             overflow: hidden;
         }
+
         .mobile-input-group:focus-within {
             border-color: var(--primary);
             background: #fff;
             box-shadow: 0 0 0 4px rgba(72, 62, 168, 0.1);
         }
+
         .prefix {
             background: #eee;
             color: #555;
@@ -465,51 +583,112 @@ $ref_qs = !empty($_SESSION['referral_code']) ? '?ref=' . urlencode($_SESSION['re
             font-size: 1rem;
             border-right: 1px solid var(--border-color);
         }
+
         .form-input {
-            width: 100%; padding: 12px 15px;
+            width: 100%;
+            padding: 12px 15px;
             border: none;
-            font-size: 1.1rem; outline: none; background: transparent;
-            font-weight: 600; letter-spacing: 0.5px;
+            font-size: 1.1rem;
+            outline: none;
+            background: transparent;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
 
         /* Password Input Wrapper */
-        .input-wrap { position: relative; }
-        .input-wrap i { 
-            position: absolute; left: 15px; top: 50%; transform: translateY(-50%); 
-            color: #999; font-size: 1.1rem; 
+        .input-wrap {
+            position: relative;
         }
+
+        .input-wrap i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 1.1rem;
+        }
+
         .pass-input {
-            width: 100%; padding: 12px 15px 12px 45px;
-            border: 1px solid var(--border-color); border-radius: 10px;
-            font-size: 1rem; outline: none; transition: 0.3s; background: #fcfcfc;
+            width: 100%;
+            padding: 12px 15px 12px 45px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+            background: #fcfcfc;
         }
-        .pass-input:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(72, 62, 168, 0.1); }
+
+        .pass-input:focus {
+            border-color: var(--primary);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(72, 62, 168, 0.1);
+        }
 
         /* Action Row */
-        .action-row { 
-            display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 25px; font-size: 0.9rem; 
+        .action-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            font-size: 0.9rem;
         }
-        .remember-me { display: flex; align-items: center; gap: 6px; color: var(--text-grey); cursor: pointer; }
-        .forgot-link { color: var(--primary); font-weight: 700; }
-        .forgot-link:hover { text-decoration: underline; }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-grey);
+            cursor: pointer;
+        }
+
+        .forgot-link {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .forgot-link:hover {
+            text-decoration: underline;
+        }
 
         /* Buttons */
         .btn-main {
-            width: 100%; background: var(--primary); color: white;
-            padding: 14px; border-radius: 10px; font-weight: 700; font-size: 1.1rem;
-            border: none; cursor: pointer; transition: 0.2s;
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            padding: 14px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
             box-shadow: 0 5px 15px rgba(72, 62, 168, 0.3);
         }
-        .btn-main:hover { background: var(--primary-dark); transform: translateY(-2px); }
+
+        .btn-main:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
 
         .btn-secondary {
-            width: 100%; background: transparent; color: var(--primary);
-            padding: 12px; border-radius: 10px; font-weight: 600; font-size: 0.95rem;
-            border: 2px solid var(--primary); cursor: pointer; transition: 0.2s;
+            width: 100%;
+            background: transparent;
+            color: var(--primary);
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border: 2px solid var(--primary);
+            cursor: pointer;
+            transition: 0.2s;
             margin-top: 10px;
         }
-        .btn-secondary:hover { background: var(--primary-light); }
+
+        .btn-secondary:hover {
+            background: var(--primary-light);
+        }
 
         /* Mobile Display */
         .mobile-display {
@@ -520,24 +699,39 @@ $ref_qs = !empty($_SESSION['referral_code']) ? '?ref=' . urlencode($_SESSION['re
             text-align: left;
             border-left: 4px solid var(--primary);
         }
-        .mobile-display strong { color: var(--primary); }
+
+        .mobile-display strong {
+            color: var(--primary);
+        }
 
         /* Mobile */
         @media (max-width: 500px) {
-            .login-card { padding: 30px 20px; }
-            .login-hero { padding: 40px 15px; }
-            .nav-wrapper { justify-content: center; }
-            .nav-right { display: none; }
+            .login-card {
+                padding: 30px 20px;
+            }
+
+            .login-hero {
+                padding: 40px 15px;
+            }
+
+            .nav-wrapper {
+                justify-content: center;
+            }
+
+            .nav-right {
+                display: none;
+            }
         }
     </style>
 </head>
+
 <body>
- <?php include "includes/preloader.php"; ?>
+    <?php include "includes/preloader.php"; ?>
     <?php include "includes/header.php"; ?>
 
     <div class="login-hero">
         <div class="login-card">
-            
+
             <div class="form-header">
                 <h2>Welcome Back</h2>
                 <p>Enter your mobile number</p>
@@ -554,17 +748,17 @@ $ref_qs = !empty($_SESSION['referral_code']) ? '?ref=' . urlencode($_SESSION['re
                 <form method="POST" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'] . $ref_qs); ?>">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf); ?>">
                     <input type="hidden" name="action" value="check_mobile">
-                    
+
                     <div class="form-group">
                         <label class="form-label">Mobile Number</label>
                         <div class="mobile-input-group">
                             <span class="prefix">+91</span>
-                            <input type="tel" name="mobile_no" class="form-input" 
-                                   placeholder="Enter 10-digit number" 
-                                   maxlength="10" 
-                                   pattern="[0-9]{10}"
-                                   required
-                                   autofocus>
+                            <input type="tel" name="mobile_no" class="form-input"
+                                placeholder="Enter 10-digit number"
+                                maxlength="10"
+                                pattern="[0-9]{10}"
+                                required
+                                autofocus>
                         </div>
                     </div>
 
@@ -580,15 +774,15 @@ $ref_qs = !empty($_SESSION['referral_code']) ? '?ref=' . urlencode($_SESSION['re
                 <form method="POST" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'] . $ref_qs); ?>">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf); ?>">
                     <input type="hidden" name="action" value="login">
-                    
+
                     <div class="form-group">
                         <label class="form-label">Password</label>
                         <div class="input-wrap">
                             <i class="fas fa-lock"></i>
-                            <input type="password" name="password" class="pass-input" 
-                                   placeholder="Enter your password" 
-                                   required
-                                   autofocus>
+                            <input type="password" name="password" class="pass-input"
+                                placeholder="Enter your password"
+                                required
+                                autofocus>
                         </div>
                     </div>
 
@@ -614,7 +808,8 @@ $ref_qs = !empty($_SESSION['referral_code']) ? '?ref=' . urlencode($_SESSION['re
         </div>
     </div>
 
-   
+
 
 </body>
+
 </html>
