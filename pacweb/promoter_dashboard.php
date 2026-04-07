@@ -494,7 +494,7 @@ if (isset($result['status']) || $result['status'] == true) {
 
                 <div class="a-left">
                     <div class="a-icon-circle" style="background:#fffbeb; color:#f59e0b;">
-                        <i class="fas fa-gift"></i>
+                        <i class="fas fa-bullhorn"></i>
                     </div>
 
                     <div class="a-text">
@@ -513,7 +513,7 @@ if (isset($result['status']) || $result['status'] == true) {
 
                 <div class="a-left">
                     <div class="a-icon-circle" style="background:#fffbeb; color:#f59e0b;">
-                        <i class="fas fa-gift"></i>
+                        <i class="fas fa-trophy"></i>
                     </div>
 
                     <div class="a-text">
@@ -533,7 +533,7 @@ if (isset($result['status']) || $result['status'] == true) {
 
                 <div class="a-left">
                     <div class="a-icon-circle" style="background:#fffbeb; color:#f59e0b;">
-                        <i class="fas fa-gift"></i>
+                        <i class="fas fa-wallet"></i>
                     </div>
 
                     <div class="a-text">
