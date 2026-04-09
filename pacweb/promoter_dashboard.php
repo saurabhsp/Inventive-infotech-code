@@ -27,7 +27,7 @@ $locality = '';
 $stmt = $con->prepare("
     SELECT u.city_id, cp.locality_id
     FROM jos_app_users u
-    LEFT JOIN jos_app_candidate_profile cp 
+    LEFT JOIN jos_app_promoter_profile cp 
         ON u.profile_id = cp.id
     WHERE u.id = ?
 ");
@@ -59,11 +59,12 @@ $profile_type = 3;
 
 $sliderQuery = "SELECT id, title, image, action_type, action_value
                 FROM jos_app_slider
-                WHERE profile_type = ? AND status = 1
+                WHERE FIND_IN_SET(?, profile_type)
+                AND status = 1
                 ORDER BY id DESC";
 
 $stmtS = $con->prepare($sliderQuery);
-$stmtS->bind_param("i", $profile_type);
+$stmtS->bind_param("s", $profile_type); // string, not integer
 $stmtS->execute();
 $resS = $stmtS->get_result();
 
@@ -376,7 +377,6 @@ if (isset($result['status']) || $result['status'] == true) {
     <?php include "includes/promoter_header.php"; ?>
 
     <!-- ================= SLIDER ================= -->
-    <div class="main-container">
         <?php if (!empty($slider_list)): ?>
 
             <div class="slider-wrapper">
@@ -433,6 +433,7 @@ if (isset($result['status']) || $result['status'] == true) {
 
 
 
+    <div class="main-container">
 
         <div class="earnings-container">
 
@@ -456,7 +457,7 @@ if (isset($result['status']) || $result['status'] == true) {
                 </div>
             </a>
 
-            <a href="#" class="earn-item">
+            <a href="referral_list.php" class="earn-item">
                 <div class="earn-icon-box">
                     <i class="fas fa-chart-line" style="color:#4ade80"></i>
                 </div>
@@ -470,6 +471,24 @@ if (isset($result['status']) || $result['status'] == true) {
 
         <h2 class="section-title">Quick Actions</h2>
         <div class="quick-actions-grid">
+            
+            
+            
+        <a href="about-pacific.php" class="quick-action-card">
+                <div class="a-left">
+                    <div class="a-icon-circle" style="background:#f5f3ff; color:#7c3aed;">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="a-text">
+                        <b>About Pacific</b><br>
+                        <span>Learn More</span>
+                    </div>
+                </div>
+                <div class="a-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </a>
+
 
             <a href="refer_and_earn.php" class="quick-action-card">
 
@@ -490,16 +509,16 @@ if (isset($result['status']) || $result['status'] == true) {
                 </div>
 
             </a>
-            <a href="#" class="quick-action-card">
+            <a href="/promotion-kit.php" class="quick-action-card">
 
                 <div class="a-left">
-                    <div class="a-icon-circle" style="background:#fffbeb; color:#f59e0b;">
-                        <i class="fas fa-bullhorn"></i>
-                    </div>
+                    <div class="a-icon-circle" style="background:#eff6ff; color:#3b82f6;">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
 
                     <div class="a-text">
-                        <b>Promote</b><br>
-                        <span>Marketing</span>
+                        <b>Marketing Kit</b><br>
+                        <span>Ready Content</span>
                     </div>
                 </div>
 
@@ -509,36 +528,16 @@ if (isset($result['status']) || $result['status'] == true) {
                 </div>
 
             </a>
-            <a href="#" class="quick-action-card">
+            <a href="promoter-academy.php" class="quick-action-card">
 
                 <div class="a-left">
-                    <div class="a-icon-circle" style="background:#fffbeb; color:#f59e0b;">
-                        <i class="fas fa-trophy"></i>
-                    </div>
-
-                    <div class="a-text">
-                        <b>Performance</b><br>
-                        <span>Rankings</span>
-                    </div>
+                   <div class="a-icon-circle" style="background:#ecfdf5; color:#10b981;">
+                    <i class="fas fa-trophy"></i>
                 </div>
 
-                <!-- ✅ RIGHT ARROW -->
-                <div class="a-arrow">
-                    <i class="fas fa-chevron-right"></i>
-                </div>
-
-            </a>
-
-            <a href="wallet.php" class="quick-action-card">
-
-                <div class="a-left">
-                    <div class="a-icon-circle" style="background:#fffbeb; color:#f59e0b;">
-                        <i class="fas fa-wallet"></i>
-                    </div>
-
                     <div class="a-text">
-                        <b>My Wallet</b><br>
-                        <span>Balance</span>
+                        <b>Promoter </b><br>
+                        <span>Academy</span>
                     </div>
                 </div>
 
