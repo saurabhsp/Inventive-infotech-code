@@ -18,7 +18,7 @@ require_once __DIR__ . '/db_config.php';
 $user = $_SESSION['user'] ?? null;
 $userid = $_SESSION['user_id'] ?? 0;
 
-$notification_count = $_SESSION['notification_count'] ?? 0;
+$notification_count = $_SESSION['notification_count'] ?? 10;
 $city_name = '';
 
 if ($userid > 0) {
@@ -48,7 +48,7 @@ $valid_to = $user['valid_to'] ?? '';
 
         <div class="brand" style="display:flex; align-items:center; gap:15px;">
 
-            <a href="<?= $logged_in ? '/jobseeker/index.php' : '/index.php' ?>">
+            <a href="<?= $logged_in ? '/promoter_dashboard.php' : '/index.php' ?>">
                 <img src="/assets/pacific_iconnect.png" width="200" alt="Logo">
             </a>
 
@@ -96,9 +96,9 @@ $valid_to = $user['valid_to'] ?? '';
                 <a href="/promoter_notifications.php" class="nav-action-icon" title="Notifications">
                     <i class="far fa-bell"></i>
 
-                    <?php if ($notification_count > 0): ?>
+                    <?php //if ($notification_count > 0): ?>
                         <span class="noti-badge"><?= $notification_count ?></span>
-                    <?php endif; ?>
+                        <?php //endif; ?>
                 </a>
 
                 <div class="profile-dropdown-wrap">
@@ -396,9 +396,14 @@ $valid_to = $user['valid_to'] ?? '';
 
                 if (data.status === "success") {
 
-                    document.getElementById("headerCityInput").value = data.data.city_name ?? "";
-                    document.getElementById("headerLocalityInput").value = data.data.locality_name ?? "";
+                    const city = data.data.city_name ?? "";
+                    const locality = data.data.locality_name ?? "";
 
+                    document.getElementById("headerCityInput").value = city;
+                    document.getElementById("headerLocalityInput").value = locality;
+
+                    // ✅ IMPORTANT FIX
+                    headerSelectedCity = city;
                 } else {
                     console.log(data.message);
                 }
