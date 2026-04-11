@@ -38,25 +38,7 @@ function make_json_curl(string $url, array $payload): \CurlHandle
 }
 
 
-/* ---------------------------------------------------------------
-   HANDLE: PROFILE TEXT UPDATE
---------------------------------------------------------------- */
-if (isset($_POST['update_profile'])) {
 
-    $ch = make_json_curl(API_BASE_URL . "updateRecruiter_profile.php", [
-        "id"                  => $profile_id,
-        "contact_person_name" => $_POST['contact_person_name'] ?? '',
-        "designation"         => $_POST['designation']         ?? '',
-        "mobile_no"           => $_POST['mobile_no']           ?? '',
-        "email"               => $_POST['email']               ?? '',
-    ]);
-
-    curl_exec($ch);
-    curl_close($ch);
-
-    header("Location: my_profile.php");
-    exit;
-}
 
 
 /* ---------------------------------------------------------------
@@ -189,6 +171,39 @@ $subscription_valid_to  = $subscription['valid_to']       ?? '';
 // Parse KYC
 $kycResult = json_decode($response_kyc, true) ?? [];
 $kycList   = $kycResult['data'] ?? [];
+
+
+/* ---------------------------------------------------------------
+   HANDLE: PROFILE TEXT UPDATE
+--------------------------------------------------------------- */
+if (isset($_POST['update_profile'])) {
+
+    $ch = make_json_curl(API_BASE_URL . "updateRecruiter_profile.php", [
+        "id" => $profile_id,
+
+        "contact_person_name" => $_POST['contact_person_name'] ?? '',
+        "organization_name"   => $company_name  ?? $_POST['organization_name'],
+        "industry_type"       => $_POST['industry_type'] ?? '',
+        "designation"         => $_POST['designation'] ?? '',
+        "mobile_no"           => $mobile ?? $_POST['mobile_no'],
+        "email"               => $_POST['email'] ?? '',
+        "website"             => $_POST['website'] ?? '',
+        "company_size"        => $_POST['company_size'] ?? '',
+        "established_year"    => $_POST['established_year'] ?? '',
+
+        // ✅ IMPORTANT MAPPING
+        "city_id"             => $_POST['city_id'] ?? '',
+        "locality_id"         => $_POST['locality_id'] ?? '',
+
+        "address"             => $_POST['address'] ?? '',
+    ]);
+
+    curl_exec($ch);
+    curl_close($ch);
+
+    header("Location: my_profile.php");
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -215,12 +230,12 @@ $kycList   = $kycResult['data'] ?? [];
             --danger-red: #e53935;
             --bronze: #cd7f32;
         }
-      
 
-      
 
-       
-      
+
+
+
+
 
         .text-danger {
             color: #d32f2f;
@@ -872,13 +887,45 @@ $kycList   = $kycResult['data'] ?? [];
         .cropper-view-box {
             outline: 2000px solid rgba(0, 0, 0, 0.5);
         }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px 20px;
+        }
+
+        .modal-grid .input-group {
+            margin-bottom: 0;
+        }
+
+        .modal-grid .full-width {
+            grid-column: span 2;
+        }
+
+        /* Mobile */
+        @media (max-width: 600px) {
+            .modal-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-grid .full-width {
+                grid-column: span 1;
+            }
+        }
+
+        /* readonly style */
+        .modal-input[readonly] {
+            background: #e5e7eb;
+            color: #555;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 
 <body>
 
 
-<?php include "includes/preloader.php"; ?>
+    <?php include "includes/preloader.php"; ?>
     <?php include "includes/header.php"; ?>
 
     <!-- Crop Modal -->
@@ -988,6 +1035,14 @@ $kycList   = $kycResult['data'] ?? [];
                             <span class="info-value"><?= htmlspecialchars($owner_name) ?></span>
                         </div>
                         <div class="info-group">
+                            <span class="info-label">Organization Name</span>
+                            <span class="info-value"><?= htmlspecialchars($profile['organization_name'] ?? '') ?></span>
+                        </div>
+                        <div class="info-group">
+                            <span class="info-label">Industry Type</span>
+                            <span class="info-value"><?= htmlspecialchars($profile['industry_type'] ?? '-') ?></span>
+                        </div>
+                        <div class="info-group">
                             <span class="info-label">Designation</span>
                             <span class="info-value"><?= htmlspecialchars($designation) ?></span>
                         </div>
@@ -998,6 +1053,30 @@ $kycList   = $kycResult['data'] ?? [];
                         <div class="info-group">
                             <span class="info-label">Email Address</span>
                             <span class="info-value"><?= htmlspecialchars($email) ?></span>
+                        </div>
+                        <div class="info-group">
+                            <span class="info-label">Website</span>
+                            <span class="info-value"><?= htmlspecialchars($profile['website'] ?? '-') ?></span>
+                        </div>
+                        <div class="info-group">
+                            <span class="info-label">No. of Employee</span>
+                            <span class="info-value"><?= htmlspecialchars($profile['company_size'] ?? '-') ?></span>
+                        </div>
+                        <div class="info-group">
+                            <span class="info-label">Established in Year</span>
+                            <span class="info-value"><?= htmlspecialchars($profile['established_year'] ?? '-') ?></span>
+                        </div>
+                        <div class="info-group">
+                            <span class="info-label">District/Tehsil/City</span>
+                            <span class="info-value"><?= htmlspecialchars($profile['city_id'] ?? '-') ?></span>
+                        </div>
+                        <div class="info-group">
+                            <span class="info-label">Area/Locality/Village</span>
+                            <span class="info-value"><?= htmlspecialchars($profile['locality_id'] ?? '-') ?></span>
+                        </div>
+                        <div class="info-group">
+                            <span class="info-label">Address</span>
+                            <span class="info-value"><?= htmlspecialchars($profile['address'] ?? '-') ?></span>
                         </div>
                     </div>
                 </div>
@@ -1051,25 +1130,106 @@ $kycList   = $kycResult['data'] ?? [];
             </div>
             <form method="POST">
                 <input type="hidden" name="id" value="<?= $userid ?>">
-                <div class="input-group">
-                    <label class="input-label">Owner Name</label>
-                    <input type="text" name="contact_person_name" class="modal-input" value="<?= htmlspecialchars($owner_name) ?>">
+
+                <div class="modal-grid">
+
+                    <div class="input-group">
+                        <label class="input-label">Owner Name</label>
+                        <input type="text" name="contact_person_name" class="modal-input"
+                            value="<?= htmlspecialchars($owner_name) ?>">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Organization</label>
+                        <input type="text" name="organization_name" class="modal-input"
+                            value="<?= htmlspecialchars($profile['organization_name'] ?? '') ?>" readonly>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Industry</label>
+                        <input type="text" name="industry_type" class="modal-input"
+                            value="<?= htmlspecialchars($profile['industry_type'] ?? '') ?>">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Designation</label>
+                        <input type="text" name="designation" class="modal-input"
+                            value="<?= htmlspecialchars($designation) ?>">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Phone</label>
+                        <input type="text" name="mobile_no" class="modal-input"
+                            value="<?= htmlspecialchars($mobile) ?>" readonly>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Email</label>
+                        <input type="email" name="email" class="modal-input"
+                            value="<?= htmlspecialchars($email) ?>">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Website</label>
+                        <input type="text" name="website" class="modal-input"
+                            value="<?= htmlspecialchars($profile['website'] ?? '') ?>">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Company Size</label>
+                        <input type="text" name="company_size" class="modal-input"
+                            value="<?= htmlspecialchars($profile['company_size'] ?? '') ?>">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Established</label>
+                        <input type="text" name="established_year" class="modal-input"
+                            value="<?= htmlspecialchars($profile['established_year'] ?? '') ?>">
+                    </div>
+
+                    <!-- ✅ IMPORTANT -->
+                    <div class="input-group">
+                        <label class="input-label">District</label>
+                        <input type="text" id="profileDistrictInput" class="modal-input" autocomplete="off"
+                            value="<?= htmlspecialchars($profile['district'] ?? '') ?>">
+
+                        <input type="hidden" name="district" id="profileDistrictId">
+
+                        <div id="profileDistrictSuggestions" class="suggestion-box"></div>
+                    </div>
+
+
+                    <div class="input-group">
+                        <label class="input-label">City</label>
+                        <input type="text" id="profileCityInput" class="modal-input" autocomplete="off"
+                            value="<?= htmlspecialchars($profile['city_id'] ?? '') ?>">
+
+                        <input type="hidden" name="city_id" id="profileCityId">
+
+                        <div id="profileCitySuggestions" class="suggestion-box"></div>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Locality</label>
+                        <input type="text" id="profileLocalityInput" class="modal-input" autocomplete="off"
+                            value="<?= htmlspecialchars($profile['locality_id'] ?? '') ?>">
+
+                        <input type="hidden" name="locality_id" id="profileLocalityId">
+
+                        <div id="profileLocalitySuggestions" class="suggestion-box"></div>
+                    </div>
+
+                    <div class="input-group full-width">
+                        <label class="input-label">Address</label>
+                        <input type="text" name="address" class="modal-input"
+                            value="<?= htmlspecialchars($profile['address'] ?? '') ?>">
+                    </div>
+
                 </div>
-                <div class="input-group">
-                    <label class="input-label">Designation</label>
-                    <input type="text" name="designation" class="modal-input" value="<?= htmlspecialchars($designation) ?>">
-                </div>
-                <div class="input-group">
-                    <label class="input-label">Phone Number</label>
-                    <input type="text" name="mobile_no" class="modal-input" value="<?= htmlspecialchars($mobile) ?>">
-                </div>
-                <div class="input-group">
-                    <label class="input-label">Email Address</label>
-                    <input type="email" name="email" class="modal-input" value="<?= htmlspecialchars($email) ?>">
-                </div>
+
                 <div class="modal-btn-row">
                     <button type="button" class="btn-modal-cancel" onclick="closeModal('editOwnerModal')">Cancel</button>
-                    <button type="submit" name="update_profile" class="btn-modal-save">Save Changes</button>
+                    <button type="submit" name="update_profile" class="btn-modal-save">Save</button>
                 </div>
             </form>
         </div>
@@ -1096,7 +1256,7 @@ $kycList   = $kycResult['data'] ?? [];
     </div>
 
     <script>
-            window.onload = () => document.getElementById("global-preloader")?.remove();
+        window.onload = () => document.getElementById("global-preloader")?.remove();
 
         /* ---- Cropper / Logo Upload ---- */
         let cropper;
@@ -1196,6 +1356,188 @@ $kycList   = $kycResult['data'] ?? [];
             });
         });
     </script>
+    <script>
+        let profileService;
+        let profilePlaceService;
+
+        let profileSelectedCity = "";
+        let profileSelectedDist = "";
+        let profileSelectedState = "";
+        let profileSelectedCountry = "";
+
+        // INIT
+        function initProfileCityAutocomplete() {
+
+            profileService = new google.maps.places.AutocompleteService();
+            profilePlaceService = new google.maps.places.PlacesService(document.createElement('div'));
+
+            const input = document.getElementById("profileCityInput");
+
+            input.addEventListener("keyup", function() {
+
+                let query = input.value;
+
+                if (query.length < 2) return;
+
+                profileService.getPlacePredictions({
+                    input: query,
+                    types: ["(cities)"], // ✅ ONLY CITY
+                    componentRestrictions: {
+                        country: "in"
+                    }
+                }, function(predictions) {
+
+                    if (!predictions) return;
+
+                    showProfileCitySuggestions(predictions);
+                });
+            });
+        }
+
+
+
+        // SHOW DISTRICT
+
+        document.getElementById("profileDistrictInput").addEventListener("keyup", function() {
+
+            let query = this.value;
+
+            if (query.length < 2) return;
+
+            profileService.getPlacePredictions({
+                    input: query,
+                    types: ["(cities)"], // ✅ ONLY CITY
+                    componentRestrictions: {
+                        country: "in"
+                    }
+                },
+                function(predictions) {
+
+                    if (!predictions) return;
+
+                    showProfileDistrictSuggestions(predictions);
+
+                });
+        });
+
+
+        function showProfileDistrictSuggestions(list) {
+
+            let box = document.getElementById("profileDistrictSuggestions");
+            box.innerHTML = "";
+
+            list.forEach(function(item) {
+
+                let div = document.createElement("div");
+                div.className = "suggestion-item";
+                div.innerHTML = item.description;
+
+                div.onclick = function() {
+
+                    document.getElementById("profileDistrictInput").value = item.description;
+                    document.getElementById("profileDistrictId").value = item.description;
+
+                    
+                    profileSelectedDist = item.description;
+
+                    box.innerHTML = "";
+                }
+
+                box.appendChild(div);
+            });
+
+            box.style.display = "block";
+        }
+
+
+        // SHOW CITY
+        function showProfileCitySuggestions(list) {
+
+            let box = document.getElementById("profileCitySuggestions");
+            box.innerHTML = "";
+            box.style.display = "block";
+
+            list.forEach(function(item) {
+
+                let div = document.createElement("div");
+                div.className = "suggestion-item";
+                div.innerHTML = item.description;
+
+                div.onclick = function() {
+
+                    document.getElementById("profileCityInput").value = item.description;
+                    document.getElementById("profileCityId").value = item.description;
+
+                    profileSelectedCity = item.description;
+
+                    box.innerHTML = "";
+                }
+
+                box.appendChild(div);
+            });
+        }
+
+        // LOCALITY
+        document.getElementById("profileLocalityInput").addEventListener("keyup", function() {
+
+            let query = this.value;
+
+            if (query.length < 2) return;
+
+            profileService.getPlacePredictions({
+                input: query,
+                types: ["(cities)"], // ✅ ONLY cities
+                componentRestrictions: {
+                    country: "in"
+                }
+            }, function(predictions) {
+
+                if (!predictions) return;
+
+                showProfileCitySuggestions(predictions);
+            });
+        });
+
+        // SHOW LOCALITY (FILTER BY CITY)
+        function showProfileLocalitySuggestions(list) {
+
+            let box = document.getElementById("profileLocalitySuggestions");
+            box.innerHTML = "";
+
+            list.forEach(function(item) {
+
+                if (
+                    item.description.toLowerCase().includes(profileSelectedCity.toLowerCase())
+                ) {
+
+                    let div = document.createElement("div");
+                    div.className = "suggestion-item";
+                    div.innerHTML = item.description;
+
+                    div.onclick = function() {
+
+                        document.getElementById("profileLocalityInput").value = item.description;
+                        document.getElementById("profileLocalityId").value = item.description;
+
+                        box.innerHTML = "";
+                    }
+
+                    box.appendChild(div);
+                }
+            });
+
+            box.style.display = "block";
+        }
+
+        // INIT CALL
+        document.addEventListener("DOMContentLoaded", function() {
+            initProfileCityAutocomplete();
+        });
+    </script>
+    <script
+        src="https://maps.googleapis.com/maps/api/js?key=
+    AIzaSyCokcdTmQxRaopu75ourz-nNmZNie1wQkY&libraries=places&callback=initProfileCityAutocomplete"
+        async defer></script>
 
 </body>
 
