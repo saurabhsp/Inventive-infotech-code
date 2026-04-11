@@ -192,12 +192,17 @@ if (isset($_POST['update_profile'])) {
         "established_year"    => $_POST['established_year'] ?? '',
 
         // ✅ IMPORTANT MAPPING
+        "district"            => $_POST['district'] ?? '',
         "city_id"             => $_POST['city_id'] ?? '',
         "locality_id"         => $_POST['locality_id'] ?? '',
+        "state"         => $_POST['state'] ?? '',
+        "country"         => $_POST['country'] ?? '',
 
         "address"             => $_POST['address'] ?? '',
     ]);
 
+    // print_r($_POST['country']);
+    // exit;
     curl_exec($ch);
     curl_close($ch);
 
@@ -1067,7 +1072,11 @@ if (isset($_POST['update_profile'])) {
                             <span class="info-value"><?= htmlspecialchars($profile['established_year'] ?? '-') ?></span>
                         </div>
                         <div class="info-group">
-                            <span class="info-label">District/Tehsil/City</span>
+                            <span class="info-label">District</span>
+                            <span class="info-value"><?= htmlspecialchars($profile['district'] ?? '-') ?></span>
+                        </div>
+                        <div class="info-group">
+                            <span class="info-label">Tehsil/City</span>
                             <span class="info-value"><?= htmlspecialchars($profile['city_id'] ?? '-') ?></span>
                         </div>
                         <div class="info-group">
@@ -1130,7 +1139,8 @@ if (isset($_POST['update_profile'])) {
             </div>
             <form method="POST">
                 <input type="hidden" name="id" value="<?= $userid ?>">
-
+                <input type="hidden" value="<?= $profile['state'] ?>" name="state" id="profileStateInput">
+                <input type="hidden" value="<?= $profile['country'] ?>" name="country" id="profileCountryInput">
                 <div class="modal-grid">
 
                     <div class="input-group">
@@ -1193,29 +1203,32 @@ if (isset($_POST['update_profile'])) {
                         <input type="text" id="profileDistrictInput" class="modal-input" autocomplete="off"
                             value="<?= htmlspecialchars($profile['district'] ?? '') ?>">
 
-                        <input type="hidden" name="district" id="profileDistrictId">
+                        <input type="hidden" name="district" id="profileDistrictId"
+                            value="<?= htmlspecialchars($profile['district'] ?? '') ?>">
 
                         <div id="profileDistrictSuggestions" class="suggestion-box"></div>
                     </div>
 
 
                     <div class="input-group">
-                        <label class="input-label">City</label>
+                        <label class="input-label">Tehsil/City</label>
                         <input type="text" id="profileCityInput" class="modal-input" autocomplete="off"
                             value="<?= htmlspecialchars($profile['city_id'] ?? '') ?>">
 
-                        <input type="hidden" name="city_id" id="profileCityId">
+                        <input type="hidden" name="city_id" id="profileCityId"
+                            value="<?= htmlspecialchars($profile['city_id'] ?? '') ?>">
+
 
                         <div id="profileCitySuggestions" class="suggestion-box"></div>
                     </div>
 
                     <div class="input-group">
-                        <label class="input-label">Locality</label>
+                        <label class="input-label">Area/Locality/Village</label>
                         <input type="text" id="profileLocalityInput" class="modal-input" autocomplete="off"
                             value="<?= htmlspecialchars($profile['locality_id'] ?? '') ?>">
 
-                        <input type="hidden" name="locality_id" id="profileLocalityId">
-
+                        <input type="hidden" name="locality_id" id="profileLocalityId"
+                            value="<?= htmlspecialchars($profile['locality_id'] ?? '') ?>">
                         <div id="profileLocalitySuggestions" class="suggestion-box"></div>
                     </div>
 
@@ -1224,6 +1237,7 @@ if (isset($_POST['update_profile'])) {
                         <input type="text" name="address" class="modal-input"
                             value="<?= htmlspecialchars($profile['address'] ?? '') ?>">
                     </div>
+
 
                 </div>
 
@@ -1380,12 +1394,8 @@ if (isset($_POST['update_profile'])) {
                 if (query.length < 2) return;
 
                 profileService.getPlacePredictions({
-                    input: query,
-                    types: ["(cities)"], // ✅ ONLY CITY
-                    componentRestrictions: {
-                        country: "in"
-                    }
-                }, function(predictions) {
+                    input: query
+                }, function(predictions, status) {
 
                     if (!predictions) return;
 
@@ -1437,7 +1447,7 @@ if (isset($_POST['update_profile'])) {
                     document.getElementById("profileDistrictInput").value = item.description;
                     document.getElementById("profileDistrictId").value = item.description;
 
-                    
+
                     profileSelectedDist = item.description;
 
                     box.innerHTML = "";
@@ -1465,13 +1475,45 @@ if (isset($_POST['update_profile'])) {
 
                 div.onclick = function() {
 
-                    document.getElementById("profileCityInput").value = item.description;
-                    document.getElementById("profileCityId").value = item.description;
+                    let fullText = item.description;
 
-                    profileSelectedCity = item.description;
+                    let cityOnly = fullText.split(",")[0];
+
+                    document.getElementById("profileCityInput").value = cityOnly;
+                    document.getElementById("profileCityId").value = cityOnly;
+
+                    // ✅ FIX: store FULL string for search
+                    profileSelectedCity = fullText;
+
+                    document.getElementById("profileCityInput").value = cityOnly;
+                    document.getElementById("profileCityId").value = cityOnly;
+
+                    profileSelectedCity = cityOnly;
+
+                    // ✅ GET FULL DETAILS (IMPORTANT LIKE HEADER)
+                    profilePlaceService.getDetails({
+                            placeId: item.place_id
+                        },
+                        function(place, status) {
+
+                            if (status !== google.maps.places.PlacesServiceStatus.OK) return;
+
+                            place.address_components.forEach(function(comp) {
+
+                                if (comp.types.includes("administrative_area_level_1")) {
+                                    profileSelectedState = comp.long_name;
+                                }
+
+                                if (comp.types.includes("country")) {
+                                    profileSelectedCountry = comp.long_name;
+                                }
+                            });
+
+                        }
+                    );
 
                     box.innerHTML = "";
-                }
+                };
 
                 box.appendChild(div);
             });
@@ -1484,17 +1526,29 @@ if (isset($_POST['update_profile'])) {
 
             if (query.length < 2) return;
 
+            // ✅ build search like header
+            let searchQuery = query;
+
+            // ✅ use full city string (important)
+            if (profileSelectedCity) {
+                searchQuery += ", " + profileSelectedCity;
+            }
+
+            if (profileSelectedState) {
+                searchQuery += ", " + profileSelectedState;
+            }
+
+            if (profileSelectedCountry) {
+                searchQuery += ", " + profileSelectedCountry;
+            }
+
             profileService.getPlacePredictions({
-                input: query,
-                types: ["(cities)"], // ✅ ONLY cities
-                componentRestrictions: {
-                    country: "in"
-                }
-            }, function(predictions) {
+                input: searchQuery
+            }, function(predictions, status) {
 
                 if (!predictions) return;
 
-                showProfileCitySuggestions(predictions);
+                showProfileLocalitySuggestions(predictions);
             });
         });
 
@@ -1503,31 +1557,41 @@ if (isset($_POST['update_profile'])) {
 
             let box = document.getElementById("profileLocalitySuggestions");
             box.innerHTML = "";
+            box.style.display = "block";
 
             list.forEach(function(item) {
 
-                if (
-                    item.description.toLowerCase().includes(profileSelectedCity.toLowerCase())
-                ) {
+                let div = document.createElement("div");
+                div.className = "suggestion-item";
+                div.innerHTML = item.description;
 
-                    let div = document.createElement("div");
-                    div.className = "suggestion-item";
-                    div.innerHTML = item.description;
+                div.onclick = function() {
 
-                    div.onclick = function() {
+                    let fullText = item.description;
 
-                        document.getElementById("profileLocalityInput").value = item.description;
-                        document.getElementById("profileLocalityId").value = item.description;
+                    // cityOnly for cutting
+                    let cityOnly = document.getElementById("profileCityInput").value.toLowerCase();
 
-                        box.innerHTML = "";
+                    let localityOnly = fullText;
+
+                    let index = fullText.toLowerCase().indexOf(cityOnly);
+
+                    if (index !== -1) {
+                        localityOnly = fullText.substring(0, index);
                     }
 
-                    box.appendChild(div);
-                }
-            });
+                    localityOnly = localityOnly.replace(/,\s*$/, "").trim();
 
-            box.style.display = "block";
+                    document.getElementById("profileLocalityInput").value = localityOnly;
+                    document.getElementById("profileLocalityId").value = localityOnly;
+
+                    box.innerHTML = "";
+                };
+
+                box.appendChild(div);
+            });
         }
+
 
         // INIT CALL
         document.addEventListener("DOMContentLoaded", function() {
