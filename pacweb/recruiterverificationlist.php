@@ -892,20 +892,7 @@ ob_start();
       }
     }
 
-    /* ---- Quick check: any assigned? ---- */
-    $chk = $con->prepare("SELECT 1 FROM jos_app_users WHERE profile_type_id=1 AND ac_manager_id=? LIMIT 1");
-    $chk->bind_param("i", $logged_admin_id);
-    $chk->execute();
-    $chk->store_result();
-    $has_assigned = ($chk->num_rows > 0);
-    $chk->close();
 
-    if (!$has_assigned) {
-      echo '<div class="alert warn">No records assigned.</div>';
-      echo '</div></div>';
-      echo ob_get_clean();
-      exit;
-    }
 
     /* ---- build SQL ---- */
     $sql_base = "
@@ -1442,15 +1429,15 @@ SELECT
             <th>Reg Date</th>
             <th>Name / Profile</th>
             <th>Logo</th>
-            <th>Contact Info</th>
-            <th>Mobile</th>
+            <th>Contact Info/Mobile</th>
+            <!-- <th>Mobile</th> -->
             <th>Referred By</th>
             <th>Assigned By / Date</th>
             <th>Plan / Subscr.</th>
             <th>KYC Status</th>
             <th>Premium Jobs</th>
             <th>Standard Jobs</th>
-            <th>Actions</th>
+            <th style="width:145px;">Actions</th>
             <th>Verification</th>
           </tr>
         </thead>
@@ -1546,8 +1533,8 @@ SELECT
                 }
                 ?>
               </td>
-              <td><?= h($contact_info) ?></td>
-              <td><?= h($row['mobile_no']) ?></td>
+              <td><?= h($contact_info) ?> || <?= h($row['mobile_no']) ?></td>
+              <!-- <td><?= h($row['mobile_no']) ?></td> -->
               <td>
                 <?php if ($refLinkHref) { ?>
                   <a class="ref-link" href="<?= h($refLinkHref) ?>"><?= $refByDisplay ?></a>
@@ -1640,7 +1627,8 @@ SELECT
                 <?php } ?>
               </td>
 
-              <td><a class="btn secondary" href="<?= h($profileUrl) ?>">View</a>
+              <td>
+                <a class="btn secondary" href="<?= h($profileUrl) ?>">View</a>
                 <?php if ($logged_admin_role_id == 1) { ?><a class="btn primary" style="margin:2px; white-space:nowrap;" href="<?= h(keep_params(['show_logs_user_id' => $row['id'], 'page' => null])) ?>">
                     Assign History
                   </a><?php } ?>
