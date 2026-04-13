@@ -988,6 +988,16 @@ LEFT JOIN jos_app_kycstatus ks ON ks.id = kyc.status
       $types_common .= 'i';
       $params_common[] = $verified_filter;
     }
+    // ===== REMOVE VERIFIED FILTER FOR CARDS =====
+    $where_for_cards = $where_common;
+    $params_for_cards = $params_common;
+    $types_for_cards = $types_common;
+
+    if ($verified_filter >= 0) {
+      array_pop($where_for_cards);
+      array_pop($params_for_cards);
+      $types_for_cards = substr($types_for_cards, 0, -1);
+    }
     /* ===== KYC Filter ===== */
     if ($kyc_status_id !== '') {
 
@@ -1208,9 +1218,9 @@ SELECT
         // count per status
         $st = (int)$s['status'];
 
-        $where_card = $where_common;
-        $types_card = $types_common;
-        $params_card = $params_common;
+        $where_card = $where_for_cards;
+        $types_card = $types_for_cards;
+        $params_card = $params_for_cards;
 
         // add verification filter
         $where_card[] = "u.verfied_status = ?";
@@ -1381,23 +1391,23 @@ SELECT
 
         <div class="filter-group">
           <label>Verification Status</label>
-        <select class="inp" name="verified_filter">
-          <option value="-1" <?= $verified_filter == -1 ? 'selected' : '' ?>>
-            Verification: Any
-          </option>
-
-          <?php
-          $vs_q = mysqli_query($con, "SELECT name, status FROM jos_app_verification_status");
-
-          while ($vs = mysqli_fetch_assoc($vs_q)) {
-          ?>
-            <option value="<?= $vs['status'] ?>"
-              <?= ($verified_filter == $vs['status']) ? 'selected' : '' ?>>
-              <?= htmlspecialchars($vs['name']) ?>
+          <select class="inp" name="verified_filter">
+            <option value="-1" <?= $verified_filter == -1 ? 'selected' : '' ?>>
+              Verification: Any
             </option>
-          <?php } ?>
-        </select>
-         </div>
+
+            <?php
+            $vs_q = mysqli_query($con, "SELECT name, status FROM jos_app_verification_status");
+
+            while ($vs = mysqli_fetch_assoc($vs_q)) {
+            ?>
+              <option value="<?= $vs['status'] ?>"
+                <?= ($verified_filter == $vs['status']) ? 'selected' : '' ?>>
+                <?= htmlspecialchars($vs['name']) ?>
+              </option>
+            <?php } ?>
+          </select>
+        </div>
       </div>
 
       <!-- ROW 3 BUTTONS -->
