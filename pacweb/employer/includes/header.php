@@ -8,7 +8,7 @@ $notification_count = $_SESSION['notification_count'] ?? 0;
 $city_name = '';
 
 if ($userid > 0) {
-    $stmt = $con->prepare("SELECT city_id FROM jos_app_users WHERE id = ? LIMIT 1");
+    $stmt = $con->prepare("SELECT city_id FROM jos_app_recruiter_profile WHERE id = ? LIMIT 1");
     $stmt->bind_param("i", $userid);
     $stmt->execute();
     $res = $stmt->get_result();
@@ -1486,31 +1486,7 @@ $valid_to = $user['valid_to'] ?? '';
             showHeaderLocalitySuggestions(predictions, query);
 
         });
-
     });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     function openLocationModal() {
 

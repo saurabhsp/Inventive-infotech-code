@@ -18,7 +18,7 @@ require_once __DIR__ . '/db_config.php';
 $user = $_SESSION['user'] ?? null;
 $userid = $_SESSION['user_id'] ?? 0;
 
-$notification_count = $_SESSION['notification_count'] ?? 10;
+$notification_count = $_SESSION['unread_notification_count'] ?? 0;
 $city_name = '';
 
 if ($userid > 0) {

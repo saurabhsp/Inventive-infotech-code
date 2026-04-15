@@ -1272,6 +1272,24 @@ if (isset($_POST['update_profile'])) {
     <script>
         window.onload = () => document.getElementById("global-preloader")?.remove();
 
+        function closeAllSuggestions() {
+            document.getElementById("profileCitySuggestions").style.display = "none";
+            document.getElementById("profileDistrictSuggestions").style.display = "none";
+            document.getElementById("profileLocalitySuggestions").style.display = "none";
+        }
+        document.querySelectorAll("#profileCityInput, #profileDistrictInput, #profileLocalityInput")
+            .forEach(function(input) {
+
+                input.addEventListener("blur", function() {
+
+                    // delay so click on suggestion still works
+                    setTimeout(function() {
+                        closeAllSuggestions();
+                    }, 150);
+
+                });
+
+            });
         /* ---- Cropper / Logo Upload ---- */
         let cropper;
 
@@ -1432,7 +1450,7 @@ if (isset($_POST['update_profile'])) {
 
 
         function showProfileDistrictSuggestions(list) {
-
+            closeAllSuggestions();
             let box = document.getElementById("profileDistrictSuggestions");
             box.innerHTML = "";
 
@@ -1462,7 +1480,7 @@ if (isset($_POST['update_profile'])) {
 
         // SHOW CITY
         function showProfileCitySuggestions(list) {
-
+            closeAllSuggestions();
             let box = document.getElementById("profileCitySuggestions");
             box.innerHTML = "";
             box.style.display = "block";
@@ -1476,12 +1494,6 @@ if (isset($_POST['update_profile'])) {
                 div.onclick = function() {
 
                     let fullText = item.description;
-
-                    let cityOnly = fullText.split(",")[0];
-
-                    document.getElementById("profileCityInput").value = cityOnly;
-                    document.getElementById("profileCityId").value = cityOnly;
-
                     // ✅ FIX: store FULL string for search
                     profileSelectedCity = fullText;
 
@@ -1554,7 +1566,7 @@ if (isset($_POST['update_profile'])) {
 
         // SHOW LOCALITY (FILTER BY CITY)
         function showProfileLocalitySuggestions(list) {
-
+            closeAllSuggestions();
             let box = document.getElementById("profileLocalitySuggestions");
             box.innerHTML = "";
             box.style.display = "block";
@@ -1572,15 +1584,21 @@ if (isset($_POST['update_profile'])) {
                     // cityOnly for cutting
                     let cityOnly = document.getElementById("profileCityInput").value.toLowerCase();
 
-                    let localityOnly = fullText;
+                    let parts = fullText.split(",");
 
-                    let index = fullText.toLowerCase().indexOf(cityOnly);
+                    let result = [];
 
-                    if (index !== -1) {
-                        localityOnly = fullText.substring(0, index);
+                    for (let i = 0; i < parts.length; i++) {
+
+                        // STOP BEFORE CITY (don't include city)
+                        if (parts[i].toLowerCase().includes(cityOnly)) {
+                            break;
+                        }
+
+                        result.push(parts[i].trim());
                     }
 
-                    localityOnly = localityOnly.replace(/,\s*$/, "").trim();
+                    let localityOnly = result.join(", ");
 
                     document.getElementById("profileLocalityInput").value = localityOnly;
                     document.getElementById("profileLocalityId").value = localityOnly;
@@ -1590,6 +1608,10 @@ if (isset($_POST['update_profile'])) {
 
                 box.appendChild(div);
             });
+        }
+
+        if (result.length === 0) {
+            localityOnly = parts[0].trim();
         }
 
 

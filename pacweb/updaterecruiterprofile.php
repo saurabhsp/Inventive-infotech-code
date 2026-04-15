@@ -239,7 +239,11 @@ $stmt->close();
 
     <div class="headbar">
         <h2>Edit Employer Profile</h2>
+        <div style="margin-left:auto;display:flex;gap:8px">
+            <a href="javascript:history.back()" class="btn secondary">← Back to List</a>
+        </div>
     </div>
+
 
     <div class="card" style="max-width:900px">
 

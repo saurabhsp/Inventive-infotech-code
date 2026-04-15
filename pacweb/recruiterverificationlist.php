@@ -75,7 +75,7 @@ if ((int)$can_view !== 1) {
 }
 
 /* -------- page config -------- */
-$page_title = 'Employer List';
+$page_title = 'Employer Verification List';
 if (session_status() !== PHP_SESSION_ACTIVE) {
   session_start();
 }
@@ -95,38 +95,38 @@ $logged_admin_role_id = (int)($u['role_id'] ?? 0);
    DASHBOARD POST SUPPORT (Assigned Recruiters)
 ============================================================ */
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-  $mode  = $_POST['mode'] ?? '';
-  $from  = $_POST['from'] ?? '';
-  $to    = $_POST['to'] ?? '';
-  $range = $_POST['range'] ?? '';
+//   $mode  = $_POST['mode'] ?? '';
+//   $from  = $_POST['from'] ?? '';
+//   $to    = $_POST['to'] ?? '';
+//   $range = $_POST['range'] ?? '';
 
-  // 🔐 Security: ignore posted admin_id and use logged one only
-  if ($logged_admin_id <= 0) {
-    die("Unauthorized access.");
-  }
+//   // 🔐 Security: ignore posted admin_id and use logged one only
+//   if ($logged_admin_id <= 0) {
+//     die("Unauthorized access.");
+//   }
 
-  // Only apply when coming from dashboard
-  if ($mode === 'employers_assigned') {
+//   // Only apply when coming from dashboard
+//   if ($mode === 'employers_assigned') {
 
-    if ($range !== 'lifetime' && !empty($from) && !empty($to)) {
+//     if ($range !== 'lifetime' && !empty($from) && !empty($to)) {
 
-      // Convert datetime to Y-m-d (for DATE comparison)
-      $created_from = date('Y-m-d', strtotime($from));
-      $created_to   = date('Y-m-d', strtotime($to));
+//       // Convert datetime to Y-m-d (for DATE comparison)
+//       $created_from = date('Y-m-d', strtotime($from));
+//       $created_to   = date('Y-m-d', strtotime($to));
 
-      // Force override GET date filters
-      $_GET['created_from'] = date('d-m-Y', strtotime($from));
-      $_GET['created_to']   = date('d-m-Y', strtotime($to));
-    }
+//       // Force override GET date filters
+//       $_GET['created_from'] = date('d-m-Y', strtotime($from));
+//       $_GET['created_to']   = date('d-m-Y', strtotime($to));
+//     }
 
-    // Optional: Clear other filters when coming from dashboard
-    $_GET['q'] = '';
-    $_GET['plan_id'] = null;
-    $_GET['page'] = 1;
-  }
-}
+//     // Optional: Clear other filters when coming from dashboard
+//     $_GET['q'] = '';
+//     $_GET['plan_id'] = null;
+//     $_GET['page'] = 1;
+//   }
+// }
 
 
 
@@ -748,7 +748,7 @@ ob_start();
 
     /* =====================
    SHOW ASSIGNMENT LOGS (by user_id)
-===================== */
+    ===================== */
 
     if (isset($_GET['show_logs_user_id']) && (int)$_GET['show_logs_user_id'] > 0) {
 
@@ -886,7 +886,7 @@ ob_start();
     FROM jos_app_subscription_plans
     WHERE profile_type = 1
     ORDER BY plan_name
-")) {
+   ")) {
       while ($r = mysqli_fetch_assoc($rs)) {
         $subscription_plan_opts[] = $r;
       }
@@ -896,49 +896,49 @@ ob_start();
 
     /* ---- build SQL ---- */
     $sql_base = "
-  FROM jos_app_users u
-  LEFT JOIN jos_app_recruiter_profile rp ON (u.profile_type_id=1 AND rp.id=u.profile_id)
-  LEFT JOIN jos_admin_users am ON am.id = u.ac_manager_assigned_by
-  LEFT JOIN jos_app_verification_status vs ON vs.status = u.verfied_status
+      FROM jos_app_users u
+      LEFT JOIN jos_app_recruiter_profile rp ON (u.profile_type_id=1 AND rp.id=u.profile_id)
+      LEFT JOIN jos_admin_users am ON am.id = u.ac_manager_assigned_by
+      LEFT JOIN jos_app_verification_status vs ON vs.status = u.verfied_status
 
-  LEFT JOIN jos_app_users ur ON ur.id = u.referred_by
-  LEFT JOIN jos_app_recruiter_profile rrp ON (ur.profile_type_id=1 AND rrp.id=ur.profile_id)
-  LEFT JOIN jos_app_candidate_profile  rcp ON (ur.profile_type_id=2 AND rcp.id=ur.profile_id)
-  LEFT JOIN jos_app_promoter_profile   rpp ON (ur.profile_type_id=3 AND rpp.id=ur.profile_id)
+      LEFT JOIN jos_app_users ur ON ur.id = u.referred_by
+      LEFT JOIN jos_app_recruiter_profile rrp ON (ur.profile_type_id=1 AND rrp.id=ur.profile_id)
+      LEFT JOIN jos_app_candidate_profile  rcp ON (ur.profile_type_id=2 AND rcp.id=ur.profile_id)
+      LEFT JOIN jos_app_promoter_profile   rpp ON (ur.profile_type_id=3 AND rpp.id=ur.profile_id)
 
-  LEFT JOIN (
-    SELECT x.userid, x.plan_id, x.start_date, x.end_date
-    FROM jos_app_usersubscriptionlog x
-    INNER JOIN (
-      SELECT userid, MAX(CONCAT(IFNULL(DATE_FORMAT(end_date,'%Y%m%d%H%i%s'),'00000000000000'), LPAD(id,10,'0'))) AS maxk
-      FROM jos_app_usersubscriptionlog
-      GROUP BY userid
-    ) m ON m.userid=x.userid
-       AND CONCAT(IFNULL(DATE_FORMAT(x.end_date,'%Y%m%d%H%i%s'),'00000000000000'), LPAD(x.id,10,'0'))=m.maxk
-  ) ls ON ls.userid = u.id
-  LEFT JOIN jos_app_subscription_plans sp ON sp.id = COALESCE(ls.plan_id, u.active_plan_id)
-  LEFT JOIN (
-    SELECT referred_by AS uid, COUNT(*) AS total_referrals
-    FROM jos_app_users
-    WHERE referred_by IS NOT NULL AND referred_by<>0
-    GROUP BY referred_by
-  ) rc ON rc.uid = u.id
-";
+      LEFT JOIN (
+        SELECT x.userid, x.plan_id, x.start_date, x.end_date
+        FROM jos_app_usersubscriptionlog x
+        INNER JOIN (
+          SELECT userid, MAX(CONCAT(IFNULL(DATE_FORMAT(end_date,'%Y%m%d%H%i%s'),'00000000000000'), LPAD(id,10,'0'))) AS maxk
+          FROM jos_app_usersubscriptionlog
+          GROUP BY userid
+        ) m ON m.userid=x.userid
+          AND CONCAT(IFNULL(DATE_FORMAT(x.end_date,'%Y%m%d%H%i%s'),'00000000000000'), LPAD(x.id,10,'0'))=m.maxk
+      ) ls ON ls.userid = u.id
+      LEFT JOIN jos_app_subscription_plans sp ON sp.id = COALESCE(ls.plan_id, u.active_plan_id)
+      LEFT JOIN (
+        SELECT referred_by AS uid, COUNT(*) AS total_referrals
+        FROM jos_app_users
+        WHERE referred_by IS NOT NULL AND referred_by<>0
+        GROUP BY referred_by
+      ) rc ON rc.uid = u.id
+      ";
 
     /* ===== KYC Latest Status Join ===== */
     $sql_base .= "
-LEFT JOIN (
-    SELECT l1.*
-    FROM jos_app_recruiterkyclog l1
-    INNER JOIN (
-        SELECT recruiter_id, MAX(id) AS max_id
-        FROM jos_app_recruiterkyclog
-        GROUP BY recruiter_id
-    ) l2 ON l1.id = l2.max_id
-) kyc ON kyc.recruiter_id = rp.id
+    LEFT JOIN (
+        SELECT l1.*
+        FROM jos_app_recruiterkyclog l1
+        INNER JOIN (
+            SELECT recruiter_id, MAX(id) AS max_id
+            FROM jos_app_recruiterkyclog
+            GROUP BY recruiter_id
+        ) l2 ON l1.id = l2.max_id
+    ) kyc ON kyc.recruiter_id = rp.id
 
-LEFT JOIN jos_app_kycstatus ks ON ks.id = kyc.status
-";
+    LEFT JOIN jos_app_kycstatus ks ON ks.id = kyc.status
+    ";
 
     $where_common = [];
     $types_common = '';
@@ -1533,7 +1533,12 @@ SELECT
                 }
                 ?>
               </td>
-              <td><?= h($contact_info) ?> || <?= h($row['mobile_no']) ?></td>
+              <td>
+                <div><?= h($contact_info) ?></div>
+                <div style="white-space:nowrap; word-break:normal;">
+                  <?= h($row['mobile_no']) ?>
+                </div>
+              </td>
               <!-- <td><?= h($row['mobile_no']) ?></td> -->
               <td>
                 <?php if ($refLinkHref) { ?>

@@ -12,9 +12,7 @@ if (empty($_SESSION['user_id']) || empty($_SESSION['is_logged_in'])) {
 require_once 'includes/db_config.php';
 
 $userId = (int)$_SESSION['user_id'];
-$profile_type_id = (int)$_SESSION['user']['profile_type_id'];
-$api_url = "https://pacweb.inv11.in/webservices/getReferralcode.php";
-
+$api_url = API_WEB_URL ."getReferralcode.php";
 // Default values
 $referral_link = '';
 $qr_code_url = '';
@@ -37,12 +35,10 @@ curl_setopt_array($ch, [
     CURLOPT_HTTPHEADER => [
         'Content-Type: application/json'
     ],
-    CURLOPT_CONNECTTIMEOUT => 5,
     CURLOPT_TIMEOUT => 15
 ]);
 
 $response = curl_exec($ch);
-
 // ❌ cURL error
 if (curl_errno($ch)) {
     $error_message = "cURL Error: " . curl_error($ch);
@@ -79,6 +75,8 @@ if (curl_errno($ch)) {
         }
     }
 }
+print_r( $earn_amount );
+// exit;
 ?>
 
 <!DOCTYPE html>
@@ -531,13 +529,7 @@ if (curl_errno($ch)) {
 
 <body>
     <?php include "includes/preloader.php"; ?>
-    <?php
-    if ($profile_type_id == 3) {
-        include "includes/promoter_header.php";
-    } else {
-        include "includes/header.php";
-    }
-    ?>
+    <?php include "includes/header.php"; ?>
 
     <div class="page-content">
         <div class="refer-card">

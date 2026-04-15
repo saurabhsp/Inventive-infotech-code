@@ -27,16 +27,6 @@ if (!isset($data['userid']) || intval($data['userid']) <= 0) {
     exit;
 }
 $user_id = intval($data['userid']);
-// ✅ Unread notifications count
-$notification_stmt = $con->prepare("
-    SELECT COUNT(*) as unread_count 
-    FROM jos_app_notifications 
-    WHERE useridto = ? AND readstatus = 0
-");
-$notification_stmt->bind_param("i", $user_id);
-$notification_stmt->execute();
-$notification_res = $notification_stmt->get_result();
-$unread_notification = $notification_res->fetch_assoc()['unread_count'] ?? 0;
 
 /**
  * Step 1: Get profile_id, active_plan_id, myreferral_code from users
@@ -63,20 +53,10 @@ $myreferral_code  = $user_row['myreferral_code'] ?? null;
 /**
  * Step 2: Get promoter profile by profile_id
  * Table: jos_app_promoter_profile
- * Known fields from your structure: id, userid, name, mobile_no, address, profile_photo, pan_no
+ * Known fields from your structure: id, userid, contact_person_name, mobile_no, address, profile_photo, pan_no
  * We’ll SELECT * and read using null-coalescing to avoid notices if some optional columns exist or not.
  */
-// $promoter_query = "SELECT * FROM jos_app_promoter_profile WHERE id = ? LIMIT 1";
-$promoter_query = "
-    SELECT 
-        p.*,
-        g.name AS gender_name
-    FROM jos_app_promoter_profile p
-    LEFT JOIN jos_crm_gender g 
-        ON p.gender_id = g.id
-    WHERE p.id = ?
-    LIMIT 1
-";
+$promoter_query = "SELECT * FROM jos_app_promoter_profile WHERE id = ? LIMIT 1";
 $stmt_promoter = $con->prepare($promoter_query);
 if (!$stmt_promoter) {
     echo json_encode(["status" => false, "message" => "DB error (prepare promoter): " . $con->error]);
@@ -146,17 +126,15 @@ $response = [
     "id" => $row['id'] ?? null,
     "userid" => $row['userid'] ?? null,
 
-    // Display name for the promoter (from your schema: name)
-    "promoter_name" => $row['name'] ?? null,
+    // Display name for the promoter (from your schema: contact_person_name)
+    "promoter_name" => $row['contact_person_name'] ?? null,
 
     "mobile_no" => $row['mobile_no'] ?? null,
     "email" => $row['email'] ?? null,                   // if column exists; else null
     "address" => $row['address'] ?? null,
     "pan_no" => $row['pan_no'] ?? null,
     "profile_photo" => $profile_photo,
-    "dob" => $row['birthdate'] ?? null,
-    "gender" => $row['gender_name'] ?? null,
-    
+
     // Optional geo & locality if present in your table (kept safe)
     "city_id" => $row['city_id'] ?? null,
     "area_id" => $row['area_id'] ?? null,
@@ -169,10 +147,9 @@ $response = [
     // Subscription + referral
     "subscription_details" => $subscription,
     "myreferral_code" => $myreferral_code,
-    "unread_notification_count" => $unread_notification,
 
     // A friendly banner copy for app UI
-    "welcome_message" => "Hi " . (($row['name'] ?? "Promoter")) . ", let’s start promoting and earning rewards."
+    "welcome_message" => "Hi " . (($row['contact_person_name'] ?? "Promoter")) . ", let’s start promoting and earning rewards."
 ];
 
 /**

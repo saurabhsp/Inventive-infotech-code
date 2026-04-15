@@ -302,6 +302,53 @@ if (!$api_error && $getGender) {
 /* ====================SUBMIT JOB========================== */
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
+    // ✅ EXPERIENCE VALIDATION
+    $exp_from = $_POST['experience_from'] ?? '';
+    $exp_to   = $_POST['experience_to'] ?? '';
+
+    if (empty($exp_from) || empty($exp_to)) {
+        $_SESSION['error_message'] = "Please select experience range (From & To)";
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
+    }
+
+    if ($exp_to < $exp_from) {
+        $_SESSION['error_message'] = "Experience 'To' must be greater than 'From'";
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
+    }
+
+
+    // ✅ SALARY VALIDATION (CORRECT)
+    $sal_from = $_POST['salary_from'] ?? '';
+    $sal_to   = $_POST['salary_to'] ?? '';
+
+    if (empty($sal_from) || empty($sal_to)) {
+        $_SESSION['error_message'] = "Please select salary range (From & To)";
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
+    }
+
+    // 🔥 find actual values from array
+    $from_value = 0;
+    $to_value   = 0;
+
+    foreach ($salary_ranges as $salary) {
+        if ($salary['id'] == $sal_from) {
+            $from_value = (int)$salary['name'];
+        }
+        if ($salary['id'] == $sal_to) {
+            $to_value = (int)$salary['name'];
+        }
+    }
+
+    // ✅ compare actual salary
+    if ($to_value < $from_value) {
+        $_SESSION['error_message'] = "Salary 'To' must be greater than 'From'";
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
+    }
+
     $postData = [
         "recruiter_id" => $recruiterid,
         "company_name" => $company_name,
@@ -344,7 +391,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
     }
     $postjson = json_encode($postData);
 
-   
+
     $curl = curl_init();
 
     curl_setopt_array($curl, [
@@ -1247,9 +1294,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
 <body>
 
-    <?php include "includes/header.php";
-    include "includes/preloader.php";
-    ?>
+    <?php if (empty($_SESSION['success_message']) && empty($_SESSION['error_message'])) {
+        include "includes/preloader.php";
+    } ?>
+    <?php include "includes/header.php"; ?>
+
     <?php if (!empty($_SESSION['success_message'])): ?>
         <div class="modal-full-overlay active" id="successModal">
             <div class="success-card">
@@ -1321,7 +1370,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
         <div class="form-card">
             <h1 class="desktop-page-title">Post Standard Job</h1>
 
-           <form method="POST" class="job-form">
+            <form method="POST" class="job-form">
                 <input type="hidden" name="job_id" value="<?php echo $job_id; ?>">
                 <input type="hidden" name="mode" value="<?php echo $mode; ?>">
                 <input type="hidden" name="form_submitted" value="1">
@@ -1334,7 +1383,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
                         <input type="text" class="form-control" name="company_name"
                             value="<?php echo $is_edit ? htmlspecialchars($editData['company_name']) : htmlspecialchars($company_name); ?>" readonly>
                     </div>
-  <div class="form-group">
+                    <div class="form-group">
                         <label class="form-label">Job Position<span class="req">*</span></label>
                         <div class="custom-dropdown">
                             <!-- ✅ VALUE AUTO SET (EDIT MODE) -->
@@ -1557,7 +1606,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
     <?php include "includes/bottom-bar.php"; ?>
     <script>
-          function toggleJobDropdown() {
+        function toggleJobDropdown() {
             document.getElementById("jobDropdown").style.display = "block";
         }
 
@@ -1600,7 +1649,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
 
 
-       document.querySelector(".job-form").addEventListener("submit", function(e) {
+        document.querySelector(".job-form").addEventListener("submit", function(e) {
             // remove old errors
             document.querySelectorAll(".form-control").forEach(el => {
                 el.classList.remove("error");
@@ -1734,9 +1783,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
         function closeErrorModal() {
             const modal = document.getElementById("errorModal");
+
             if (modal) {
                 modal.style.display = "none";
             }
+
+            // ✅ redirect to index.php
+            window.location.href = "index.php";
         }
 
 

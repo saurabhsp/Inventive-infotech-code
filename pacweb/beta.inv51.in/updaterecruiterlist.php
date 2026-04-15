@@ -81,12 +81,8 @@ if (isset($_POST['update_profile'])) {
     $district            = trim($_POST['district']);
     $city_id             = trim($_POST['city_id']);
     $locality_id         = trim($_POST['locality_id']);
-    $district           = trim($_POST['mobile_no']);
+    $mobile_no           = trim($_POST['mobile_no']);
 
-    // print_r($city_id );
-    // print_r($locality_id );
-    // print_r($city_id );
-    // exit;
     $con->begin_transaction();
 
     try {
@@ -207,30 +203,36 @@ $stmt->close();
         display: flex;
         gap: 10px;
     }
-.form-group{
-    position: relative;
-}
-   .suggestion-box{
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: #0f172a;
-    /* border: 1px solid #334155; */
-    width: 100%;
-    z-index: 9999;
-    max-height: 200px;
-    overflow-y: auto;
-}
+
+    .form-group {
+        position: relative;
+    }
+
+    .suggestion-box {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: #0f172a;
+        /* border: 1px solid #334155; */
+        width: 100%;
+        z-index: 9999;
+        max-height: 200px;
+        overflow-y: auto;
+    }
 
 
-.suggestion-item{
-    padding: 8px 10px;
-    cursor: pointer;
-}
+    .suggestion-item {
+        padding: 8px 10px;
+        cursor: pointer;
+    }
 
-.suggestion-item:hover{
-    background: #1e293b;
-}
+    .suggestion-item:hover {
+        background: #1e293b;
+    }
+
+    .suggestion-box {
+        display: none;
+    }
 </style>
 
 <div class="master-wrap">
@@ -301,19 +303,19 @@ $stmt->close();
 
                 <div class="form-group">
                     <label class="lbl">District</label>
-                    <input class="inp" id="districtInput" name="district" autocomplete="off">
+                    <input class="inp" id="districtInput" value="<?= h($data['district']) ?>" name="district" autocomplete="off">
                     <div id="districtSuggestions" class="suggestion-box"></div>
                 </div>
 
                 <div class="form-group">
                     <label class="lbl">City</label>
-                    <input class="inp" id="cityInput" name="city_id" autocomplete="off">
+                    <input class="inp" id="cityInput" value="<?= h($data['city_id']) ?>" name="city_id" autocomplete="off">
                     <div id="citySuggestions" class="suggestion-box"></div>
                 </div>
 
                 <div class="form-group">
                     <label class="lbl">Locality</label>
-                    <input class="inp" id="localityInput" name="locality_id" autocomplete="off">
+                    <input class="inp" id="localityInput" value="<?= h($data['locality_id']) ?>" name="locality_id" autocomplete="off">
                     <div id="localitySuggestions" class="suggestion-box"></div>
                 </div>
 
@@ -329,6 +331,45 @@ $stmt->close();
     </div>
 </div>
 <script>
+    // =========================
+    // CLOSE ALL SUGGESTION BOXES
+    // =========================
+    function closeAllSuggestions() {
+        document.getElementById("districtSuggestions").style.display = "none";
+        document.getElementById("citySuggestions").style.display = "none";
+        document.getElementById("localitySuggestions").style.display = "none";
+    }
+
+    // =========================
+    // CLICK OUTSIDE → CLOSE
+    // =========================
+    document.addEventListener("click", function(e) {
+
+        if (!e.target.closest(".form-group")) {
+            closeAllSuggestions();
+        }
+
+    });
+    document.addEventListener("focusin", function(e) {
+
+        // if clicked inside one field → close others only
+        if (e.target.id === "districtInput") {
+            document.getElementById("citySuggestions").style.display = "none";
+            document.getElementById("localitySuggestions").style.display = "none";
+        }
+
+        if (e.target.id === "cityInput") {
+            document.getElementById("districtSuggestions").style.display = "none";
+            document.getElementById("localitySuggestions").style.display = "none";
+        }
+
+        if (e.target.id === "localityInput") {
+            document.getElementById("districtSuggestions").style.display = "none";
+            document.getElementById("citySuggestions").style.display = "none";
+        }
+
+    });
+
     let service;
     let placeService;
 
@@ -377,7 +418,7 @@ $stmt->close();
                 div.onclick = function() {
                     selectedDistrict = p.description; // ✅ correct
                     document.getElementById("districtInput").value = p.description;
-                    box.innerHTML = "";
+                    closeAllSuggestions();
                 }
 
                 box.appendChild(div);
@@ -421,7 +462,7 @@ $stmt->close();
 
                     selectedCity = p.description;
                     document.getElementById("cityInput").value = p.description;
-                    box.innerHTML = "";
+                    closeAllSuggestions();
 
                 }
 
@@ -469,7 +510,7 @@ $stmt->close();
                     div.onclick = function() {
 
                         document.getElementById("localityInput").value = p.description;
-                        box.innerHTML = "";
+                        closeAllSuggestions();
 
                     }
 

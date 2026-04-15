@@ -77,7 +77,9 @@ function send_otp($mobile_no)
     ]);
 
     $response = curl_exec($ch);
-
+//   print_r($postData);
+//   print_r($response);
+//     exit;
     // ✅ ERROR HANDLING (ADD THIS)
     if (curl_errno($ch)) {
         error_log("cURL Error: " . curl_error($ch));
@@ -88,6 +90,7 @@ function send_otp($mobile_no)
     curl_close($ch);
 
     $result = json_decode($response, true);
+  
 
     return ($result && $result['status'] === 'success');
 }
@@ -295,7 +298,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($profile_type === 3) {
             // ✅ PROMOTER
             $stmt = $con->prepare("
-        SELECT promoter_name 
+        SELECT name AS name
         FROM jos_app_promoter_profile
         WHERE id = ?
         LIMIT 1
@@ -303,7 +306,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // ✅ CANDIDATE
             $stmt = $con->prepare("
-        SELECT candidate_name 
+        SELECT candidate_name AS name
         FROM jos_app_candidate_profile
         WHERE id = ?
         LIMIT 1
@@ -316,18 +319,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $row = $result->fetch_assoc();
 
         $_SESSION['username'] = $row['name'] ?? 'User';
-
-        $stmt->bind_param("i", $user['profile_id']);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $row = $result->fetch_assoc();
-
-        if ($profile_type === 3) {
-            $_SESSION['username'] = $row['promoter_name'] ?? 'User';
-        } else {
-            $_SESSION['username'] = $row['candidate_name'] ?? 'User';
-        }
-
         unset($_SESSION['temp_mobile']);
 
         /* ===== REDIRECT ===== */

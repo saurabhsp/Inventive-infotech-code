@@ -358,6 +358,59 @@ curl_close($ch);
 </head>
 
 <body>
+
+    <?php if (empty($_SESSION['success'])) {
+        include "includes/preloader.php";
+    } ?>
+    <?php include "includes/header.php";
+    ?>
+    <?php if (!empty($_SESSION['success'])): ?>
+        <div class="modal-full-overlay active" id="successModal">
+            <div class="success-card">
+                <h1 class="success-title">Success!</h1>
+                <p class="success-subtitle">
+                    <?php echo $_SESSION['success']; ?>
+                </p>
+                <div class="success-icon-wrap">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-outline"
+                        onclick="goBackPage()">
+                        Close
+                    </button>
+                    <form action="premium-job-details.php" method="POST">
+                        <input type="hidden" name="id"
+                            value="<?php echo $_SESSION['last_job_id'] ?? ''; ?>">
+
+                        <button type="submit" class="btn btn-primary">
+                            View Job
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <?php unset($_SESSION['success']); ?>
+        <?php unset($_SESSION['prev_page']); ?>
+    <?php endif; ?>
+
+
+    <?php if (!empty($_SESSION['error_message'])): ?>
+        <div class="modal-full-overlay active" id="errorModal">
+            <div class="modal-map-card" style="max-width:400px;height:auto;padding:30px;text-align:center;">
+                <h3 style="margin-bottom:15px;color:#e53935;">Error</h3>
+                <p><?php echo $_SESSION['error_message']; ?></p>
+
+                <button onclick="goBackPage()"
+                    style="margin-top:20px;padding:10px 20px;background:#2563eb;color:white;border-radius:6px;border:none;">
+                    OK
+                </button>
+            </div>
+        </div>
+        <?php unset($_SESSION['error_message']); ?>
+        <?php unset($_SESSION['prev_page']); ?>
+    <?php endif; ?>
+
   <?php if (!empty($_SESSION['success'])): ?>
     <div style="color: green;">
       <?= $_SESSION['success']; ?>

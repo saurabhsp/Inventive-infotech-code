@@ -412,38 +412,49 @@ if (!$api_error && $getExperience) {
 
 
 /* ====================8. Get Skills List========================== */
+/* ====================8. Get Skills List========================== */
 
 $skills = [];
-$position_post = json_encode([
-    "position" => 9
-]);
-$curl = curl_init();
 
-curl_setopt_array($curl, array(
-    CURLOPT_URL => API_BASE_URL . "getMskill_list.php",
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_CONNECTTIMEOUT => 5,
-    CURLOPT_TIMEOUT        => 10,
-    CURLOPT_POSTFIELDS => $position_post,
+// ✅ GET selected job position ID (from form or edit mode)
+$selected_position = $_POST['job_position'] ?? ($editData['job_position_id'] ?? '');
 
-));
+if (!empty($selected_position)) {
 
-$getSkills = curl_exec($curl);
+    $position_post = json_encode([
+        "position" => $selected_position
+    ]);
 
-if (curl_errno($curl)) {
-    $api_error = "Unable to fetch skills.";
-}
+    $curl = curl_init();
 
-curl_close($curl);
+    curl_setopt_array($curl, [
+        CURLOPT_URL => API_BASE_URL . "getMskill_list.php",
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $position_post,
+        CURLOPT_HTTPHEADER => [
+            "Content-Type: application/json"
+        ]
+    ]);
 
-if (!$api_error && $getSkills) {
+    $getSkills = curl_exec($curl);
 
-    $result = json_decode($getSkills, true);
+    if (curl_errno($curl)) {
+        $api_error = "Unable to fetch skills.";
+    }
 
-    if (isset($result['status']) && $result['status'] == "success") {
-        $skills = $result['data'];
-    } else {
-        $api_error = "Skills not found.";
+    curl_close($curl);
+
+    if (!$api_error && $getSkills) {
+        $result = json_decode($getSkills, true);
+
+        if (isset($result['status']) && $result['status'] == "success") {
+            $skills = $result['data'];
+        } else {
+            $api_error = "Skills not found.";
+        }
     }
 }
 
@@ -578,6 +589,52 @@ if (!$api_error && $getGender) {
 /* ==================== 13. SUBMIT ALL DATA ========================== */
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
+    // ✅ EXPERIENCE VALIDATION
+    $exp_from = $_POST['experience_from'] ?? '';
+    $exp_to   = $_POST['experience_to'] ?? '';
+
+    if (empty($exp_from) || empty($exp_to)) {
+        $_SESSION['error_message'] = "Please select experience range (From & To)";
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
+    }
+
+    if ($exp_to < $exp_from) {
+        $_SESSION['error_message'] = "Experience 'To' must be greater than 'From'";
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
+    }
+
+
+    // ✅ SALARY VALIDATION (CORRECT)
+$sal_from = $_POST['salary_from'] ?? '';
+$sal_to   = $_POST['salary_to'] ?? '';
+
+if (empty($sal_from) || empty($sal_to)) {
+    $_SESSION['error_message'] = "Please select salary range (From & To)";
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit;
+}
+
+// 🔥 find actual values from array
+$from_value = 0;
+$to_value   = 0;
+
+foreach ($salary_ranges as $salary) {
+    if ($salary['id'] == $sal_from) {
+        $from_value = (int)$salary['name'];
+    }
+    if ($salary['id'] == $sal_to) {
+        $to_value = (int)$salary['name'];
+    }
+}
+
+// ✅ compare actual salary
+if ($to_value < $from_value) {
+    $_SESSION['error_message'] = "Salary 'To' must be greater than 'From'";
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit;
+}
 
     $postData = [
         "recruiter_id" => $profile_id,
@@ -2008,7 +2065,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 <body>
 
 
-    <?php if (empty($_SESSION['success_message'])) {
+    <?php if (empty($_SESSION['success_message']) && empty($_SESSION['error_message'])) {
         include "includes/preloader.php";
     } ?>
     <?php include "includes/header.php";
@@ -2577,12 +2634,53 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['form_submitted'])) {
 
         function selectJob(el) {
             let id = el.getAttribute("data-id");
-            let text = el.innerText;
 
+            // set hidden input
             document.getElementById("jobPositionValue").value = id;
-            document.getElementById("selectedJobText").innerText = text;
 
+            // set UI text
+            document.getElementById("selectedJobText").innerText = el.innerText;
+
+            // close dropdown
             document.getElementById("jobDropdown").style.display = "none";
+
+            // 🔥 CALL API HERE
+            loadSkills(id);
+        }
+
+        function loadSkills(positionId) {
+
+            fetch("<?= API_BASE_URL ?>getMskill_list.php", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        position: positionId
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+
+                    let skillBox = document.getElementById("skillDropdown");
+                    skillBox.innerHTML = "";
+
+                    if (data.status === "success") {
+
+                        data.data.forEach(skill => {
+                            skillBox.innerHTML += `
+                    <label class="checkbox-item">
+                        <input type="checkbox" name="skills_required[]" value="${skill.id}">
+                        ${skill.title}
+                    </label>
+                `;
+                        });
+
+                    } else {
+                        skillBox.innerHTML = "No skills found";
+                    }
+                })
+                .catch(err => console.error(err));
         }
 
         function filterJobs() {

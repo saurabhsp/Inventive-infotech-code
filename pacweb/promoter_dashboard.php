@@ -76,6 +76,55 @@ while ($row = $resS->fetch_assoc()) {
     $slider_list[] = $row;
 }
 
+/* ===============================
+   1. GET PROFILE API
+================================ */
+
+
+// $api = API_BASE_URL . "getPromoterprofile.php";
+$api = API_WEB_URL . "getPromoterprofile.php";
+
+
+$payload = json_encode([
+    "userid" => $user_id
+]);
+
+$ch = curl_init($api);
+
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $payload,
+    CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+
+    // ✅ ADD
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT => 15
+]);
+$response = curl_exec($ch);
+
+if (curl_errno($ch)) {
+    die("API Error: " . curl_error($ch));
+}
+
+curl_close($ch);
+
+
+$result = json_decode($response, true);
+
+
+if (isset($result['status']) && $result['status'] == true && isset($result['data'])) {
+    $profile = $result['data'];
+    $notification_count = $profile['unread_notification_count'] ?? 0;
+    $_SESSION['notification_count'] = $notification_count;
+} else {
+    $apierror = "Unable to fetch Promoter Profile";
+}
+
+
+
+
+
 /*API FETCHING STARTED HERE*/
 
 $apierror = '';

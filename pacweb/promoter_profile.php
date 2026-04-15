@@ -7,6 +7,8 @@ require_once __DIR__ . '/includes/session.php';
 require_once __DIR__ . '/includes/db_config.php';
 $userid = $_SESSION['user_id'] ?? 0;
 
+
+
 /* ===============================
    ✅ LOGIN CHECK
 ================================ */
@@ -21,7 +23,8 @@ if (empty($_SESSION['user_id'])) {
 
 $profile = [];
 
-$api = API_BASE_URL . "getPromoterprofile.php";
+// $api = API_BASE_URL . "getPromoterprofile.php";
+$api = API_WEB_URL . "getPromoterprofile.php";
 
 
 $payload = json_encode([
@@ -51,7 +54,6 @@ curl_close($ch);
 
 $result = json_decode($response, true);
 
-print_r($result);
 
 if (isset($result['status']) && $result['status'] == true && isset($result['data'])) {
     $profile = $result['data'];
@@ -59,104 +61,15 @@ if (isset($result['status']) && $result['status'] == true && isset($result['data
     $profile = [];
 }
 
-/* ===============================
-   GET ALL JOB POSITIONS FROM DB
-================================ */
 
-$conn = new mysqli('localhost', 'inv11_pacificiconnect_beta', '$JbDLi@evoaag(gV', 'inv11_pacificiconnect_beta26');
-
-if ($conn->connect_error) {
-    die("Database connection failed: " . $conn->connect_error);
-}
-
-$all_roles = [];
-
-$sql = "SELECT id,name FROM jos_crm_jobpost ORDER BY name ASC";
-$res = $conn->query($sql);
-
-while ($row = $res->fetch_assoc()) {
-    $all_roles[] = $row;
-}
-
-$selected_roles = [];
-
-if (!empty($profile['job_position_ids'])) {
-    $selected_roles = explode(',', $profile['job_position_ids']);
-    $selected_roles = array_map('trim', $selected_roles);
-}
-/* ===============================
-   2. UPDATE PROFILE API
-================================ */
-
-if (isset($_POST['updateProfile'])) {
-
-    $update_api = API_BASE_URL . "updateCandidateprofile.php";
-
-    $data = json_encode([
-        "id" => $profile['id'] ?? 0,
-
-        "candidate_name" => $_POST['candidate_name'] ?? $profile['candidate_name'],
-        "mobile_no" => $_POST['mobile_no'] ?? $profile['mobile_no'],
-        "gender_id" => $_POST['gender_id'] ?? $profile['gender_id'],
-        "birthdate" => $_POST['birthdate'] ?? $profile['birthdate'],
-        "email" => $_POST['email'] ?? $profile['email'],
-        "address" => $_POST['address'] ?? $profile['address'],
-
-        "job_position_ids" => $_POST['job_position_ids'] ?? $profile['job_position_ids'],
-        "experience_type" => $_POST['experience_type'] ?? $profile['experience_type'],
-        "experience_period" => $_POST['experience_period'] ?? $profile['experience_period'],
-
-        "country" => $_POST['country'] ?? $profile['country'],
-        "state" => $_POST['state'] ?? $profile['state'],
-        "district" => $_POST['district'] ?? $profile['district'],
-        "city_id" => $_POST['city_id'] ?? $profile['city_id'],
-        "locality_id" => $_POST['locality_id'] ?? $profile['locality_id']
-    ]);
-
-    $ch = curl_init($update_api);
-
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => $data,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-
-        // ✅ ADD
-        CURLOPT_CONNECTTIMEOUT => 5,
-        CURLOPT_TIMEOUT => 15
-    ]);
-
-    $response = curl_exec($ch);
-
-    if (curl_errno($ch)) {
-        die("API Error: " . curl_error($ch));
-    }
-
-    curl_close($ch);
-
-    // âœ… ðŸ‘‰ YEH ADD KIYA
-    $city = $_POST['city_id'] ?? '';
-
-    if ($city != '') {
-        $stmt = $conn->prepare("
-        UPDATE jos_app_users 
-        SET city_id = ? 
-        WHERE id = ?
-    ");
-        $stmt->bind_param("si", $city, $userid);
-        $stmt->execute();
-    }
-
-    header("Location: promoter_profile.php");
-    exit;
-}
 /* ===============================
    3. PROFILE PHOTO UPLOAD (512px resize)
 ================================ */
 
 if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] == 0) {
 
-    $upload_api = API_BASE_URL . "addCandidatephoto.php";
+    $upload_api = API_WEB_URL . "addPromoterphoto.php";
+    // $upload_api = "https://pacweb.inv11.in/webservices/addPromoterphoto.php";
 
     $tmp = $_FILES['profile_photo']['tmp_name'];
     if ($_FILES['profile_photo']['size'] > 5 * 1024 * 1024) {
@@ -220,6 +133,8 @@ if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] == 0) {
     $response = curl_exec($ch);
 
     curl_close($ch);
+    print_r($response);
+    exit;
     unlink($tempFile);
 
     echo json_encode(["status" => "success"]);
@@ -866,11 +781,11 @@ if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] == 0) {
                         </div>
                     </div>
                     <div class="profile-details-text">
-                        <h2 class="profile-name"><?= $profile['candidate_name'] ?? 'User' ?></h2>
+                        <h2 class="profile-name"><?= $profile['promoter_name'] ?? 'User' ?></h2>
                         <p class="user-role">Promoter</p>
                     </div>
-              
-                  
+
+
                     <div class="side-menu">
                         <!-- <a href="#" class="menu-item"><i class="fas fa-file-alt"></i> My Resume</a>
 
@@ -907,7 +822,7 @@ if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] == 0) {
 
                         <div class="info-group">
                             <span class="label">Date of Birth</span>
-                            <span class="value"><?= $profile['birthdate'] ?? '' ?></span>
+                            <span class="value"><?= $profile['dob'] ?? '' ?></span>
                         </div>
 
                         <div class="info-group">
@@ -923,13 +838,13 @@ if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] == 0) {
                     </div>
                 </div>
 
-            
+
 
             </main>
         </div>
     </div>
 
-  
+
 
     <script>
         // Modal Logic
