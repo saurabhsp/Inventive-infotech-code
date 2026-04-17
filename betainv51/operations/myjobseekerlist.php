@@ -1860,6 +1860,7 @@ ob_start();
                             <th style="width:60px">SR No</th>
                             <th>Reg Date</th>
                             <th>Name / Profile</th>
+                            <th>Name / Profile</th>
                             <th>Mobile</th>
                             <th>City</th>
                             <th>Referral Code</th>

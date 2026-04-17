@@ -92,6 +92,85 @@ if (!function_exists('fetch_one')) {
 $usersTbl = 'jos_app_users';
 $crmLeads_tbl = 'jos_app_crm_leads';
 $subscriptionTbl = 'jos_app_usersubscriptionlog';
+$historyTbl = 'jos_app_crm_lead_status_history';
+$statusTbl  = 'jos_app_crm_lead_statuses';
+/* ============================================================
+   FOLLOW-UP DASHBOARD COUNTS
+   ============================================================ */
+
+/* ---------------- TODAY FOLLOW-UP ---------------- */
+$todayFollowup = fetch_one(
+    $con,
+    "SELECT COUNT(*) AS total
+    FROM $historyTbl h
+    JOIN (
+        SELECT lead_id, MAX(id) AS max_id
+        FROM $historyTbl
+        GROUP BY lead_id
+    ) x ON x.max_id = h.id
+    JOIN $statusTbl s ON s.id = h.to_status_id
+    JOIN $crmLeads_tbl l ON l.id = h.lead_id
+    WHERE s.status_code = 'FOLLOW_UP'
+    AND DATE(h.next_followup_dt) = CURDATE()
+    AND (
+        l.assigned_by = ?
+        OR (
+            (l.assigned_by IS NULL OR l.assigned_by = 0)
+            AND l.created_by = ?
+        )
+    )",
+    "ii",
+    [$logged_admin_id, $logged_admin_id]
+);
+
+/* ---------------- MISSED FOLLOW-UP ---------------- */
+$missedFollowup = fetch_one(
+    $con,
+    "SELECT COUNT(*) AS total
+    FROM $historyTbl h
+    JOIN (
+        SELECT lead_id, MAX(id) AS max_id
+        FROM $historyTbl
+        GROUP BY lead_id
+    ) x ON x.max_id = h.id
+    JOIN $statusTbl s ON s.id = h.to_status_id
+    JOIN $crmLeads_tbl l ON l.id = h.lead_id
+    WHERE s.status_code = 'FOLLOW_UP'
+    AND h.next_followup_dt IS NOT NULL
+    AND h.next_followup_dt < NOW()
+    AND (
+        l.assigned_by = ?
+        OR (
+            (l.assigned_by IS NULL OR l.assigned_by = 0)
+            AND l.created_by = ?
+        )
+    )",
+    "ii",
+    [$logged_admin_id, $logged_admin_id]
+);
+
+/* ---------------- COMPLETED FOLLOW-UP ---------------- */
+$completedFollowup = fetch_one(
+    $con,
+    "SELECT COUNT(DISTINCT h1.lead_id) AS total
+    FROM $historyTbl h1
+    JOIN $statusTbl s1 ON s1.id = h1.to_status_id
+    JOIN $historyTbl h2 ON h2.lead_id = h1.lead_id
+    JOIN $statusTbl s2 ON s2.id = h2.to_status_id
+    JOIN $crmLeads_tbl l ON l.id = h1.lead_id
+    WHERE s1.status_code = 'FOLLOW_UP'
+    AND s2.status_code != 'FOLLOW_UP'
+    AND h2.id > h1.id
+    AND (
+        l.assigned_by = ?
+        OR (
+            (l.assigned_by IS NULL OR l.assigned_by = 0)
+            AND l.created_by = ?
+        )
+    )",
+    "ii",
+    [$logged_admin_id, $logged_admin_id]
+);
 
 /* ============================================================
    EMPLOYER DASHBOARD COUNTS
@@ -108,12 +187,12 @@ if ($range === 'lifetime') {
         "SELECT COUNT(*) as total 
          FROM `$usersTbl`
          WHERE profile_type_id = 1
+         AND status_id = 1
          AND ac_manager_id = ?
          AND ac_manager_assigned_at IS NOT NULL",
         "i",
         [$logged_admin_id]
     );
-
 } else {
 
     $assignedEmployersCount = fetch_one(
@@ -122,12 +201,12 @@ if ($range === 'lifetime') {
          FROM `$usersTbl`
          WHERE profile_type_id = 1
          AND ac_manager_id = ?
+         AND status_id = 1
          AND ac_manager_assigned_at IS NOT NULL
          AND ac_manager_assigned_at BETWEEN ? AND ?",
         "iss",
         [$logged_admin_id, $from, $to]
     );
-
 }
 
 
@@ -222,7 +301,6 @@ if ($range === 'lifetime') {
     ");
 
     $stmt->bind_param("i", $logged_admin_id);
-
 } else {
 
     $stmt = $con->prepare("
@@ -247,10 +325,16 @@ if ($range === 'lifetime') {
     );
 }
 
+/* 6️⃣ Total Applications */
+
+
 
 $applicationsTbl = 'jos_app_applications';
+
 /* 6️⃣ Total Applications (Premium + Standard split) */
+
 if ($range === 'lifetime') {
+
     $stmt = $con->prepare("
         SELECT 
             COUNT(A.id) AS total_applications,            
@@ -276,7 +360,6 @@ if ($range === 'lifetime') {
     ");
 
     $stmt->bind_param("i", $logged_admin_id);
-
 } else {
 
     $stmt = $con->prepare("
@@ -491,6 +574,54 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
             font-size: 13px;
             color: var(--muted);
         }
+
+        /* follow up css card */
+        .followup-grid {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            /* allow wrapping */
+        }
+
+        .followup-card {
+            flex: 1;
+            min-width: 220px;
+            /* controls when it breaks */
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+            transition: .2s;
+        }
+
+        .followup-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .followup-title {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .followup-value {
+            background: #3b82f6;
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .topbar {
+            position: static !important;
+            top: auto !important;
+            z-index: auto !important;
+        }
     </style>
 </head>
 
@@ -587,12 +718,12 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
             </div>
 
             <!-- Total Applications -->
-               <div class="card kpi-card">
+            <div class="card kpi-card">
                 <div>
                     <div class="card-title">Total Applications</div>
 
-                    <div class="card-value" >
-                        <?=  $totalApplications ?> 
+                    <div class="card-value">
+                        <?= $totalApplications ?>
                     </div>
 
                     <div style="font-size:16px; ">
@@ -604,6 +735,8 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
                     <a class="btn-link" href="#" onclick="openBreakdown('total_applications'); return false;">View Details →</a>
                 </div>
             </div>
+
+
 
             <!--<div class="card kpi-card">-->
             <!--    <div>-->
@@ -617,6 +750,31 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
 
         </div>
 
+        <hr style="opacity:.18;margin:14px 0">
+
+        <div class="section-label">
+            Follow-up Counts
+        </div>
+
+        <div class="followup-grid">
+
+            <div class="followup-card">
+                <div class="followup-title">Today's Follow-up</div>
+                <div class="followup-value"><?= $todayFollowup ?></div>
+            </div>
+
+            <div class="followup-card">
+                <div class="followup-title">Completed</div>
+                <div class="followup-value"><?= $completedFollowup ?></div>
+            </div>
+
+            <div class="followup-card">
+                <div class="followup-title">Missed</div>
+                <div class="followup-value"><?= $missedFollowup ?></div>
+            </div>
+
+        </div>
+
         <div class="actions">
             <a href="/adminconsole/operations/candidate_summary.php" onclick="">View Matching Candidates</a>
             <a href="/adminconsole/operations/lead.php">Add New Lead</a>
@@ -626,7 +784,7 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
     </div>
 
     <form id="dashboardPostForm" method="post" action="/adminconsole/operations/lead_list.php" style="display:none;">
-            <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+        <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
         <input type="hidden" name="mode" id="f_mode">
         <input type="hidden" name="range" value="<?= $range ?>">
         <input type="hidden" name="admin_id" value="<?= $logged_admin_id ?>">

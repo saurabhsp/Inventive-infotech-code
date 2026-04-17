@@ -334,6 +334,39 @@ if ($mode === 'candidate') {
         die('Invalid userid');
     }
 
+    if (
+        $_SERVER['REQUEST_METHOD'] === 'POST'
+        && isset($_POST['upload_photo'])
+        && !empty($_POST['cropped_image'])
+        && $userid > 0
+    ) {
+        $imageData = $_POST['cropped_image'];
+
+        $imageData = str_replace('data:image/png;base64,', '', $imageData);
+        $imageData = str_replace(' ', '+', $imageData);
+        $decoded = base64_decode($imageData);
+
+        $newName = 'jobseeker_' . $userid . '_' . time() . '.png';
+
+        $uploadDir = __DIR__ . '/../../webservices/uploads/profile_photos/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        file_put_contents($uploadDir . $newName, $decoded);
+
+        $dbPath = 'webservices/uploads/profile_photos/' . $newName;
+
+        $stmt = $con->prepare("UPDATE jos_app_candidate_profile SET profile_photo=? WHERE userid=?");
+        $stmt->bind_param("si", $dbPath, $userid);
+        $stmt->execute();
+        $stmt->close();
+
+        header("Location: " . $_SERVER['REQUEST_URI']);
+        exit;
+    }
+
+
     // user basics
     $u_sql = "SELECT active_plan_id, myreferral_code FROM jos_app_users WHERE id=? LIMIT 1";
     $st = $con->prepare($u_sql);
@@ -505,12 +538,14 @@ ORDER BY A.application_date DESC, A.id DESC
         <title>Jobseeker Profile</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="stylesheet" href="/adminconsole/assets/ui.css">
+        <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.6.1/dist/cropper.css">
+        <script src="https://unpkg.com/cropperjs@1.6.1/dist/cropper.js"></script>
         <style>
             body {
                 background: #020617;
             }
 
-            
+
             .headbar {
                 margin: 0;
                 padding: 8px 0 6px;
@@ -558,10 +593,62 @@ ORDER BY A.application_date DESC, A.id DESC
             .muted {
                 color: #9aa0a6;
             }
+
+            /* //crop modal css */
+            .img-crop-modal {
+                display: none;
+                position: fixed; 
+                inset: 0;
+                background: rgba(0, 0, 0, 0.8);
+                z-index: 9999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            } 
+
+            .img-crop-box {
+                background: #fff;
+                border-radius: 12px;
+                width: 90%;
+                max-width: 600px;
+                padding: 16px;
+            }
+
+            .img-crop-container {
+                width: 100%;
+                height: 350px;
+                overflow: hidden;
+            }
+
+            .img-crop-container img {
+                max-width: 100%;
+            }
+
+            .crop-actions {
+                margin-top: 12px;
+                text-align: right;
+            }
         </style>
     </head>
 
     <body>
+        <!-- modal for image crop -->
+        <div id="cropModal" style="display:none;" class="img-crop-modal">
+            <div class="img-crop-box">
+                <h3>Crop Image</h3>
+
+                <div class="img-crop-container">
+                    <img id="cropImage">
+                </div>
+
+                <div class="crop-actions">
+                    <button type="button" id="cropCancel" class="btn secondary">Cancel</button>
+                    <button type="button" id="cropSave" class="btn primary">Crop & Upload</button>
+                </div>
+            </div>
+        </div>
+
+
         <div class="master-wrap">
             <div class="headbar" style="display:flex;align-items:center;gap:12px">
                 <h2>Jobseeker Profile</h2>
@@ -578,9 +665,29 @@ ORDER BY A.application_date DESC, A.id DESC
 
             <div class="card" style="padding:20px">
                 <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
-                    <div style="height:72px;width:72px;border-radius:50%;background:#111827;overflow:hidden;display:flex;align-items:center;justify-content:center">
-                        <img src="<?= h($photo_url) ?>" alt="photo" style="height:100%;width:100%;object-fit:cover">
+                    <div style="height:72px;width:72px;border-radius:50%;overflow:hidden;">
+                        <img src="<?= h($photo_url) ?>" style="width:100%;height:100%;object-fit:cover;">
                     </div>
+
+                    <?php if (!empty($C['profile_photo'])) { ?>
+
+                        <!-- IMAGE EXISTS → CHANGE OPTION -->
+                        <form id="photoForm" method="post" style="margin-top:8px;">
+                            <input type="file" id="photoInput" accept="image/*">
+                            <input type="hidden" name="cropped_image" id="croppedImage">
+                            <input type="hidden" name="upload_photo" value="1">
+                        </form>
+
+                    <?php } else { ?>
+
+                        <!-- NO IMAGE → UPLOAD OPTION -->
+                        <form id="photoForm" method="post" style="margin-top:8px;">
+                            <input type="file" id="photoInput" accept="image/*" required>
+                            <input type="hidden" name="cropped_image" id="croppedImage">
+                            <input type="hidden" name="upload_photo" value="1">
+                        </form>
+
+                    <?php } ?>
                     <div>
                         <div style="font-size:18px;font-weight:700;color:#fff"><?= h($C['candidate_name'] ?: 'Jobseeker') ?></div>
                         <div class="muted">
@@ -759,6 +866,71 @@ ORDER BY A.application_date DESC, A.id DESC
 
 
         </div>
+        <script>
+            let cropper;
+
+            const photoInput = document.getElementById('photoInput');
+            const cropModal = document.getElementById('cropModal');
+            const cropImage = document.getElementById('cropImage');
+            const cropSave = document.getElementById('cropSave');
+            const cropCancel = document.getElementById('cropCancel');
+            const croppedImageInput = document.getElementById('croppedImage');
+            const photoForm = document.getElementById('photoForm');
+
+            if (photoInput) {
+
+                photoInput.addEventListener('change', function(e) {
+
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+
+                    reader.onload = function(event) {
+
+                        cropImage.src = event.target.result;
+                        cropModal.style.display = "flex";
+
+                        if (cropper) {
+                            cropper.destroy();
+                        }
+
+                        cropper = new Cropper(cropImage, {
+                            aspectRatio: 1,
+                            viewMode: 1,
+                            autoCropArea: 1
+                        });
+                    };
+
+                    reader.readAsDataURL(file);
+                });
+
+                cropSave.addEventListener('click', function() {
+
+                    if (!cropper) return;
+
+                    const canvas = cropper.getCroppedCanvas({
+                        width: 150,
+                        height: 150
+                    });
+
+                    croppedImageInput.value = canvas.toDataURL('image/png');
+
+                    cropper.destroy();
+                    cropModal.style.display = "none";
+
+                    photoForm.submit();
+                });
+
+                cropCancel.addEventListener('click', function() {
+
+                    if (cropper) cropper.destroy();
+
+                    cropModal.style.display = "none";
+                    photoInput.value = "";
+                });
+            }
+        </script>
     </body>
 
     </html>

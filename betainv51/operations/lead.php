@@ -228,7 +228,7 @@ function flash_redirect(string $msg = 'Saved')
     if (document.referrer && document.referrer !== window.location.href) {
       window.location.href = document.referrer + (document.referrer.includes('?') ? '&' : '?') + 'ok=<?= urlencode($msg) ?>';
     } else {
-      window.location.href = 'lead_list.php?ok=<?= urlencode($msg) ?>';
+      window.location.href = 'lead.php?ok=<?= urlencode($msg) ?>';
     }
   </script>
 <?php
@@ -303,6 +303,43 @@ function plan_allowed_for_profile(array $plans, ?string $plan_id, int $profile_t
 $err = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  /* ===== HISTORY AJAX (PUT THIS FIRST INSIDE POST) ===== */
+  if (isset($_POST['get_history'])) {
+
+    $lead_id = (int)$_POST['lead_id'];
+    $rows = [];
+
+    $sql = "SELECT 
+            h.*,
+            s1.status_name AS from_status,
+            s2.status_name AS to_status,
+            u.name AS user_name
+          FROM `$HISTTBL` h
+          LEFT JOIN `$STATUSTBL` s1 ON s1.id = h.from_status_id
+          LEFT JOIN `$STATUSTBL` s2 ON s2.id = h.to_status_id
+          LEFT JOIN `$ADMINUSERS` u ON u.id = h.changed_by
+          WHERE h.lead_id = ?
+          ORDER BY h.id DESC";
+
+    $st = $con->prepare($sql);
+    $st->bind_param("i", $lead_id);
+    $st->execute();
+    $res = $st->get_result();
+
+    while ($r = $res->fetch_assoc()) {
+      $rows[] = [
+        'from' => $r['from_status'] ?? '—',
+        'to' => $r['to_status'] ?? '—',
+        'user' => $r['user_name'] ?? '—',
+        'date' => $r['changed_at'] ? date('d-m-Y h:i A', strtotime($r['changed_at'])) : '—',
+        'reason' => $r['reason']
+      ];
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => true, 'rows' => $rows]);
+    exit;
+  }
 
   $isModal = isset($_POST['status_update']);
 
@@ -419,9 +456,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $meta_json = json_encode($meta, JSON_UNESCAPED_UNICODE);
         $changed_by = $MY_ID ?: null;
 
-        $stH = $con->prepare("INSERT INTO `$HISTTBL` (lead_id,from_status_id,to_status_id,changed_by,reason,meta_json)
-                              VALUES (?,?,?,?,?,?)");
-        stmt_bind($stH, "iiiiss", [$lead_id, $from_status, $to_status, $changed_by, $remark, $meta_json]);
+        $stH = $con->prepare("INSERT INTO `$HISTTBL` (lead_id,from_status_id,to_status_id,changed_by,reason,meta_json,next_followup_dt)
+                              VALUES (?,?,?,?,?,?,?)");
+        stmt_bind($stH, "iiiisss", [$lead_id, $from_status, $to_status, $changed_by, $remark, $meta_json,$followup_db]);
         $stH->execute();
         $stH->close();
       }
@@ -642,9 +679,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   $meta_json = json_encode($meta, JSON_UNESCAPED_UNICODE);
                   $changed_by = $MY_ID ?: null;
 
-                  $stH = $con->prepare("INSERT INTO `$HISTTBL` (lead_id,from_status_id,to_status_id,changed_by,reason,meta_json)
-                                      VALUES (?,?,?,?,?,?)");
-                  stmt_bind($stH, "iiiiss", [$id, $old_status, $status_id, $changed_by, $reason, $meta_json]);
+                  $stH = $con->prepare("INSERT INTO `$HISTTBL` (lead_id,from_status_id,to_status_id,changed_by,reason,meta_json,next_followup_dt)
+                                      VALUES (?,?,?,?,?,?,?)");
+                  stmt_bind($stH, "iissss", [$id, $old_status, $status_id, $changed_by, $reason, $meta_json,$followup_db]);
                   $stH->execute();
                   $stH->close();
                 }
@@ -712,9 +749,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $meta_json = json_encode($meta, JSON_UNESCAPED_UNICODE);
                 $changed_by = $MY_ID ?: null;
 
-                $stH = $con->prepare("INSERT INTO `$HISTTBL` (lead_id,from_status_id,to_status_id,changed_by,reason,meta_json)
-                                    VALUES (?,NULL,?,?,?,?)");
-                stmt_bind($stH, "iiiss", [$newId, $status_id, $changed_by, $reason, $meta_json]);
+                $stH = $con->prepare("INSERT INTO `$HISTTBL` (lead_id,from_status_id,to_status_id,changed_by,reason,meta_json,next_followup_dt)
+                                    VALUES (?,NULL,?,?,?,?,?)");
+                stmt_bind($stH, "iissss", [$newId, $status_id, $changed_by, $reason, $meta_json,$followup_db]);
                 $stH->execute();
                 $stH->close();
               }
@@ -762,6 +799,7 @@ $ptype = (int)($_GET['ptype'] ?? 0);
 $stFilter = (int)($_GET['status'] ?? 0);
 $srcFilter = (int)($_GET['source'] ?? 0);
 $assFilter = (int)($_GET['assignee'] ?? 0);
+$city = trim($_GET['city'] ?? '');
 /* --------------------------------------------------
    Restrict hidden filters to Super Admin only
 -------------------------------------------------- */
@@ -796,6 +834,11 @@ if ($srcFilter > 0) {
   $where .= " AND l.source_id=?";
   $bind[] = $srcFilter;
   $types .= 'i';
+}
+if ($city !== '') {
+  $where .= " AND l.city_location LIKE ?";
+  $bind[] = "%$city%";
+  $types .= 's';
 }
 
 if ($isSuperAdmin) {
@@ -848,14 +891,15 @@ $sql = "SELECT l.*,
             s.status_name, s.status_code,
             src.source_name,
             p.plan_name AS onboarded_plan_name,
-            ab.name AS assigned_by_name
-      FROM `$TABLE` l
-      LEFT JOIN `$STATUSTBL` s ON s.id=l.status_id
-      LEFT JOIN `$SOURCETBL` src ON src.id=l.source_id
-      LEFT JOIN `$PLANTBL` p ON p.id=l.onboarded_plan_id
-      LEFT JOIN `$ADMINUSERS` ab ON ab.id = l.assigned_by
-      $where
-      ORDER BY l.id DESC";
+            ab.name AS assigned_by_name,
+            (SELECT COUNT(*) FROM `$HISTTBL` h WHERE h.lead_id = l.id) as history_count
+        FROM `$TABLE` l
+        LEFT JOIN `$STATUSTBL` s ON s.id = l.status_id
+        LEFT JOIN `$SOURCETBL` src ON src.id = l.source_id
+        LEFT JOIN `$PLANTBL` p ON p.id = l.onboarded_plan_id
+        LEFT JOIN `$ADMINUSERS` ab ON ab.id = l.assigned_by
+        $where
+        ORDER BY l.id DESC";
 
 if (!$all) $sql .= " LIMIT $lim";
 
@@ -1049,6 +1093,10 @@ ob_start(); ?>
   .flatpickr-calendar.arrowBottom:after {
     display: none !important;
   }
+
+  .btn.gray {
+    margin: 2px;
+  }
 </style>
 
 <script>
@@ -1139,6 +1187,11 @@ ob_start(); ?>
         </select>
       <?php endif; ?>
 
+      <input type="text" name="city" class="inp"
+        placeholder="Search City"
+        value="<?= h($city) ?>"
+        style="min-width:150px">
+
 
       <button class="btn gray" type="submit">Search</button>
 
@@ -1166,7 +1219,7 @@ ob_start(); ?>
             <th>Source</th>
             <th>Status</th>
             <th>On-boarded Plan</th>
-            <th>Assigned By / Date</th>
+            <th>Created By / Date</th>
             <th>Assigned To</th>
             <th>Updated</th>
             <th style="min-width:260px">Actions</th>
@@ -1191,6 +1244,9 @@ ob_start(); ?>
 
 
             $assignedByName = $r['assigned_by_name'] ?? '—';
+            $assignedById = (int)($r['assigned_by'] ?? 0);
+            $createdById = (int)($r['created_by'] ?? 0);
+            $historyCount = (int)($r['history_count'] ?? 0);
             $assignedAt = fmt_dt($r['assigned_at'] ?? null);
 
             $payload = [
@@ -1239,7 +1295,11 @@ ob_start(); ?>
               <td>
                 <button class="btn gray" type="button"
                   onclick='openStatusModal(<?= (int)$r["id"] ?>, <?= json_encode($payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
-                  Update Status
+                  Show Status
+                </button>
+                <button class="btn gray" type="button"
+                  onclick="openHistoryModal(<?= (int)$r['id'] ?>)">
+                  History & Update
                 </button>
 
                 <?php if (user_can('edit', $MENU_ID, $con)): ?>
@@ -1247,8 +1307,14 @@ ob_start(); ?>
                 <?php endif; ?>
 
 
-                <?php if (user_can('delete', $MENU_ID, $con)): ?>
-                  <form method="post" style="display:inline" onsubmit="return confirm('Delete this lead?');">
+                <?php
+                if (
+                  user_can('delete', $MENU_ID, $con) &&
+                  $assignedById === $MY_ID &&
+                  $createdById === $MY_ID &&
+                  $historyCount < 2
+                ):
+                ?> <form method="post" style="display:inline" onsubmit="return confirm('Delete this lead?');">
                     <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
                     <input type="hidden" name="id" value="<?= h($r['id']) ?>">
                     <button class="btn red" name="delete" type="submit">Delete</button>
@@ -1263,16 +1329,16 @@ ob_start(); ?>
     </div>
   </div>
 
-  <!-- Status Update Modal -->
-  <div id="statusModal" class="pac-modal">
+
+  <div id="historyModal" class="pac-modal">
     <div class="pac-panel">
+
       <div class="pac-head">
-        <h3 style="margin:0">Update Lead Status</h3>
-        <button class="btn gray" type="button" onclick="closeStatusModal()">Close</button>
+        <h3 style="margin:0">Lead History + Update</h3>
+        <button class="btn gray" onclick="closeHistoryModal()">Close</button>
       </div>
 
-      <div id="leadLabels" class="pac-labelgrid"></div>
-
+      <!-- STATUS UPDATE (same as existing) -->
       <hr style="opacity:.18;margin:14px 0">
 
       <form id="statusForm" method="post" class="pac-grid3">
@@ -1312,6 +1378,44 @@ ob_start(); ?>
           <span id="m_msg" style="color:#9ca3af"></span>
         </div>
       </form>
+
+      <hr style="margin:15px 0;opacity:.2">
+
+      <!-- HISTORY TABLE -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Sr No.</th>
+              <th>From</th>
+              <th>To</th>
+              <th>User</th>
+              <th>Date</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody">
+            <tr>
+              <td colspan="5">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Status Update Modal -->
+  <div id="statusModal" class="pac-modal">
+    <div class="pac-panel">
+      <div class="pac-head">
+        <h3 style="margin:0"> Lead Status</h3>
+        <button class="btn gray" type="button" onclick="closeStatusModal()">Close</button>
+      </div>
+
+      <div id="leadLabels" class="pac-labelgrid"></div>
+
+
     </div>
   </div>
 
@@ -1684,13 +1788,66 @@ ob_start(); ?>
       } else if (document.referrer) {
         window.location.href = document.referrer;
       } else {
-        window.location.href = 'lead_list.php';
+        window.location.href = 'lead.php';
       }
 
     }
   </script>
 
 <?php endif; ?>
+<script>
+  function openHistoryModal(id) {
+    document.getElementById('historyModal').style.display = 'block';
 
+    // ✅ FIX HERE
+    document.getElementById('m_lead_id').value = id;
+
+    const tbody = document.getElementById('historyBody');
+    tbody.innerHTML = `<tr><td colspan="6">Loading...</td></tr>`;
+
+    const fd = new FormData();
+    fd.append('get_history', '1');
+    fd.append('lead_id', id);
+
+    fetch(location.href, {
+        method: 'POST',
+        body: fd
+      })
+      .then(res => res.json())
+      .then(data => {
+
+        if (!data.rows.length) {
+          tbody.innerHTML = `<tr><td colspan="6">No history found</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data.rows.map((r, i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td>${r.from}</td>
+        <td>${r.to}</td>
+        <td>${r.user}</td>
+        <td>${r.date}</td>
+        <td>${r.reason || '-'}</td>
+      </tr>
+    `).join('');
+      });
+    // 🔥 ADD THIS BELOW
+    if (window.flatpickr) {
+      flatpickr(document.getElementById('m_followup_at'), {
+        enableTime: true,
+        time_24hr: false,
+        dateFormat: "d-m-Y h:i K",
+        allowInput: true,
+        appendTo: document.getElementById('historyModal')
+      });
+    }
+  }
+
+
+  function closeHistoryModal() {
+    document.getElementById('historyModal').style.display = 'none';
+  }
+</script>
 <?php
 echo ob_get_clean();
