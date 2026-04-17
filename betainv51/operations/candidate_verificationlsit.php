@@ -245,6 +245,89 @@ $mode = get_str('mode', '');
 /* **********************************************************************
    MODE: CANDIDATE PROFILE  (?mode=candidate&userid=123)
    ********************************************************************** */
+/* =====================
+   SHOW ASSIGNMENT LOGS (by user_id)
+===================== */
+
+if (isset($_GET['show_logs_user_id']) && (int)$_GET['show_logs_user_id'] > 0) {
+
+    $user_id = (int)$_GET['show_logs_user_id'];
+
+    echo '<!doctype html><html><head><meta charset="utf-8"><title>Assign History - Candidate</title>';
+    echo '<link rel="stylesheet" href="/adminconsole/assets/ui.css">';
+    echo '<div style="margin-bottom:10px;">
+    <a class="btn secondary" href="' . h($_SERVER['PHP_SELF']) . '">
+    ← Back to List
+    </a>
+    </div>';
+
+    // Fetch assignment history for jobseeker
+    $sql = "
+        SELECT 
+            l.*,
+            au.name AS changed_by_name,
+            oldm.name AS old_manager_name,
+            newm.name AS new_manager_name
+        FROM jos_app_user_ac_manager_log l
+        LEFT JOIN jos_admin_users au ON au.id = l.changed_by
+        LEFT JOIN jos_admin_users oldm ON oldm.id = l.old_ac_manager_id
+        LEFT JOIN jos_admin_users newm ON newm.id = l.new_ac_manager_id
+        WHERE l.user_id = ?
+        ORDER BY l.id DESC
+    ";
+
+    $stmt = $con->prepare($sql);
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+
+    echo '<div class="card" style="margin-top:15px">';
+    echo '<h3 style="margin-bottom:10px">AC Manager Assignment History (Jobseeker)</h3>';
+
+    if ($res && $res->num_rows > 0) {
+
+        echo '<div class="table-wrap">';
+        echo '<table class="table">';
+
+        echo '<thead>
+        <tr>
+            <th>#</th>
+            <th>Old Manager</th>
+            <th>New Manager</th>
+            <th>Changed By</th>
+            <th>Remark</th>
+            <th>Date</th>
+        </tr>
+      </thead>';
+
+        echo '<tbody>';
+
+        $i = 1;
+        while ($row = $res->fetch_assoc()) {
+
+            echo '<tr>';
+            echo '<td>' . $i++ . '</td>';
+            echo '<td>' . htmlspecialchars($row['old_manager_name'] ?? '—') . '</td>';
+            echo '<td>' . htmlspecialchars($row['new_manager_name'] ?? '—') . '</td>';
+            echo '<td>' . htmlspecialchars($row['changed_by_name'] ?? '—') . '</td>';
+            echo '<td>' . htmlspecialchars($row['remark'] ?? '') . '</td>';
+            echo '<td>' . (!empty($row['changed_at'])
+                ? htmlspecialchars(date('d M Y h:i A', strtotime($row['changed_at'])))
+                : '-') . '</td>';
+            echo '</tr>';
+        }
+
+        echo '</tbody></table></div>';
+    } else {
+        echo '<div class="alert warn">No assignment history found for this jobseeker.</div>';
+    }
+
+    echo '</div>';
+
+    $stmt->close();
+    exit;
+}
+
 if ($mode === 'candidate') {
     $userid = get_int('userid', 0);
     if ($userid <= 0) {
@@ -411,6 +494,8 @@ ORDER BY A.application_date DESC, A.id DESC
 
 
 
+
+
     ob_start(); ?>
     <!doctype html>
     <html lang="en">
@@ -425,6 +510,7 @@ ORDER BY A.application_date DESC, A.id DESC
                 background: #020617;
             }
 
+            
             .headbar {
                 margin: 0;
                 padding: 8px 0 6px;
@@ -1892,6 +1978,18 @@ ob_start();
 
                 <?php endforeach; ?>
             </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
             <!-- Filters -->
             <div class="filters-wrap" id="filtersWrap">
