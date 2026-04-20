@@ -263,11 +263,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $mode        = $_POST['mode'] ?? '';
   $admin_id    = isset($_POST['admin_id']) ? (int)$_POST['admin_id'] : 0;
   $profileType = isset($_POST['profile_type_id']) ? (int)$_POST['profile_type_id'] : 0;
+  if (!in_array($mode, ['followup_today', 'followup_missed', 'followup_completed'])) {
 
-  $dateFrom = $_POST['from'] ?? '';
-  $dateTo   = $_POST['to'] ?? '';
 
-  if (!empty($dateFrom) && !empty($dateTo)) {
+    $dateFrom = $_POST['from'] ?? '';
+    $dateTo   = $_POST['to'] ?? '';
+  }
+
+  /* ❌ FOLLOWUP ME DATE MAT LAGA */
+  if (
+    !empty($dateFrom) &&
+    !empty($dateTo) &&
+    !in_array($mode, ['followup_today', 'followup_missed', 'followup_completed'])
+  ) {
     $created_from = date('Y-m-d H:i:s', strtotime($dateFrom));
     $created_to   = date('Y-m-d H:i:s', strtotime($dateTo));
   }
@@ -294,7 +302,45 @@ if ($profileType > 0) {
   $bindBase[] = $profileType;
   $typesBase .= 'i';
 }
+if ($admin_id > 0) {
 
+  /* ================= FOLLOWUPS ================= */
+
+  if ($mode === 'followup_today') {
+
+    $whereBase .= " AND EXISTS (
+        SELECT 1 FROM $HISTTBL h
+        JOIN $STATUSTBL s ON s.id = h.to_status_id
+        WHERE h.lead_id = l.id
+        AND s.status_code = 'FOLLOW_UP'
+        AND DATE(h.next_followup_dt) = CURDATE()
+    )";
+  }
+
+  if ($mode === 'followup_missed') {
+
+    $whereBase .= " AND EXISTS (
+        SELECT 1 FROM $HISTTBL h
+        JOIN $STATUSTBL s ON s.id = h.to_status_id
+        WHERE h.lead_id = l.id
+        AND s.status_code = 'FOLLOW_UP'
+        AND h.next_followup_dt < NOW()
+    )";
+  }
+
+  if ($mode === 'followup_completed') {
+
+    $whereBase .= " AND EXISTS (
+        SELECT 1 FROM $HISTTBL h1
+        JOIN $STATUSTBL s1 ON s1.id = h1.to_status_id
+        JOIN $HISTTBL h2 ON h2.lead_id = h1.lead_id AND h2.id > h1.id
+        JOIN $STATUSTBL s2 ON s2.id = h2.to_status_id
+        WHERE h1.lead_id = l.id
+        AND s1.status_code = 'FOLLOW_UP'
+        AND s2.status_code != 'FOLLOW_UP'
+    )";
+  }
+}
 if ($admin_id > 0) {
 
   if ($mode === 'leads_assigned') {
@@ -610,21 +656,23 @@ padding-top:100px;
     padding: 10px;
     background: #0f1a2e;
   }
-  td .btn {
-  margin-right: 8px;
-  margin-bottom: 6px;
-}
 
-td form {
-  display: inline-block;
-  margin-right: 8px;
-}
-.action-buttons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
+  td .btn {
+    margin-right: 8px;
+    margin-bottom: 6px;
+  }
+
+  td form {
+    display: inline-block;
+    margin-right: 8px;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
 </style>
 <script>
   window.PACIFIC_PLANS = <?= json_encode($plansByType, JSON_UNESCAPED_UNICODE) ?>;
