@@ -46,23 +46,47 @@ if ($profile_type_id == 2) {
             ON cp.userid=u.id
         WHERE u.id=?
     ");
-}
-// elseif($profile_type_id == 3)
-// {
-//     $stmt = $con->prepare("
-//         SELECT u.mobile_no,
-//                pp.*
-//         FROM jos_app_users u
-//         JOIN jos_app_promoter_profile pp 
-//             ON pp.id = u.profile_id
-//         WHERE u.id=?
-//     ");
-// }
-else {
+} else {
     die("Invalid profile type");
 }
 
 
+/* =========================
+   GET SKILLS FROM API
+========================= */
+
+$skills_list = [];
+
+$position_post = json_encode([
+    "position" => 9   // you can change dynamic later
+]);
+
+$curl = curl_init();
+
+curl_setopt_array($curl, [
+    CURLOPT_URL => "https://pacificconnect2.0.inv51.in/webservices/getMskill_list.php",
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $position_post,
+    CURLOPT_HTTPHEADER => [
+        "Content-Type: application/json"
+    ],
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT => 10,
+]);
+
+$response = curl_exec($curl);
+
+
+if (!curl_errno($curl)) {
+    $result = json_decode($response, true);
+
+    if (!empty($result['status']) && $result['status'] == "success") {
+        $skills_list = $result['data'];
+    }
+}
+
+curl_close($curl);
 /* =========================
    UPDATE MODE
 ========================= */
@@ -87,10 +111,17 @@ if (isset($_POST['update_profile'])) {
     $experience_type  = trim($_POST['experience_type'] ?? '');
     $experience_period = (int)($_POST['experience_period'] ?? 0);
 
+    $job_position_ids = $_POST['job_position'] ?? [];
+    $job_position_ids = array_map('intval', $job_position_ids);
+    $job_position_ids_str = implode(',', $job_position_ids);
+
+    // print_r( $job_position_ids_str );
+    // exit;
+
     /* users table fields */
     $mobile_no = trim($_POST['mobile_no'] ?? '');
-    $latitude  = trim($_POST['latitude'] ?? '');
-    $longitude = trim($_POST['longitude'] ?? '');
+    // $latitude  = trim($_POST['latitude'] ?? '');
+    // $longitude = trim($_POST['longitude'] ?? '');
 
     $con->begin_transaction();
 
@@ -104,8 +135,6 @@ if (isset($_POST['update_profile'])) {
         UPDATE jos_app_candidate_profile SET
             candidate_name=?,
             email=?,
-            pan_no=?,
-            aadhar_no=?,
             gender_id=?,
             birthdate=?,
             address=?,
@@ -115,16 +144,15 @@ if (isset($_POST['update_profile'])) {
             skills=?,
             exp_description=?,
             experience_type=?,
-            experience_period=?
+            experience_period=?,
+            job_position_ids=?
         WHERE id=?
         ");
 
         $stmt->bind_param(
-            "ssssissssssssii",
+            "ssissssssssisi",
             $candidate_name,
             $email,
-            $pan_no,
-            $aadhar_no,
             $gender_id,
             $birthdate,
             $address,
@@ -135,6 +163,7 @@ if (isset($_POST['update_profile'])) {
             $exp_description,
             $experience_type,
             $experience_period,
+            $job_position_ids_str,
             $profile_id
         );
 
@@ -182,8 +211,88 @@ if (isset($_POST['update_profile'])) {
 }
 
 
+/* ====================2. Get Job Positions========================== */
 
+$job_positions = [];
 
+$post_user = json_encode([
+    "user_id" => $user_id
+]);
+
+$curl = curl_init();
+
+curl_setopt_array($curl, [
+    CURLOPT_URL => "https://pacificconnect2.0.inv51.in/webservices/getPosition.php",
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $post_user
+]);
+
+$response = curl_exec($curl);
+curl_close($curl);
+
+if ($response) {
+
+    $result = json_decode($response, true);
+
+    if ($result['status'] == "success") {
+
+        $job_positions = $result['data']['position'];
+    }
+}
+
+/* ====================4. Experience List========================== */
+
+$experience_list = [];
+
+$curl = curl_init();
+
+curl_setopt_array($curl, [
+    CURLOPT_URL => "https://pacificconnect.inv51.in/webservices/getExperience_list.php",
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
+]);
+
+$response = curl_exec($curl);
+curl_close($curl);
+
+if ($response) {
+
+    $result = json_decode($response, true);
+
+    if ($result['status'] == "success") {
+
+        $experience_list = $result['data'];
+    }
+}
+/* ====================4. Experience TYPE========================== */
+
+$experience_type = [];
+
+$curl = curl_init();
+
+curl_setopt_array($curl, [
+    CURLOPT_URL => "https://pacificconnect.inv51.in/webservices/getExptype.php",
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT        => 10,
+]);
+
+$expresponse = curl_exec($curl);
+curl_close($curl);
+
+if ($expresponse) {
+
+    $expresult = json_decode($expresponse, true);
+
+    if ($expresult['status'] == "success") {
+
+        $experience_type = $expresult['data'];
+    }
+}
 
 
 /* =========================
@@ -231,12 +340,27 @@ $gstmt->close();
 ?>
 
 <link rel="stylesheet" href="/adminconsole/assets/ui.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <style>
     .form-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 18px 24px;
+        grid-template-columns: repeat(3, 1fr);
+        /* ✅ 3 in row */
+        gap: 18px 20px;
+    }
+
+    @media (max-width: 900px) {
+        .form-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 600px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     .form-group {
@@ -258,12 +382,189 @@ $gstmt->close();
         display: flex;
         gap: 10px;
     }
+
+    .multi-select {
+        position: relative;
+        width: 100%;
+    }
+
+    /* ================= DARK THEME SKILLS ================= */
+
+    .select-box {
+        border: 1px solid #334155;
+        padding: 10px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        background: #0f172a;
+        /* dark */
+        color: #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .select-box:after {
+        content: "▼";
+        font-size: 12px;
+        color: #94a3b8;
+    }
+
+    /* dropdown */
+    .checkbox-container {
+        display: none;
+        position: absolute;
+        background: #0f172a;
+        /* dark */
+        border: 1px solid #334155;
+        border-radius: 10px;
+        max-height: 220px;
+        overflow-y: auto;
+        width: 100%;
+        z-index: 9999;
+        margin-top: 5px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+
+    /* items */
+    .checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px;
+        cursor: pointer;
+        font-size: 14px;
+        color: #e2e8f0;
+    }
+
+    .checkbox-item:hover {
+        background: #1e293b;
+        /* hover dark */
+    }
+
+    /* checkbox color */
+    .checkbox-item input {
+        accent-color: #3b82f6;
+    }
+
+    /* scrollbar */
+    .checkbox-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .checkbox-container::-webkit-scrollbar-thumb {
+        background: #475569;
+        border-radius: 10px;
+    }
+
+    /* LOCAITION SUGGESTION BOX CSS */
+    .suggestion-box {
+        position: absolute;
+        width: 100%;
+        background: #0b1220;
+        border-radius: 8px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 9999;
+        margin-top: 5px;
+    }
+
+    .suggestion-item {
+        padding: 10px;
+        cursor: pointer;
+    }
+
+    .suggestion-item:hover {
+        background: #334155;
+    }
+
+    /* //job position css */
+    /* Dropdown container */
+    .custom-dropdown {
+        position: relative;
+        width: 100%;
+    }
+
+    /* Box */
+    .dropdown-box {
+        border: 1px solid #334155;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: #0f172a;
+        color: #e2e8f0;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* Arrow */
+    .dropdown-box .arrow {
+        font-size: 12px;
+        color: #94a3b8;
+    }
+
+    /* Dropdown list */
+    .dropdown-list {
+        display: none;
+        position: absolute;
+        width: 100%;
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        max-height: 250px;
+        overflow-y: auto;
+        z-index: 9999;
+        margin-top: 5px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Search box */
+    .dropdown-search {
+        width: 100%;
+        padding: 10px;
+        border: none;
+        border-bottom: 1px solid #334155;
+        background: #020617;
+        color: #e2e8f0;
+        outline: none;
+    }
+
+    /* Items */
+    .dropdown-item {
+        padding: 10px;
+        cursor: pointer;
+        color: #e2e8f0;
+        font-size: 14px;
+    }
+
+    /* Hover */
+    .dropdown-item:hover {
+        background: #1e293b;
+    }
+
+    /* Selected */
+    .dropdown-item.active {
+        background: #2563eb;
+        color: #fff;
+        font-weight: bold;
+    }
+
+    /* Scrollbar */
+    .dropdown-list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .dropdown-list::-webkit-scrollbar-thumb {
+        background: #475569;
+        border-radius: 10px;
+    }
 </style>
 
 <div class="master-wrap">
 
     <div class="headbar">
-        <h2>Edit Recruiter Profile</h2>
+        <h2>Edit Candidate Profile</h2>
     </div>
 
     <div class="card" style="max-width:900px">
@@ -291,7 +592,7 @@ $gstmt->close();
                     <input class="inp" name="email" value="<?= h($data['email']) ?>">
                 </div>
 
-                <div class="form-group">
+                <!-- <div class="form-group">
                     <label class="lbl">PAN No</label>
                     <input class="inp" name="pan_no" value="<?= h($data['pan_no']) ?>">
                 </div>
@@ -299,7 +600,7 @@ $gstmt->close();
                 <div class="form-group">
                     <label class="lbl">Aadhar No</label>
                     <input class="inp" name="aadhar_no" value="<?= h($data['aadhar_no']) ?>">
-                </div>
+                </div> -->
 
                 <div class="form-group">
                     <label class="lbl">Gender</label>
@@ -316,50 +617,138 @@ $gstmt->close();
 
                 <div class="form-group">
                     <label class="lbl">Birthdate</label>
-                    <input class="inp" type="date" name="birthdate" value="<?= h($data['birthdate']) ?>">
+                    <?php
+                    $birthdate_val = '';
+
+                    if (!empty($data['birthdate']) && $data['birthdate'] != '0000-00-00') {
+                        $birthdate_val = date('d-m-Y', strtotime($data['birthdate']));
+                    }
+                    ?>
+                    <input class="inp" value="<?= h($birthdate_val) ?>" placeholder="DD-MM-YYYY" type="text" id="birthdate" name="birthdate" value="<?= h($data['birthdate']) ?>">
                 </div>
 
                 <div class="form-group full">
                     <label class="lbl">Address</label>
                     <textarea class="inp" name="address"><?= h($data['address']) ?></textarea>
                 </div>
+                <br>
+
+
+
+
+                <!-- ✅ IMPORTANT -->
+                <div class="form-group">
+                    <label class="input-label">District</label>
+                    <input class="inp" type="text" id="profileDistrictInput" class="modal-input" autocomplete="off"
+                        value="<?= h($data['district']) ?>">
+
+                    <input type="hidden" name="district" id="profileDistrictId"
+                        value="<?= h($data['district']) ?>">
+
+                    <div id="profileDistrictSuggestions" class="suggestion-box"></div>
+                </div>
+
 
                 <div class="form-group">
-                    <label class="lbl">District</label>
-                    <input class="inp" name="district" value="<?= h($data['district']) ?>">
+                    <label class="input-label">Tehsil/City</label>
+                    <input class="inp" type="text" id="profileCityInput" class="modal-input" autocomplete="off"
+                        value="<?= h($data['city_id']) ?>">
+
+                    <input type="hidden" name="city_id" id="profileCityId"
+                        value="<?= h($data['city_id']) ?>">
+
+
+                    <div id="profileCitySuggestions" class="suggestion-box"></div>
                 </div>
 
                 <div class="form-group">
-                    <label class="lbl">City</label>
-                    <input class="inp" name="city_id" value="<?= h($data['city_id']) ?>">
+                    <label class="input-label">Area/Locality/Village</label>
+                    <input class="inp" type="text" id="profileLocalityInput" class="modal-input" autocomplete="off"
+                        value="<?= h($data['locality_id']) ?>">
+
+                    <input type="hidden" name="locality_id" id="profileLocalityId"
+                        value="<?= h($data['locality_id']) ?>">
+                    <div id="profileLocalitySuggestions" class="suggestion-box"></div>
                 </div>
 
+
+
+                <?php $selected_positions = [];
+
+                if (!empty($data['job_position_ids'])) {
+                    $selected_positions = explode(',', $data['job_position_ids']);
+                } ?>
                 <div class="form-group">
-                    <label class="lbl">Locality</label>
-                    <input class="inp" name="locality_id" value="<?= h($data['locality_id']) ?>">
+                    <label class="lbl">Job Position</label>
+
+                    <div class="multi-select">
+                        <div class="select-box" onclick="toggleJobDropdown()">
+                            <span id="jobSelectedText">Select Job Positions</span>
+                        </div>
+
+                        <div class="checkbox-container" id="jobDropdown">
+                            <!-- 🔍 SEARCH -->
+                            <input type="text"
+                                id="jobSearch"
+                                placeholder="🔍 Search job..."
+                                onkeyup="filterJobs()"
+                                class="dropdown-search">
+
+                            <?php foreach ($job_positions as $position): ?>
+                                <label class="checkbox-item"
+    data-name="<?= strtolower($position['name']) ?>">
+                                    <input type="checkbox"
+                                        name="job_position[]"
+                                        value="<?= $position['id'] ?>"
+                                        <?php if (in_array($position['id'], $selected_positions)) echo 'checked'; ?>
+                                        onchange="updateJobText()">
+
+                                    <?= htmlspecialchars($position['name']) ?>
+                                </label>
+                            <?php endforeach; ?>
+
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group full">
-                    <label class="lbl">Skills</label>
-                    <textarea class="inp" name="skills"><?= h($data['skills']) ?></textarea>
-                </div>
 
-                <div class="form-group full">
-                    <label class="lbl">Experience Description</label>
-                    <textarea class="inp" name="exp_description"><?= h($data['exp_description']) ?></textarea>
-                </div>
+
 
                 <div class="form-group">
                     <label class="lbl">Experience Type</label>
-                    <input class="inp" name="experience_type" value="<?= h($data['experience_type']) ?>">
+                    <select class="inp" name="experience_type">
+                        <option value="">From</option>
+                        <?php if (!empty($experience_type)) { ?>
+                            <?php foreach ($experience_type as $expt) { ?>
+                                <option value="<?php echo $expt['id']; ?>"
+                                    <?php echo (h($data['experience_type']) == $expt['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($expt['name']); ?>
+                                </option>
+                            <?php } ?>
+                        <?php } ?>
+                    </select>
                 </div>
 
+
+                <!-- <?php //print_r($data);
+                        //exit; 
+                        ?> -->
                 <div class="form-group">
                     <label class="lbl">Experience Period</label>
-                    <input class="inp" name="experience_period" value="<?= h($data['experience_period']) ?>">
+                    <select class="inp" name="experience_period">
+                        <option value="">From</option>
+                        <?php if (!empty($experience_list)) { ?>
+                            <?php foreach ($experience_list as $exp) { ?>
+                                <option value="<?php echo $exp['id']; ?>"
+                                    <?php echo (h($data['experience_period']) == $exp['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($exp['name']); ?>
+                                </option>
+                            <?php } ?>
+                        <?php } ?>
+                    </select>
                 </div>
 
-                <div class="form-group">
+                <!-- <div class="form-group">
                     <label class="lbl">Latitude</label>
                     <input class="inp" name="latitude" value="<?= h($data['latitude']) ?>">
                 </div>
@@ -367,7 +756,7 @@ $gstmt->close();
                 <div class="form-group">
                     <label class="lbl">Longitude</label>
                     <input class="inp" name="longitude" value="<?= h($data['longitude']) ?>">
-                </div>
+                </div> -->
 
             </div>
 
@@ -383,3 +772,388 @@ $gstmt->close();
 
     </div>
 </div>
+<script>
+    function toggleJobDropdown() {
+        let box = document.getElementById("jobDropdown");
+        box.style.display = box.style.display === "block" ? "none" : "block";
+    }
+
+    function updateJobText() {
+        let checkboxes = document.querySelectorAll('input[name="job_position[]"]:checked');
+
+        let names = [];
+        checkboxes.forEach(cb => {
+            names.push(cb.parentElement.innerText.trim());
+        });
+
+        document.getElementById("jobSelectedText").innerText =
+            names.length > 0 ? names.join(", ") : "Select Job Positions";
+    }
+
+    // auto load selected text on edit
+    document.addEventListener("DOMContentLoaded", function() {
+        updateJobText();
+    });
+
+    // close dropdown outside click
+    document.addEventListener("click", function(e) {
+        if (!e.target.closest(".multi-select")) {
+            document.getElementById("jobDropdown").style.display = "none";
+        }
+    });
+
+    function filterJobs() {
+
+    let input = document.getElementById("jobSearch").value.toLowerCase();
+
+    let items = document.querySelectorAll("#jobDropdown .checkbox-item");
+
+    items.forEach(item => {
+
+        let name = item.getAttribute("data-name");
+
+        if (name.includes(input)) {
+            item.style.display = "flex";
+        } else {
+            item.style.display = "none";
+        }
+
+    });
+}
+
+function toggleJobDropdown() {
+    let box = document.getElementById("jobDropdown");
+
+    let isOpen = box.style.display === "block";
+
+    box.style.display = isOpen ? "none" : "block";
+
+    if (!isOpen) {
+        setTimeout(() => {
+            document.getElementById("jobSearch").focus();
+        }, 100);
+    }
+}
+</script>
+<script>
+    let currentIndex = -1;
+
+    document.addEventListener("keydown", function(e) {
+
+        let items = document.querySelectorAll("#skillsDropdown .checkbox-item");
+
+        if (items.length === 0) return;
+
+        // DOWN ↓
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+
+            currentIndex++;
+
+            if (currentIndex >= items.length) currentIndex = 0;
+
+            highlightItem(items);
+        }
+
+        // UP ↑
+        if (e.key === "ArrowUp") {
+            e.preventDefault();
+
+            currentIndex--;
+
+            if (currentIndex < 0) currentIndex = items.length - 1;
+
+            highlightItem(items);
+        }
+
+        // ENTER
+        if (e.key === "Enter") {
+            if (currentIndex >= 0) {
+
+                e.preventDefault();
+
+                let checkbox = items[currentIndex].querySelector("input");
+
+                checkbox.checked = !checkbox.checked;
+
+                updateSkills();
+            }
+        }
+
+    });
+
+    function highlightItem(items) {
+
+        items.forEach(item => item.style.background = "");
+
+        items[currentIndex].style.background = "#1e293b";
+
+        items[currentIndex].scrollIntoView({
+            block: "nearest"
+        });
+
+    }
+
+    document.querySelector(".select-box").addEventListener("focus", () => {
+        document.getElementById("skillsDropdown").style.display = "block";
+    });
+
+    flatpickr("#birthdate", {
+        dateFormat: "d-m-Y", // ✅ DD-MM-YYYY
+        allowInput: true
+    });
+</script>
+<script>
+    function closeAllSuggestions() {
+        document.getElementById("profileCitySuggestions").style.display = "none";
+        document.getElementById("profileDistrictSuggestions").style.display = "none";
+        document.getElementById("profileLocalitySuggestions").style.display = "none";
+    }
+    document.querySelectorAll("#profileCityInput, #profileDistrictInput, #profileLocalityInput")
+        .forEach(function(input) {
+
+            input.addEventListener("blur", function() {
+
+                // delay so click on suggestion still works
+                setTimeout(function() {
+                    closeAllSuggestions();
+                }, 150);
+
+            });
+
+        });
+    let profileService;
+    let profilePlaceService;
+
+    let profileSelectedCity = "";
+    let profileSelectedDist = "";
+    let profileSelectedState = "";
+    let profileSelectedCountry = "";
+
+    // INIT
+    function initProfileCityAutocomplete() {
+
+        profileService = new google.maps.places.AutocompleteService();
+        profilePlaceService = new google.maps.places.PlacesService(document.createElement('div'));
+
+        const input = document.getElementById("profileCityInput");
+
+        input.addEventListener("keyup", function() {
+
+            let query = input.value;
+
+            if (query.length < 2) return;
+
+            profileService.getPlacePredictions({
+                input: query
+            }, function(predictions, status) {
+
+                if (!predictions) return;
+
+                showProfileCitySuggestions(predictions);
+            });
+        });
+    }
+
+
+
+    // SHOW DISTRICT
+
+    document.getElementById("profileDistrictInput").addEventListener("keyup", function() {
+
+        let query = this.value;
+
+        if (query.length < 2) return;
+
+        profileService.getPlacePredictions({
+                input: query,
+                types: ["(cities)"], // ✅ ONLY CITY
+                componentRestrictions: {
+                    country: "in"
+                }
+            },
+            function(predictions) {
+
+                if (!predictions) return;
+
+                showProfileDistrictSuggestions(predictions);
+
+            });
+    });
+
+
+    function showProfileDistrictSuggestions(list) {
+        closeAllSuggestions();
+        let box = document.getElementById("profileDistrictSuggestions");
+        box.innerHTML = "";
+
+        list.forEach(function(item) {
+
+            let div = document.createElement("div");
+            div.className = "suggestion-item";
+            div.innerHTML = item.description;
+
+            div.onclick = function() {
+
+                document.getElementById("profileDistrictInput").value = item.description;
+                document.getElementById("profileDistrictId").value = item.description;
+
+
+                profileSelectedDist = item.description;
+
+                box.innerHTML = "";
+            }
+
+            box.appendChild(div);
+        });
+
+        box.style.display = "block";
+    }
+
+
+    // SHOW CITY
+    function showProfileCitySuggestions(list) {
+        closeAllSuggestions();
+        let box = document.getElementById("profileCitySuggestions");
+        box.innerHTML = "";
+        box.style.display = "block";
+
+        list.forEach(function(item) {
+
+            let div = document.createElement("div");
+            div.className = "suggestion-item";
+            div.innerHTML = item.description;
+
+            div.onclick = function() {
+
+                let fullText = item.description;
+                // ✅ FIX: store FULL string for search
+                profileSelectedCity = fullText;
+
+                document.getElementById("profileCityInput").value = cityOnly;
+                document.getElementById("profileCityId").value = cityOnly;
+
+                profileSelectedCity = cityOnly;
+
+                // ✅ GET FULL DETAILS (IMPORTANT LIKE HEADER)
+                profilePlaceService.getDetails({
+                        placeId: item.place_id
+                    },
+                    function(place, status) {
+
+                        if (status !== google.maps.places.PlacesServiceStatus.OK) return;
+
+                        place.address_components.forEach(function(comp) {
+
+                            if (comp.types.includes("administrative_area_level_1")) {
+                                profileSelectedState = comp.long_name;
+                            }
+
+                            if (comp.types.includes("country")) {
+                                profileSelectedCountry = comp.long_name;
+                            }
+                        });
+
+                    }
+                );
+
+                box.innerHTML = "";
+            };
+
+            box.appendChild(div);
+        });
+    }
+
+    // LOCALITY
+    document.getElementById("profileLocalityInput").addEventListener("keyup", function() {
+
+        let query = this.value;
+
+        if (query.length < 2) return;
+
+        // ✅ build search like header
+        let searchQuery = query;
+
+        // ✅ use full city string (important)
+        if (profileSelectedCity) {
+            searchQuery += ", " + profileSelectedCity;
+        }
+
+        if (profileSelectedState) {
+            searchQuery += ", " + profileSelectedState;
+        }
+
+        if (profileSelectedCountry) {
+            searchQuery += ", " + profileSelectedCountry;
+        }
+
+        profileService.getPlacePredictions({
+            input: searchQuery
+        }, function(predictions, status) {
+
+            if (!predictions) return;
+
+            showProfileLocalitySuggestions(predictions);
+        });
+    });
+
+    // SHOW LOCALITY (FILTER BY CITY)
+    function showProfileLocalitySuggestions(list) {
+        closeAllSuggestions();
+        let box = document.getElementById("profileLocalitySuggestions");
+        box.innerHTML = "";
+        box.style.display = "block";
+
+        list.forEach(function(item) {
+
+            let div = document.createElement("div");
+            div.className = "suggestion-item";
+            div.innerHTML = item.description;
+
+            div.onclick = function() {
+
+                let fullText = item.description;
+
+                // cityOnly for cutting
+                let cityOnly = document.getElementById("profileCityInput").value.toLowerCase();
+
+                let parts = fullText.split(",");
+
+                let result = [];
+
+                for (let i = 0; i < parts.length; i++) {
+
+                    // STOP BEFORE CITY (don't include city)
+                    if (parts[i].toLowerCase().includes(cityOnly)) {
+                        break;
+                    }
+
+                    result.push(parts[i].trim());
+                }
+
+                let localityOnly = result.join(", ");
+
+                document.getElementById("profileLocalityInput").value = localityOnly;
+                document.getElementById("profileLocalityId").value = localityOnly;
+
+                box.innerHTML = "";
+            };
+
+            box.appendChild(div);
+        });
+    }
+
+    if (result.length === 0) {
+        localityOnly = parts[0].trim();
+    }
+
+
+    // INIT CALL
+    document.addEventListener("DOMContentLoaded", function() {
+        initProfileCityAutocomplete();
+    });
+</script>
+<script
+    src="https://maps.googleapis.com/maps/api/js?key=
+    AIzaSyCokcdTmQxRaopu75ourz-nNmZNie1wQkY&libraries=places&callback=initProfileCityAutocomplete"
+    async defer></script>
