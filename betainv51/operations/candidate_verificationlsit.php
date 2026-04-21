@@ -1538,10 +1538,20 @@ $has_referrer        = (isset($_GET['has_referrer']) && $_GET['has_referrer'] !=
 $referral_code_in    = get_str('referral_code', '');
 $plan_access_in      = get_int('plan_access', 0);     // 1 free, 2 premium
 $subscription_status = strtolower(get_str('subscription_status', '')); // active|expired|''
-$created_from_raw    = get_str('created_from', '');
-$created_to_raw      = get_str('created_to', '');
-$created_from_sql    = normalize_reg_date($created_from_raw);
-$created_to_sql      = normalize_reg_date($created_to_raw);
+$created_from_raw = get_str('created_from', '');
+$created_to_raw   = get_str('created_to', '');
+
+$created_from_sql = '';
+$created_to_sql   = '';
+
+if ($created_from_raw !== '') {
+    $created_from_sql = normalize_reg_date($created_from_raw) . ' 00:00:00';
+}
+
+if ($created_to_raw !== '') {
+    $created_to_sql = normalize_reg_date($created_to_raw) . ' 23:59:59';
+}
+
 
 
 
@@ -2173,7 +2183,7 @@ ob_start();
                     <input class="inp" type="text" name="city_id" value="<?= h($city_id) ?>" placeholder="City ID">
 
                     <div style="display:flex;flex-direction:column;min-width:180px">
-                        <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Created Date From</span>
+                        <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Reg Date From</span>
                         <input class="inp datepicker" type="text"
                             name="created_from"
                             value="<?= h($created_from_raw) ?>"
@@ -2181,7 +2191,7 @@ ob_start();
                     </div>
 
                     <div style="display:flex;flex-direction:column;min-width:180px">
-                        <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Created Date To</span>
+                        <span style="font-size:12px;color:#9ca3af;margin-bottom:2px">Reg Date To</span>
                         <input class="inp datepicker" type="text"
                             name="created_to"
                             value="<?= h($created_to_raw) ?>"
