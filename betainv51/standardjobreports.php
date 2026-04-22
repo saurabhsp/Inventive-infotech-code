@@ -12,13 +12,13 @@ require_once __DIR__ . '/../includes/auth.php';
 require_login();
 
 // ACCEPT RECRUITER ID FROM LIST
-$recruiter_id = 0;
+$employer_id = 0;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $recruiter_id = isset($_POST['recruiter_id']) ? (int)$_POST['recruiter_id'] : 0;
+  $employer_id = isset($_POST['recruiter_id']) ? (int)$_POST['recruiter_id'] : 0;
 }
 /* ----------------------------
-   ACL: view-only guard (same as premium_jobs_report.php)
+   ACL: view-only guard (same as standard_jobs_report.php)
    ---------------------------- */
 try {
   // Helper: get current logged-in user's id
@@ -224,7 +224,7 @@ if ($position_id > 0) {
 }
 
 /* ======================================================================
-   MODE: Candidate Profile Details  (?candidate={userid})
+   MODE: Employer Profile Details  (?candidate={userid})
    ====================================================================== */
 if (isset($_GET['candidate'])) {
   $userid = (int)$_GET['candidate'];
@@ -267,13 +267,13 @@ if (isset($_GET['candidate'])) {
   <link rel="stylesheet" href="/adminconsole/assets/ui.css">
   <div class="master-wrap">
     <div class="headbar">
-      <h2 style="margin:0"><?= h($row['candidate_name'] ?? 'Candidate') ?></h2>
+      <h2 style="margin:0"><?= h($row['candidate_name'] ?? 'Employer') ?></h2>
       <div style="margin-left:auto;display:flex;gap:8px">
+
         <?php if ($returnUrl): ?>
-          <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back to Position Summary</a>
+          <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back</a>
         <?php endif; ?>
-        <a class="btn secondary" href="<?= h(keep_params(['candidate' => null])) ?>">← Back</a>
-        <button class="btn secondary" onclick="window.print()">Print</button>
+        <a class="btn secondary" href="standard_jobs_report.php">← Back to List</a>
       </div>
     </div>
 
@@ -393,18 +393,35 @@ if (isset($_GET['apps'])) {
   $stmt->close();
 
   // Applications + candidate basics
+  // $sql = "SELECT a.id,
+  //                a.userid,
+  //                a.application_date,
+  //                a.status_id,
+  //                a.interview_date_time,
+  //                cp.candidate_name,
+  //                cp.mobile_no,
+  //                cp.email
+  //         FROM jos_app_applications a
+  //         LEFT JOIN jos_app_candidate_profile cp ON cp.userid = a.userid
+  //         WHERE a.job_listing_type = 2 AND a.job_id = ?
+  //         ORDER BY a.application_date DESC";
   $sql = "SELECT a.id,
-                 a.userid,
-                 a.application_date,
-                 a.status_id,
-                 a.interview_date_time,
-                 cp.candidate_name,
-                 cp.mobile_no,
-                 cp.email
-          FROM jos_app_applications a
-          LEFT JOIN jos_app_candidate_profile cp ON cp.userid = a.userid
-          WHERE a.job_listing_type = 2 AND a.job_id = ?
-          ORDER BY a.application_date DESC";
+               a.userid,
+               a.application_date,
+               a.status_id,
+               s.name AS status_name,
+               a.interview_date_time,
+               cp.candidate_name,
+               cp.mobile_no,
+               cp.email
+        FROM jos_app_applications a
+        LEFT JOIN jos_app_candidate_profile cp 
+               ON cp.userid = a.userid
+        LEFT JOIN jos_app_applicationstatus s
+               ON s.id = a.status_id
+        WHERE a.job_listing_type = 2 
+        AND a.job_id = ?
+        ORDER BY a.application_date DESC";
   $stmt = $con->prepare($sql);
   $stmt->bind_param('i', $jobId);
   $stmt->execute();
@@ -425,9 +442,10 @@ if (isset($_GET['apps'])) {
           <span class="badge"><?= h($job['company_label']) ?></span>
         <?php } ?>
         <?php if ($returnUrl): ?>
-          <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back to Position Summary</a>
+          <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back</a>
+        <?php else: ?>
+          <a class="btn secondary" href="standard_jobs_report.php">← Back</a>
         <?php endif; ?>
-        <a class="btn secondary" href="<?= h(keep_params(['apps' => null])) ?>">← Back</a>
       </div>
     </div>
 
@@ -436,9 +454,9 @@ if (isset($_GET['apps'])) {
         <table class="table">
           <thead>
             <tr>
-              <th>SR No.</th>
+              <th>Sr No.</th>
               <th>Application ID</th>
-              <th>Candidate</th>
+              <th>Employer</th>
               <th>Contact</th>
               <th>Applied On</th>
               <th>Status</th>
@@ -455,7 +473,12 @@ if (isset($_GET['apps'])) {
               </tr>
             <?php } else {
               foreach ($rows as $r) {
-                $viewCandUrl = h(keep_params(['candidate' => (int)$r['userid']]));
+                $currentUrl = $_SERVER['REQUEST_URI'];
+                $basePath   = $_SERVER['SCRIPT_NAME'];
+
+                $viewCandUrl = $basePath
+                  . '?candidate=' . (int)$r['userid']
+                  . '&return=' . urlencode($currentUrl);
                 echo '<tr>';
                 echo '<td>' . $sr++ . '</td>';
                 echo '<td>' . (int)$r['id'] . '</td>';
@@ -467,9 +490,16 @@ if (isset($_GET['apps'])) {
                 echo implode('<br>', $contact);
                 echo '</td>';
                 echo '<td>' . h(fmt_dt($r['application_date'])) . '</td>';
-                echo '<td>' . h((string)$r['status_id']) . '</td>';
+                echo '<td>' . h((string)$r['status_name']) . '</td>';
                 echo '<td>' . h(fmt_dt($r['interview_date_time'])) . '</td>';
-                echo '<td><a class="btn secondary" href="' . $viewCandUrl . '" target="_blank" rel="noopener">View Candidate</a></td>';
+                echo '<td>
+                <a class="btn secondary"
+                  href="' . h($viewCandUrl) . '"
+                  target="_blank"
+                  rel="noopener">
+                  View Employer
+                </a>
+                </td>';
                 echo '</tr>';
               }
             } ?>
@@ -561,15 +591,30 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
     <div class="headbar">
       <h2 style="margin:0"><?= h($row ? ($row['job_position'] ?: 'Job Details') : 'Job not found') ?></h2>
       <div style="margin-left:auto;display:flex;gap:8px">
-        <?php if ($row) {
-          $appsUrl = h(keep_params(['apps' => (int)$row['id']]));
+
+
+        <?php
+        if ($row) {
+
+          $currentUrl = $_SERVER['REQUEST_URI'];
+
+          $basePath = '/adminconsole/operations/standard_jobs_report.php';
+
+          $appsUrl = $basePath
+            . '?apps=' . (int)$row['id']
+            . '&return=' . urlencode($currentUrl);
         ?>
-          <a class="btn secondary" href="<?= $appsUrl ?>" target="_blank">View Applications (<?= (int)$row['apps_count'] ?>)</a>
+          <a class="btn secondary" href="<?= h($appsUrl) ?>" target="_blank">
+            View Applications (<?= (int)$row['apps_count'] ?>)
+          </a>
         <?php } ?>
+
+
         <?php if ($returnUrl): ?>
-          <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back to Position Summary</a>
+          <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back to List</a>
+        <?php else: ?>
+          <a class="btn secondary" href="standard_jobs_report.php">← Back to List</a>
         <?php endif; ?>
-        <a class="btn secondary" href="<?= h(keep_params(['view' => null])) ?>">← Back to List</a>
         <button class="btn secondary" onclick="window.print()">Print</button>
       </div>
     </div>
@@ -867,10 +912,10 @@ $types = '';
 $params = [];
 
 // Apply recruiter filter only if recruiter_id exists
-if ($recruiter_id > 0) {
+if ($employer_id > 0) {
   $where[] = "jv.recruiter_id = ?";
   $types  .= 'i';
-  $params[] = $recruiter_id;
+  $params[] = $employer_id;
 }
 
 if ($q !== '') {
@@ -1048,8 +1093,8 @@ ob_start(); ?>
         <input type="hidden" name="return" value="<?= h($returnUrl) ?>">
       <?php endif; ?>
 
-      <?php if ($recruiter_id > 0): ?>
-        <input type="hidden" name="recruiter_id" value="<?= (int)$recruiter_id ?>">
+      <?php if ($employer_id > 0): ?>
+        <input type="hidden" name="recruiter_id" value="<?= (int)$employer_id ?>">
       <?php endif; ?>
 
 
