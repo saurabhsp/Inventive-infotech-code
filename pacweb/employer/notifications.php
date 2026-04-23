@@ -92,14 +92,14 @@ $result = json_decode($response, true);
         }
 
         /* --- MAIN CONTENT --- */
-        .container {
+        .notifications-container {
             max-width: 900px;
             margin: 30px auto;
             padding: 0 20px;
         }
 
         /* --- NOTIFICATION CARD (MATCHING DESKTOP STYLE) --- */
-        .noti-card {
+        .notifications-card {
             background: var(--white);
             border-radius: 12px;
             border: 1px solid var(--border-light);
@@ -110,7 +110,7 @@ $result = json_decode($response, true);
             transition: 0.2s;
         }
 
-        .noti-card:hover {
+        .notifications-card:hover {
             border-color: var(--primary);
             transform: translateY(-2px);
         }
@@ -127,7 +127,7 @@ $result = json_decode($response, true);
         }
 
         /* Top Bar of Card */
-        .noti-header {
+        .notifications-header {
             padding: 20px 25px;
             display: flex;
             align-items: center;
@@ -198,12 +198,12 @@ $result = json_decode($response, true);
                 height: 60px;
             }
 
-            .container {
+            .notifications-container {
                 margin: 15px auto;
                 padding: 0 15px;
             }
 
-            .noti-header {
+            .notifications-header {
                 padding: 15px;
             }
 
@@ -226,19 +226,19 @@ $result = json_decode($response, true);
     include "includes/preloader.php";
     ?>
 
-    <div class="container">
+    <div class="notifications-container">
 
         <?php if ($result['status'] && !empty($result['notifications'])): ?>
 
             <?php foreach ($result['notifications'] as $noti): ?>
 
-                <div class="noti-card">
+                <div class="notifications-card">
 
                     <?php if ($noti['readstatus'] == 0): ?>
                         <div class="unread-indicator"></div>
                     <?php endif; ?>
 
-                    <div class="noti-header">
+                    <div class="notifications-header">
 
                         <?php
                         // icon based on action_type
