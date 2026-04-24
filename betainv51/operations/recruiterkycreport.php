@@ -446,6 +446,8 @@ $ok = $_GET['ok'] ?? '';
 ob_start();
 ?>
 <link rel="stylesheet" href="/adminconsole/assets/ui.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
     /* SOLID modal (not transparent) */
     .modal {
@@ -657,12 +659,14 @@ ob_start();
             </select>
 
             <!-- Date range -->
-            <input type="date" class="inp" name="from" value="<?= clean($from) ?>">
-            <input type="date" class="inp" name="to" value="<?= clean($to) ?>">
+            <input class="inp datepicker" type="text" name="from" value="<?= clean($from) ?>" placeholder="DD-MM-YYYY" />
+            <input class="inp datepicker" type="text" name="to" value="<?= clean($to) ?>" placeholder="DD-MM-YYYY" />
+            <!-- <input type="date" class="inp" name="from" value="<?= clean($from) ?>">
+            <input type="date" class="inp" name="to" value="<?= clean($to) ?>"> -->
 
             <!-- Employer name filter with autocomplete -->
             <span class="name-wrap">
-                <input type="text" class="inp" name="q" list="recruiterNames" placeholder="Filter by recruiter name..." value="<?= clean($q) ?>">
+                <input type="text" class="inp" name="q" list="recruiterNames" placeholder="Employer Name" value="<?= clean($q) ?>">
                 <datalist id="recruiterNames">
                     <?php foreach ($sugg as $nm): ?>
                         <option value="<?= clean($nm) ?>"></option>
@@ -966,6 +970,15 @@ ob_start();
             if (e.target === missingModal) closeMissing();
         });
     })();
+
+    document.addEventListener("DOMContentLoaded", function() {
+        flatpickr(".datepicker", {
+          altInput: true,
+          altFormat: "d-m-Y",
+          dateFormat: "Y-m-d",
+          allowInput: false
+        });
+      });
 </script>
 <?php
 echo ob_get_clean();

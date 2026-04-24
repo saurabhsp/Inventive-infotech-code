@@ -456,7 +456,7 @@ if (isset($_GET['apps'])) {
             <tr>
               <th>Sr No.</th>
               <th>Application ID</th>
-              <th>Employer</th>
+              <th>Name</th>
               <th>Contact</th>
               <th>Applied On</th>
               <th>Status</th>
@@ -497,7 +497,7 @@ if (isset($_GET['apps'])) {
                   href="' . h($viewCandUrl) . '"
                   target="_blank"
                   rel="noopener">
-                  View Employer
+                  View Profile
                 </a>
                 </td>';
                 echo '</tr>';
@@ -788,7 +788,7 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
                         href="<?= $viewCandUrl ?>"
                         target="_blank"
                         rel="noopener">
-                        View Candidate
+                        View Profile
                       </a>
                     </td>
                   </tr>

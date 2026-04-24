@@ -635,17 +635,17 @@ $net_revenue = $revenue_subscription * 0.75;
 
         <div class="followup-grid">
 
-            <div class="followup-card">
+            <div class="followup-card" onclick="openFollowupBreakdown('today');">
                 <div class="followup-title">Today's Follow-up</div>
                 <div class="followup-value"><?= $todayFollowup ?></div>
             </div>
 
-            <div class="followup-card">
+            <div class="followup-card" onclick="openFollowupBreakdown('completed');">
                 <div class="followup-title">Completed</div>
                 <div class="followup-value"><?= $completedFollowup ?></div>
             </div>
 
-            <div class="followup-card">
+            <div class="followup-card" onclick="openFollowupBreakdown('missed');">
                 <div class="followup-title">Missed</div>
                 <div class="followup-value"><?= $missedFollowup ?></div>
             </div>
@@ -691,6 +691,24 @@ $net_revenue = $revenue_subscription * 0.75;
             form.submit();
         }
 
+          //for folowup
+        function openFollowupBreakdown(type) {
+
+            const form = document.getElementById('dashboardPostForm');
+
+            // Set mode based on card clicked
+            if (type === 'today') {
+                document.getElementById('f_mode').value = 'followup_today';
+            } else if (type === 'completed') {
+                document.getElementById('f_mode').value = 'followup_completed';
+            } else if (type === 'missed') {
+                document.getElementById('f_mode').value = 'followup_missed';
+            }
+            // Redirect to followup listing page
+            form.action = "/adminconsole/operations/lead_list.php";
+
+            form.submit();
+        }
 
 
         function showTodayDate() {

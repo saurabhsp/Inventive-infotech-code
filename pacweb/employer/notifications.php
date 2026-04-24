@@ -225,70 +225,71 @@ $result = json_decode($response, true);
     include "includes/header.php";
     include "includes/preloader.php";
     ?>
+    <div class="notification-page">
+        <div class="notifications-container">
 
-    <div class="notifications-container">
+            <?php if ($result['status'] && !empty($result['notifications'])): ?>
 
-        <?php if ($result['status'] && !empty($result['notifications'])): ?>
+                <?php foreach ($result['notifications'] as $noti): ?>
 
-            <?php foreach ($result['notifications'] as $noti): ?>
+                    <div class="notifications-card">
 
-                <div class="notifications-card">
+                        <?php if ($noti['readstatus'] == 0): ?>
+                            <div class="unread-indicator"></div>
+                        <?php endif; ?>
 
-                    <?php if ($noti['readstatus'] == 0): ?>
-                        <div class="unread-indicator"></div>
-                    <?php endif; ?>
+                        <div class="notifications-header">
 
-                    <div class="notifications-header">
-
-                        <?php
-                        // icon based on action_type
-                        $iconClass = "fa-bell";
-                        $iconBox = "icon-call";
-
-                        if ($noti['action_type'] == 1) {
-                            $iconClass = "fa-phone";
+                            <?php
+                            // icon based on action_type
+                            $iconClass = "fa-bell";
                             $iconBox = "icon-call";
-                        } elseif ($noti['action_type'] == 2) {
-                            $iconClass = "fa-whatsapp";
-                            $iconBox = "icon-call";
-                        } elseif ($noti['action_type'] == 3) {
-                            $iconClass = "fa-map-marker-alt";
-                            $iconBox = "icon-location";
-                        }
-                        ?>
 
-                        <div class="icon-box <?php echo $iconBox; ?>">
-                            <i class="fas <?php echo $iconClass; ?>"></i>
+                            if ($noti['action_type'] == 1) {
+                                $iconClass = "fa-phone";
+                                $iconBox = "icon-call";
+                            } elseif ($noti['action_type'] == 2) {
+                                $iconClass = "fa-whatsapp";
+                                $iconBox = "icon-call";
+                            } elseif ($noti['action_type'] == 3) {
+                                $iconClass = "fa-map-marker-alt";
+                                $iconBox = "icon-location";
+                            }
+                            ?>
+
+                            <div class="icon-box <?php echo $iconBox; ?>">
+                                <i class="fas <?php echo $iconClass; ?>"></i>
+                            </div>
+
+                            <div class="noti-title">
+                                <?php echo htmlspecialchars($noti['title']); ?>
+                            </div>
+
                         </div>
 
-                        <div class="noti-title">
-                            <?php echo htmlspecialchars($noti['title']); ?>
+                        <div class="noti-body">
+                            <?php echo htmlspecialchars($noti['msg']); ?>
+                        </div>
+
+                        <div class="noti-footer">
+                            <span class="noti-time">
+                                <?php echo $noti['datetime']; ?>
+                            </span>
+
+                            <a href="#" class="view-link">View Details</a>
                         </div>
 
                     </div>
 
-                    <div class="noti-body">
-                        <?php echo htmlspecialchars($noti['msg']); ?>
-                    </div>
+                <?php endforeach; ?>
 
-                    <div class="noti-footer">
-                        <span class="noti-time">
-                            <?php echo $noti['datetime']; ?>
-                        </span>
+            <?php else: ?>
 
-                        <a href="#" class="view-link">View Details</a>
-                    </div>
+                <p>No notifications found</p>
 
-                </div>
+            <?php endif; ?>
 
-            <?php endforeach; ?>
-
-        <?php else: ?>
-
-            <p>No notifications found</p>
-
-        <?php endif; ?>
-
+        </div>
     </div>
     <?php include "includes/bottom-bar.php"; ?>
     <script>

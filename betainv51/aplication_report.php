@@ -1170,49 +1170,64 @@ ORDER BY a.application_date DESC
 /* ----------------- filters ----------------- */
 
 /* detect dashboard POST */
-
 $is_from_dashboard = false;
-$filter_admin_id   = 0;
-$listing_type      = 0;
-$status_id         = 0;
+$dashboard_admin_id = 0;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_id'])) {
-  $is_from_dashboard = true;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_id']))
+{
+    $is_from_dashboard = true;
+    $dashboard_admin_id = (int)$_POST['admin_id'];
 
-  $filter_admin_id = (int)($_POST['admin_id'] ?? 0);
-  $date_from       = $_POST['from'] ?? '';
-  $date_to         = $_POST['to'] ?? '';
-  $listing_type    = (int)($_POST['lt'] ?? 0);
-  $status_id       = (int)($_POST['status_id'] ?? 0);
+    $date_from = $_POST['from'] ?? '';
+    $date_to   = $_POST['to'] ?? '';
+}
+else
+{
+    $date_from = get_str('from', '');
+    $date_to   = get_str('to', '');
+}
 
-  // keep params for keep_params()
-  $_GET['admin_id'] = $filter_admin_id;
-  $_GET['from']     = $date_from;
-  $_GET['to']       = $date_to;
-  $_GET['lt']       = $listing_type;
-  $_GET['status_id'] = $status_id;
-} else {
-  $filter_admin_id = get_int('admin_id', 0);
-  $date_from       = get_str('from', '');
-  $date_to         = get_str('to', '');
-  $listing_type    = get_int('lt', 0);
-  $status_id       = get_int('status_id', 0);
+$dashboard_company_names = [];
+if ($dashboard_admin_id > 0) {
+
+    $sqlCompanies = "
+        SELECT DISTINCT rp.organization_name
+        FROM jos_app_users u
+        JOIN jos_app_recruiter_profile rp ON rp.id = u.id
+        WHERE u.ac_manager_id = ?
+        AND u.profile_type_id = 1
+        AND rp.organization_name IS NOT NULL
+        AND rp.organization_name != ''
+    ";
+
+    $stmtComp = $con->prepare($sqlCompanies);
+    $stmtComp->bind_param("i", $dashboard_admin_id);
+    $stmtComp->execute();
+    $resComp = $stmtComp->get_result();
+
+    while ($rowComp = $resComp->fetch_assoc()) {
+        $dashboard_company_names[] = $rowComp['organization_name'];
+    }
+
+    $stmtComp->close();
 }
 
 
 /* convert dd-mm-yyyy to yyyy-mm-dd */
-if ($date_from) {
-  $d = DateTime::createFromFormat('Y-m-d', $date_from)
-    ?: DateTime::createFromFormat('d-m-Y', $date_from);
+if ($date_from)
+{
+    $d = DateTime::createFromFormat('Y-m-d', $date_from)
+      ?: DateTime::createFromFormat('d-m-Y', $date_from);
 
-  if ($d) $date_from = $d->format('Y-m-d');
+    if ($d) $date_from = $d->format('Y-m-d');
 }
 
-if ($date_to) {
-  $d = DateTime::createFromFormat('Y-m-d', $date_to)
-    ?: DateTime::createFromFormat('d-m-Y', $date_to);
+if ($date_to)
+{
+    $d = DateTime::createFromFormat('Y-m-d', $date_to)
+      ?: DateTime::createFromFormat('d-m-Y', $date_to);
 
-  if ($d) $date_to = $d->format('Y-m-d');
+    if ($d) $date_to = $d->format('Y-m-d');
 }
 
 /* convert dd/mm/yyyy to yyyy-mm-dd for DB */
@@ -1225,12 +1240,19 @@ if ($date_to) {
   if ($d) $date_to = $d->format('Y-m-d');
 }
 
-//$listing_type = get_int('lt', 0);         // 0=All, 1=Premium (walk-in), 2=Standard (vacancy)
-//$status_id    = get_int('status_id', 0);  // jos_app_applicationstatus.id
+$listing_type = get_int('lt', 0);         // 0=All, 1=Premium (walk-in), 2=Standard (vacancy)
+$status_id    = get_int('status_id', 0);  // jos_app_applicationstatus.id
 $candidate_name = get_str('candidate_name', '');
 $company_name = get_str('company_name', '');
-$view_all     = get_int('all', 0);        // 1=View All
-$limit        = $view_all ? 1000 : 50;
+
+/* If coming from dashboard → force View All */
+if ($is_from_dashboard) {
+    $view_all = 1;
+} else {
+    $view_all = get_int('all', 0);
+}
+
+$limit        = $view_all ? 100000 : 50;
 
 
 /* ----------------- status options ----------------- */
@@ -1258,26 +1280,11 @@ LEFT JOIN jos_app_jobvacancies JV ON (A.job_listing_type=2 AND JV.id=A.job_id)
 LEFT JOIN jos_app_recruiter_profile RP1 ON RP1.id = JW.recruiter_id
 LEFT JOIN jos_app_recruiter_profile RP2 ON RP2.id = JV.recruiter_id
 LEFT JOIN jos_app_candidate_profile CP ON CP.userid = A.userid
-LEFT JOIN jos_app_users U
-    ON (
-        (A.job_listing_type = 2 AND JV.recruiter_id = U.profile_id AND U.profile_type_id = 1)
-        OR
-        (A.job_listing_type = 1 AND JW.recruiter_id = U.profile_id AND U.profile_type_id = 1)
-    )
 WHERE 1=1
 ";
 
 $types_cards = '';
 $params_cards = [];
-
-
-if ($filter_admin_id > 0) {
-  $sql_cards .= " AND U.ac_manager_id = ?";
-  $types_cards .= 'i';
-  $params_cards[] = $filter_admin_id;
-}
-
-
 
 if ($date_from !== '') {
   $sql_cards .= " AND DATE(A.application_date)>=?";
@@ -1315,6 +1322,27 @@ if ($company_name !== '') {
 
   for ($i = 0; $i < 4; $i++)
     $params_cards[] = "%" . $company_name . "%";
+}
+
+// 🔹 Dashboard company filter (AC Manager filter)
+// 🔹 Dashboard company filter (AC Manager filter)
+if ($dashboard_admin_id > 0 && !empty($dashboard_company_names)) {
+
+    $placeholders = implode(',', array_fill(0, count($dashboard_company_names), '?'));
+
+    $sql_cards .= " AND (
+        JW.company_name IN ($placeholders)
+        OR JV.company_name IN ($placeholders)
+        OR RP1.organization_name IN ($placeholders)
+        OR RP2.organization_name IN ($placeholders)
+    )";
+
+    $types_cards .= str_repeat('s', count($dashboard_company_names) * 4);
+
+    foreach ($dashboard_company_names as $c) $params_cards[] = $c;
+    foreach ($dashboard_company_names as $c) $params_cards[] = $c;
+    foreach ($dashboard_company_names as $c) $params_cards[] = $c;
+    foreach ($dashboard_company_names as $c) $params_cards[] = $c;
 }
 
 $sql_cards .= " GROUP BY A.status_id";
@@ -1378,25 +1406,12 @@ $sql[] = "LEFT JOIN jos_crm_jobpost JP2 ON JP2.id = JV.job_position_id";
 $sql[] = "LEFT JOIN jos_app_recruiter_profile RP2 ON RP2.id = JV.recruiter_id";
 /* Jobseeker */
 $sql[] = "LEFT JOIN jos_app_candidate_profile CP ON CP.userid = A.userid";
-/* Recruiter user / account manager mapping */
-$sql[] = "LEFT JOIN jos_app_users U
-          ON (
-              (A.job_listing_type = 2 AND JV.recruiter_id = U.profile_id AND U.profile_type_id = 1)
-              OR
-              (A.job_listing_type = 1 AND JW.recruiter_id = U.profile_id AND U.profile_type_id = 1)
-          )";
 $sql[] = "WHERE 1=1";
+
 
 
 $types = '';
 $binds = [];
-
-if ($filter_admin_id > 0) {
-  $sql[] = "AND U.ac_manager_id = ?";
-  $types .= 'i';
-  $binds[] = $filter_admin_id;
-}
-
 if ($date_from !== '') {
   $sql[] = "AND DATE(A.application_date) >= ?";
   $types .= 's';
@@ -1435,6 +1450,26 @@ if ($company_name !== '') {
   $binds[] = "%" . $company_name . "%";
   $binds[] = "%" . $company_name . "%";
   $binds[] = "%" . $company_name . "%";
+}
+
+// 🔹 Dashboard company filter (Main list)
+if ($dashboard_admin_id > 0 && !empty($dashboard_company_names)) {
+
+    $placeholders = implode(',', array_fill(0, count($dashboard_company_names), '?'));
+
+    $sql[] = "AND (
+        JW.company_name IN ($placeholders)
+        OR JV.company_name IN ($placeholders)
+        OR RP1.organization_name IN ($placeholders)
+        OR RP2.organization_name IN ($placeholders)
+    )";
+
+    $types .= str_repeat('s', count($dashboard_company_names) * 4);
+
+    foreach ($dashboard_company_names as $c) $binds[] = $c;
+    foreach ($dashboard_company_names as $c) $binds[] = $c;
+    foreach ($dashboard_company_names as $c) $binds[] = $c;
+    foreach ($dashboard_company_names as $c) $binds[] = $c;
 }
 
 
@@ -1613,10 +1648,17 @@ ob_start(); ?>
       width: 100%;
     }
 
-    .table th,
+    /* .table th,
     .table td {
       word-break: break-word;
-    }
+    } */
+      .table td {
+    word-break: break-word;
+}
+
+.table th {
+    white-space: nowrap;
+}
   </style>
 </head>
 
@@ -1629,7 +1671,7 @@ ob_start(); ?>
           <div class="muted">Last <?= $view_all ? 'All' : '50'; ?> records • Filter by date, listing type, and status.</div>
         </div>
         <div style="margin-left:auto">
-          <a class="btn secondary" href="<?= h(keep_params(['admin_id' => null, 'from' => null, 'to' => null, 'lt' => null, 'status_id' => null, 'candidate_name' => null, 'all' => null, 'company_name' => null])) ?>">
+          <a class="btn secondary" href="<?= h(keep_params(['from' => null, 'to' => null, 'lt' => null, 'status_id' => null, 'candidate_name' => null, 'all' => null, 'company_name' => null])) ?>">
             Reset</a>
         </div>
       </div>
@@ -1664,11 +1706,11 @@ ob_start(); ?>
       <!-- Show/Hide Filter Button -->
       <div style="margin-left:auto; display:flex; align-items:center;">
         <button type="button"
-          id="toggleFilterBtn"
-          class="btn secondary"
-          onclick="toggleFilterBox(); return false;">
-          Show Filters
-        </button>
+  id="toggleFilterBtn"
+  class="btn secondary"
+  onclick="toggleFilterBox(); return false;">
+  Show Filters
+</button>
       </div>
 
     </div>
@@ -1677,7 +1719,6 @@ ob_start(); ?>
     <div id="filterPanel" class="card toolbar hide">
 
       <form method="get">
-        <input type="hidden" name="admin_id" value="<?= (int)$filter_admin_id ?>">
         <div class="row">
           <div class="group">
             <label>From</label>
@@ -1777,8 +1818,12 @@ ob_start(); ?>
                   </td>
                   <td><?= h($r['job_position'] ?: '—') ?></td>
                   <td><?= h($r['company_name'] ?: '—') ?></td>
-                  <td><span class="pill <?= $pill_cls ?>"><?= h($lt_text) ?></span></td>
-                  <td><span class="badge"><?= h($status) ?></span></td>
+                  <td style="text-align:center; white-space:nowrap;">
+                    <span class="pill <?= $pill_cls ?>">
+                      <?= h($lt_text) ?>
+                    </span>
+                  </td>
+                  <td style="text-align:center; white-space:nowrap;"><span class="badge"><?= h($status) ?></span></td>
                   <td>
                     <div style="display:flex;gap:6px;flex-wrap:wrap">
                       <a class="btn secondary" href="<?= $jobHref ?>" target="_blank" rel="noopener">View Job</a>

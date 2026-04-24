@@ -594,56 +594,59 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
 
 
 
-/* suggestion dropdown */
-.suggestion-box{
-    position:absolute;
-    top:100%;
-    left:0;
-    width:100%;
+    /* suggestion dropdown */
+    .suggestion-box {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
 
-    max-height:200px;
-    overflow-y:auto;
+        max-height: 200px;
+        overflow-y: auto;
 
-    background:#020617;
-    border-radius:8px;
+        background: #020617;
+        border-radius: 8px;
 
-    z-index:999999;
+        z-index: 999999;
 
-    margin-top:6px;
+        margin-top: 6px;
 
-    box-shadow:0 10px 25px rgba(0,0,0,.45);
-}
-
-/* suggestion item */
-.suggestion-item{
-    padding:10px 12px;
-    cursor:pointer;
-    font-size:13px;
-    color:#e2e8f0;
-}
-
-/* hover */
-.suggestion-item:hover{
-    background:#697fed;
-    color:#fff;
-}
-.modal-content{
-    overflow:visible;
-}
-.suggestion-box{
-    animation:fadeIn .15s ease;
-}
-
-@keyframes fadeIn{
-    from{
-        opacity:0;
-        transform:translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, .45);
     }
-    to{
-        opacity:1;
-        transform:translateY(0);
+
+    /* suggestion item */
+    .suggestion-item {
+        padding: 10px 12px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #e2e8f0;
     }
-}
+
+    /* hover */
+    .suggestion-item:hover {
+        background: #697fed;
+        color: #fff;
+    }
+
+    .modal-content {
+        overflow: visible;
+    }
+
+    .suggestion-box {
+        animation: fadeIn .15s ease;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 
 <div class="master-wrap">
@@ -1169,11 +1172,10 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
                 <div id="citySuggestions" class="suggestion-box"></div>
             </div>
 
-
-            <!-- Hidden fields -->
+            <!-- 
             <input type="hidden" id="city_place_id" name="city_place_id">
             <input type="hidden" id="city_lat" name="city_lat">
-            <input type="hidden" id="city_lng" name="city_lng">
+            <input type="hidden" id="city_lng" name="city_lng"> -->
 
             <div class="form-group">
                 <label>Locality</label>
@@ -1217,7 +1219,7 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
 
             <div class="form-group">
                 <label>Upload Image</label>
-                <input type="file" id="img_file" name="images[]" multiple accept="image/*">
+                <input type="file" id="img_file" accept="image/*">
             </div>
 
             <div class="form-group">
@@ -1328,45 +1330,100 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
 
                 let filtered = [];
 
+
                 predictions.forEach(function(p) {
 
-                    let text = p.description;
 
+
+
+                    if (
+                        p.types.includes("establishment") ||
+                        p.types.includes("point_of_interest")
+                    ) {
+                        return;
+                    }
+
+                    let text = p.description;
+                    let queryLower = query.toLowerCase();
+                    let descLower = text.toLowerCase();
+
+                    if (!descLower.startsWith(queryLower)) {
+                        return;
+                    }
                     /* country */
                     if (type === "country") {
-                        filtered.push(p);
+
+                        if (p.types.includes("country")) {
+                            filtered.push(p);
+                        }
+
                     }
 
                     /* state */
+                    /* state */
                     else if (type === "state") {
-                        if (text.includes(selectedCountry))
+
+                        if (
+                            p.types.includes("administrative_area_level_1") &&
+                            text.includes(selectedCountry)
+                        ) {
                             filtered.push(p);
+                        }
+
                     }
 
                     /* district */
                     else if (type === "district") {
-                        if (text.includes(selectedState))
-                            filtered.push(p);
+
+                        if (
+                            p.types.includes("administrative_area_level_3") ||
+                            p.types.includes("locality")
+                        ) {
+
+                            if (text.toLowerCase().includes(selectedState.toLowerCase())) {
+                                filtered.push(p);
+                            }
+
+                        }
+
                     }
 
                     /* city */
                     else if (type === "city") {
 
-                        checkCityDistrict(p, function(valid) {
+                        if (p.types.includes("locality")) {
 
-                            if (valid) {
+                            if (text.toLowerCase().includes(selectedState.toLowerCase())) {
                                 filtered.push(p);
-                                showSuggestions(filtered, inputId, type);
                             }
 
-                        });
+                        }
 
                     }
 
                     /* locality */
                     else if (type === "locality") {
-                        if (text.includes(selectedCity))
-                            filtered.push(p);
+
+                        if (
+                            p.types.includes("sublocality") ||
+                            p.types.includes("sublocality_level_1") ||
+                            p.types.includes("neighborhood") ||
+                            p.types.includes("locality") ||
+                            p.types.includes("premise")
+                        ) {
+
+                            if (
+                                selectedCity &&
+                                text.toLowerCase().includes(selectedCity.toLowerCase())
+                            ) {
+
+                                if (text.toLowerCase().includes(query.toLowerCase())) {
+                                    filtered.push(p);
+                                }
+
+                            }
+                        }
+
                     }
 
                 });
@@ -1416,8 +1473,16 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
 
     function showSuggestions(list, inputId, type) {
 
+
         let box = document.getElementById(type + "Suggestions");
         box.innerHTML = "";
+
+        if (list.length === 0) {
+            box.style.display = "none";
+            return;
+        }
+
+        box.style.display = "block";
 
         list.forEach(function(item) {
 
@@ -1759,20 +1824,37 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
     /* remove */
 
     $(document).on('click', '.removeImage', function() {
+
+        let rowIndex = $(this).closest('tr').index();
+
+        /* remove hidden inputs */
+        $('#imageInputs input').eq(rowIndex * 3).remove();
+        $('#imageInputs input').eq(rowIndex * 3).remove();
+        $('#imageInputs input').eq(rowIndex * 3).remove();
+
         $(this).closest('tr').remove();
+
         if ($('#imageTable tbody tr').length == 0) {
             $('#imageTableWrap').hide();
         }
+
     });
     $(document).on('click', '.editImage', function() {
 
         editingImageRow = $(this).closest('tr');
+
+        let rowIndex = editingImageRow.index();
 
         let order = editingImageRow.find('td:eq(1)').text();
         let status = editingImageRow.find('td:eq(2)').text().trim() === 'Active' ? 1 : 0;
 
         $('#img_order').val(order);
         $('#img_status').val(status);
+
+        /* REMOVE OLD HIDDEN INPUTS */
+        $('#imageInputs input').eq(rowIndex * 3).remove();
+        $('#imageInputs input').eq(rowIndex * 3).remove();
+        $('#imageInputs input').eq(rowIndex * 3).remove();
 
         $('#imageModal').addClass('active');
 

@@ -228,7 +228,7 @@ function flash_redirect(string $msg = 'Saved')
     if (document.referrer && document.referrer !== window.location.href) {
       window.location.href = document.referrer + (document.referrer.includes('?') ? '&' : '?') + 'ok=<?= urlencode($msg) ?>';
     } else {
-      window.location.href = 'lead.php?ok=<?= urlencode($msg) ?>';
+      window.location.href = 'lead_list.php?ok=<?= urlencode($msg) ?>';
     }
   </script>
 <?php
@@ -332,7 +332,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'to' => $r['to_status'] ?? '—',
         'user' => $r['user_name'] ?? '—',
         'date' => $r['changed_at'] ? date('d-m-Y h:i A', strtotime($r['changed_at'])) : '—',
-        'reason' => $r['reason']
+        'reason' => $r['reason'],
+        'next_followup_dt' => $r['next_followup_dt']
+          ? date('d-m-Y h:i A', strtotime($r['next_followup_dt']))
+          : '—',
       ];
     }
 
@@ -458,7 +461,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stH = $con->prepare("INSERT INTO `$HISTTBL` (lead_id,from_status_id,to_status_id,changed_by,reason,meta_json,next_followup_dt)
                               VALUES (?,?,?,?,?,?,?)");
-        stmt_bind($stH, "iiiisss", [$lead_id, $from_status, $to_status, $changed_by, $remark, $meta_json,$followup_db]);
+        stmt_bind($stH, "iiiisss", [$lead_id, $from_status, $to_status, $changed_by, $remark, $meta_json, $followup_db]);
         $stH->execute();
         $stH->close();
       }
@@ -681,7 +684,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                   $stH = $con->prepare("INSERT INTO `$HISTTBL` (lead_id,from_status_id,to_status_id,changed_by,reason,meta_json,next_followup_dt)
                                       VALUES (?,?,?,?,?,?,?)");
-                  stmt_bind($stH, "iissss", [$id, $old_status, $status_id, $changed_by, $reason, $meta_json,$followup_db]);
+                  stmt_bind($stH, "iissss", [$id, $old_status, $status_id, $changed_by, $reason, $meta_json, $followup_db]);
                   $stH->execute();
                   $stH->close();
                 }
@@ -751,7 +754,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $stH = $con->prepare("INSERT INTO `$HISTTBL` (lead_id,from_status_id,to_status_id,changed_by,reason,meta_json,next_followup_dt)
                                     VALUES (?,NULL,?,?,?,?,?)");
-                stmt_bind($stH, "iissss", [$newId, $status_id, $changed_by, $reason, $meta_json,$followup_db]);
+                stmt_bind($stH, "iissss", [$newId, $status_id, $changed_by, $reason, $meta_json, $followup_db]);
                 $stH->execute();
                 $stH->close();
               }
@@ -1149,6 +1152,9 @@ ob_start(); ?>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <?php if (user_can('add', $MENU_ID, $con)): ?>
           <a class="btn green" href="<?= h(keep_params(['add' => 1])) ?>">Add New Lead</a>
+          <a class="btn green" href="add_lead.php">Excel Import</a>
+          <a href="lead_excel_sample.php" class="btn primary">Download Sample Excel</a>
+
         <?php endif; ?>
       </div>
     </div>
@@ -1295,7 +1301,7 @@ ob_start(); ?>
               <td>
                 <button class="btn gray" type="button"
                   onclick='openStatusModal(<?= (int)$r["id"] ?>, <?= json_encode($payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
-                  Show Status
+                  Detail
                 </button>
                 <button class="btn gray" type="button"
                   onclick="openHistoryModal(<?= (int)$r['id'] ?>)">
@@ -1334,7 +1340,7 @@ ob_start(); ?>
     <div class="pac-panel">
 
       <div class="pac-head">
-        <h3 style="margin:0">Lead History + Update</h3>
+        <h3 style="margin:0">Lead History & Update Status</h3>
         <button class="btn gray" onclick="closeHistoryModal()">Close</button>
       </div>
 
@@ -1387,11 +1393,11 @@ ob_start(); ?>
           <thead>
             <tr>
               <th>Sr No.</th>
-              <th>From</th>
-              <th>To</th>
-              <th>User</th>
               <th>Date</th>
-              <th>Reason</th>
+              <th>Lead Status</th>
+              <th>Followup Date</th>
+              <th>Updated by</th>
+              <th>Remark</th>
             </tr>
           </thead>
           <tbody id="historyBody">
@@ -1555,7 +1561,8 @@ ob_start(); ?>
   <div class="pac-panel" style="max-width:980px">
     <div class="pac-head">
       <h3 style="margin:0"><?= $isEdit ? 'Edit Lead' : 'Add Lead' ?></h3>
-      <a class="btn gray" href="<?= h(keep_params(['edit' => null, 'add' => null])) ?>">Back to List</a>
+      <!-- <a class="btn gray" href="<?= h(keep_params(['edit' => null, 'add' => null])) ?>">Back to List</a> -->
+      <button type="button" class="btn gray" onclick="window.history.back()">Back to List</button>
     </div>
 
     <?php if ($err): ?><div class="badge off" style="margin:10px 0"><?= h($err) ?></div><?php endif; ?>
@@ -1653,7 +1660,7 @@ ob_start(); ?>
 
       <!-- Jobseeker -->
       <div id="js_candidate" style="grid-column: span 2">
-        <label>Jobseeker  Name*</label>
+        <label>Jobseeker Name*</label>
         <input name="candidate_name" class="inp" value="<?= h($val('candidate_name')) ?>" placeholder="Jobseeker  name">
       </div>
       <div id="js_fill" class="hide"></div>
@@ -1788,7 +1795,7 @@ ob_start(); ?>
       } else if (document.referrer) {
         window.location.href = document.referrer;
       } else {
-        window.location.href = 'lead.php';
+        window.location.href = 'lead_list.php';
       }
 
     }
@@ -1822,12 +1829,12 @@ ob_start(); ?>
         }
 
         tbody.innerHTML = data.rows.map((r, i) => `
-      <tr>
+       <tr>
         <td>${i+1}</td>
-        <td>${r.from}</td>
-        <td>${r.to}</td>
-        <td>${r.user}</td>
         <td>${r.date}</td>
+        <td>${r.to}</td>
+        <td>${r.next_followup_dt}</td>
+        <td>${r.user}</td>
         <td>${r.reason || '-'}</td>
       </tr>
     `).join('');

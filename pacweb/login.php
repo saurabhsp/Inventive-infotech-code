@@ -53,13 +53,13 @@ function get_message(): array
 }
 
 /* ---------------- OTP FUNCTION ---------------- */
-function send_otp($mobile_no)
+function send_otp($mobile_no, $purpose = 'signup')
 {
     $url = API_BASE_URL . "generate_otp.php";
 
     $postData = [
         'mobile_number' => $mobile_no,
-        'purpose' => 'signup'
+        'purpose' => $purpose
     ];
 
     $ch = curl_init($url);
@@ -68,19 +68,13 @@ function send_otp($mobile_no)
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => http_build_query($postData),
-
-        // ✅ ADD HERE (THIS IS THE MAIN FIX)
         CURLOPT_CONNECTTIMEOUT => 5,
         CURLOPT_TIMEOUT => 10,
-
         CURLOPT_FAILONERROR => true
     ]);
 
     $response = curl_exec($ch);
-//   print_r($postData);
-//   print_r($response);
-//     exit;
-    // ✅ ERROR HANDLING (ADD THIS)
+
     if (curl_errno($ch)) {
         error_log("cURL Error: " . curl_error($ch));
         curl_close($ch);
@@ -88,11 +82,55 @@ function send_otp($mobile_no)
     }
 
     curl_close($ch);
-
     $result = json_decode($response, true);
-  
+    // ✅ Check API response properly
+    return ($result && isset($result['status']) && $result['status'] === 'success');
+}
 
-    return ($result && $result['status'] === 'success');
+/* ===== FORGOT PASSWORD ===== */
+$action = "";
+if ($action === 'forgot_password') {
+
+    $mobile_no = preg_replace('/\D+/', '', $_POST['mobile_no'] ?? '');
+
+    if (strlen($mobile_no) !== 10) {
+        set_message("Mobile number must be 10 digits.", "error");
+        header("Location: " . self_url());
+        exit;
+    }
+
+    // check user exists
+    $stmt = $con->prepare("SELECT id FROM jos_app_users WHERE mobile_no = ? LIMIT 1");
+    $stmt->bind_param("s", $mobile_no);
+    $stmt->execute();
+    $res = $stmt->get_result();
+
+    if ($res->num_rows < 1) {
+        set_message("Mobile number not registered.", "error");
+        header("Location: " . self_url());
+        exit;
+    }
+
+    // rate limit (reuse existing)
+    if (isset($_SESSION['otp_time']) && time() - $_SESSION['otp_time'] < 30) {
+        set_message("Please wait before requesting OTP again.", "error");
+        header("Location: " . self_url());
+        exit;
+    }
+
+    $_SESSION['otp_mobile'] = $mobile_no;
+    $_SESSION['otp_time'] = time();
+
+    // ✅ send OTP with correct purpose
+    if (!send_otp($mobile_no, 'forgot_password')) {;
+        set_message("Failed to send OTP", "error");
+        header("Location: " . self_url());
+        exit;
+    }
+
+    // ✅ redirect SAME verify page
+    header("Location: " . verify_otp_url());
+    exit;
 }
 
 /* ---------------- HELPERS FOR REF URL ---------------- */
@@ -117,7 +155,7 @@ function self_url(array $params = []): string
     return $base . (!empty($query) ? '?' . http_build_query($query) : '');
 }
 
-function verify_otp_url(): string
+function verify_otp_url($purpose = 'signup'): string
 {
     $base = 'verify_otp.php';
     $query = [];
@@ -126,7 +164,9 @@ function verify_otp_url(): string
         $query['ref'] = $_SESSION['referral_code'];
     }
 
-    return $base . (!empty($query) ? '?' . http_build_query($query) : '');
+    $query['purpose'] = $purpose; // ✅ ADD THIS
+
+    return $base . '?' . http_build_query($query);
 }
 
 /* ---------------- FORM ---------------- */
@@ -186,13 +226,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['otp_mobile'] = $mobile_no;
             $_SESSION['otp_time'] = time();
 
-            if (!send_otp($mobile_no)) {
+            if (!send_otp($mobile_no, 'signup')) {
                 set_message("Failed to send OTP", "error");
                 header("Location: " . self_url());
                 exit;
             }
 
-            header("Location: " . verify_otp_url());
+            header("Location: " . verify_otp_url('signup'));
             exit;
         }
 
@@ -208,6 +248,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: " . self_url(['step' => 'password']));
         exit;
     }
+
+    /* ===== STEP 2: FORGOT PASS ===== */
+    $action = $_POST['action'] ?? '';
+    $mobile_no = preg_replace('/\D+/', '', $_POST['mobile_no'] ?? '');
+
+    /* ===== FORGOT PASSWORD ===== */
+    if ($action === 'forgot_password') {
+
+        if (strlen($mobile_no) !== 10) {
+            set_message("Mobile number must be 10 digits.", "error");
+            header("Location: " . self_url());
+            exit;
+        }
+
+        $stmt = $con->prepare("SELECT id FROM jos_app_users WHERE mobile_no = ? LIMIT 1");
+        $stmt->bind_param("s", $mobile_no);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        if ($res->num_rows < 1) {
+            set_message("Mobile number not registered.", "error");
+            header("Location: " . self_url());
+            exit;
+        }
+
+        $_SESSION['otp_mobile'] = $mobile_no;
+        $_SESSION['otp_time'] = time();
+
+        if (!send_otp($mobile_no, 'forgot_password')) {
+            set_message("Failed to send OTP", "error");
+            header("Location: " . self_url());
+            exit;
+        }
+
+        header("Location: " . verify_otp_url('forgot_password'));
+        exit;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     /* ===== STEP 2: LOGIN ===== */
     if ($action === 'login') {
@@ -637,6 +728,8 @@ $ref_qs = !empty($_SESSION['referral_code']) ? '?ref=' . urlencode($_SESSION['re
         .forgot-link {
             color: var(--primary);
             font-weight: 700;
+            font-size: 17px;
+
         }
 
         .forgot-link:hover {
@@ -781,17 +874,21 @@ $ref_qs = !empty($_SESSION['referral_code']) ? '?ref=' . urlencode($_SESSION['re
                         <label class="remember-me">
                             <input type="checkbox" name="remember_me"> Remember me
                         </label>
-                        <a href="/forgot-password.php" class="forgot-link">Forgot Password?</a>
                     </div>
 
+                    <!-- ✅ LOGIN BUTTON INSIDE FORM -->
                     <button type="submit" class="btn-main">Login</button>
                 </form>
 
-                <!-- Change Mobile Form -->
+                <!-- ✅ FORGOT PASSWORD SEPARATE -->
                 <form method="POST" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'] . $ref_qs); ?>">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf); ?>">
-                    <input type="hidden" name="action" value="reset">
-                    <button type="submit" class="btn-secondary">Change Mobile Number</button>
+                    <input type="hidden" name="action" value="forgot_password">
+                    <input type="hidden" name="mobile_no" value="<?php echo htmlspecialchars($mobile_no); ?>">
+
+                    <button type="submit" class="forgot-link" style="background:none;border:none; margin-top:20px;">
+                        Forgot Password?
+                    </button>
                 </form>
 
             <?php endif; ?>

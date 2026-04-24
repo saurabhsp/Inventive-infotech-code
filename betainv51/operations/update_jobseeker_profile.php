@@ -98,8 +98,6 @@ if (isset($_POST['update_profile'])) {
     /* candidate profile fields */
     $candidate_name   = trim($_POST['candidate_name'] ?? '');
     $email            = trim($_POST['email'] ?? '');
-    $pan_no           = trim($_POST['pan_no'] ?? '');
-    $aadhar_no        = trim($_POST['aadhar_no'] ?? '');
     $gender_id        = (int)($_POST['gender_id'] ?? 0);
     $birthdate        = trim($_POST['birthdate'] ?? '');
     $address          = trim($_POST['address'] ?? '');
@@ -145,12 +143,13 @@ if (isset($_POST['update_profile'])) {
             exp_description=?,
             experience_type=?,
             experience_period=?,
-            job_position_ids=?
+            job_position_ids=?,
+            mobile_no=?
         WHERE id=?
         ");
 
         $stmt->bind_param(
-            "ssissssssssisi",
+            "ssissssssssissi",
             $candidate_name,
             $email,
             $gender_id,
@@ -164,6 +163,7 @@ if (isset($_POST['update_profile'])) {
             $experience_type,
             $experience_period,
             $job_position_ids_str,
+            $mobile_no,
             $profile_id
         );
 
@@ -590,17 +590,7 @@ $gstmt->close();
                 <div class="form-group">
                     <label class="lbl">Email</label>
                     <input class="inp" name="email" value="<?= h($data['email']) ?>">
-                </div>
-
-                <!-- <div class="form-group">
-                    <label class="lbl">PAN No</label>
-                    <input class="inp" name="pan_no" value="<?= h($data['pan_no']) ?>">
-                </div>
-
-                <div class="form-group">
-                    <label class="lbl">Aadhar No</label>
-                    <input class="inp" name="aadhar_no" value="<?= h($data['aadhar_no']) ?>">
-                </div> -->
+                </div>            
 
                 <div class="form-group">
                     <label class="lbl">Gender</label>
@@ -621,10 +611,10 @@ $gstmt->close();
                     $birthdate_val = '';
 
                     if (!empty($data['birthdate']) && $data['birthdate'] != '0000-00-00') {
-                        $birthdate_val = date('d-m-Y', strtotime($data['birthdate']));
+                        $birthdate_val = $data['birthdate']; 
                     }
                     ?>
-                    <input class="inp" value="<?= h($birthdate_val) ?>" placeholder="DD-MM-YYYY" type="text" id="birthdate" name="birthdate" value="<?= h($data['birthdate']) ?>">
+                    <input class="inp"  value="<?= h($birthdate_val) ?>" placeholder="DD-MM-YYYY" type="text" id="birthdate" name="birthdate" >
                 </div>
 
                 <div class="form-group full">
@@ -696,7 +686,7 @@ $gstmt->close();
 
                             <?php foreach ($job_positions as $position): ?>
                                 <label class="checkbox-item"
-    data-name="<?= strtolower($position['name']) ?>">
+                                    data-name="<?= strtolower($position['name']) ?>">
                                     <input type="checkbox"
                                         name="job_position[]"
                                         value="<?= $position['id'] ?>"
@@ -778,11 +768,36 @@ $gstmt->close();
         box.style.display = box.style.display === "block" ? "none" : "block";
     }
 
-    function updateJobText() {
-        let checkboxes = document.querySelectorAll('input[name="job_position[]"]:checked');
+    function updateJobText(el = null) {
 
+        let allCheckboxes = document.querySelectorAll('input[name="job_position[]"]');
+        let checked = document.querySelectorAll('input[name="job_position[]"]:checked');
+
+        // ❌ Block more than 3
+        if (checked.length > 3) {
+            el.checked = false;
+            return;
+        }
+
+        // ✅ DISABLE remaining if 3 selected
+        if (checked.length === 3) {
+            allCheckboxes.forEach(cb => {
+                if (!cb.checked) {
+                    cb.disabled = true;
+                    cb.parentElement.style.opacity = "0.5"; // optional fade
+                }
+            });
+        } else {
+            // ✅ ENABLE back if less than 3
+            allCheckboxes.forEach(cb => {
+                cb.disabled = false;
+                cb.parentElement.style.opacity = "1";
+            });
+        }
+
+        // ✅ Update text
         let names = [];
-        checkboxes.forEach(cb => {
+        checked.forEach(cb => {
             names.push(cb.parentElement.innerText.trim());
         });
 
@@ -804,36 +819,36 @@ $gstmt->close();
 
     function filterJobs() {
 
-    let input = document.getElementById("jobSearch").value.toLowerCase();
+        let input = document.getElementById("jobSearch").value.toLowerCase();
 
-    let items = document.querySelectorAll("#jobDropdown .checkbox-item");
+        let items = document.querySelectorAll("#jobDropdown .checkbox-item");
 
-    items.forEach(item => {
+        items.forEach(item => {
 
-        let name = item.getAttribute("data-name");
+            let name = item.getAttribute("data-name");
 
-        if (name.includes(input)) {
-            item.style.display = "flex";
-        } else {
-            item.style.display = "none";
-        }
+            if (name.includes(input)) {
+                item.style.display = "flex";
+            } else {
+                item.style.display = "none";
+            }
 
-    });
-}
-
-function toggleJobDropdown() {
-    let box = document.getElementById("jobDropdown");
-
-    let isOpen = box.style.display === "block";
-
-    box.style.display = isOpen ? "none" : "block";
-
-    if (!isOpen) {
-        setTimeout(() => {
-            document.getElementById("jobSearch").focus();
-        }, 100);
+        });
     }
-}
+
+    function toggleJobDropdown() {
+        let box = document.getElementById("jobDropdown");
+
+        let isOpen = box.style.display === "block";
+
+        box.style.display = isOpen ? "none" : "block";
+
+        if (!isOpen) {
+            setTimeout(() => {
+                document.getElementById("jobSearch").focus();
+            }, 100);
+        }
+    }
 </script>
 <script>
     let currentIndex = -1;
@@ -899,8 +914,12 @@ function toggleJobDropdown() {
     });
 
     flatpickr("#birthdate", {
-        dateFormat: "d-m-Y", // ✅ DD-MM-YYYY
-        allowInput: true
+        altInput: true,
+        altFormat: "d-m-Y", // 👀 what user sees
+        dateFormat: "Y-m-d", // 📤 what gets submitted
+        allowInput: true,
+        defaultDate: document.getElementById("birthdate").value
+
     });
 </script>
 <script>

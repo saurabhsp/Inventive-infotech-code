@@ -126,25 +126,29 @@ $todayFollowup = fetch_one(
 /* ---------------- MISSED FOLLOW-UP ---------------- */
 $missedFollowup = fetch_one(
     $con,
-    "SELECT COUNT(*) AS total
-    FROM $historyTbl h
-    JOIN (
-        SELECT lead_id, MAX(id) AS max_id
-        FROM $historyTbl
-        GROUP BY lead_id
-    ) x ON x.max_id = h.id
-    JOIN $statusTbl s ON s.id = h.to_status_id
-    JOIN $crmLeads_tbl l ON l.id = h.lead_id
-    WHERE s.status_code = 'FOLLOW_UP'
-    AND h.next_followup_dt IS NOT NULL
-    AND h.next_followup_dt < NOW()
-    AND (
-        l.assigned_by = ?
-        OR (
-            (l.assigned_by IS NULL OR l.assigned_by = 0)
-            AND l.created_by = ?
-        )
-    )",
+    "SELECT COUNT(DISTINCT h1.lead_id) AS total
+FROM jos_app_crm_lead_status_history h1
+JOIN jos_app_crm_lead_statuses s1 
+    ON s1.id = h1.to_status_id
+JOIN jos_app_crm_leads l 
+    ON l.id = h1.lead_id
+LEFT JOIN jos_app_crm_lead_status_history h2 
+    ON h2.lead_id = h1.lead_id
+    AND h2.id > h1.id
+WHERE s1.status_code = 'FOLLOW_UP'
+AND h1.next_followup_dt IS NOT NULL
+AND (
+    h2.id IS NULL
+    OR
+    DATE(h2.changed_at) > DATE(h1.next_followup_dt)
+)
+AND (
+    l.assigned_by = ?
+    OR (
+        (l.assigned_by IS NULL OR l.assigned_by = 0)
+        AND l.created_by = ?
+    )
+)",
     "ii",
     [$logged_admin_id, $logged_admin_id]
 );
@@ -758,17 +762,17 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
 
         <div class="followup-grid">
 
-            <div class="followup-card">
+            <div class="followup-card" onclick="openFollowupBreakdown('today');">
                 <div class="followup-title">Today's Follow-up</div>
                 <div class="followup-value"><?= $todayFollowup ?></div>
             </div>
 
-            <div class="followup-card">
+            <div class="followup-card" onclick="openFollowupBreakdown('completed');">
                 <div class="followup-title">Completed</div>
                 <div class="followup-value"><?= $completedFollowup ?></div>
             </div>
 
-            <div class="followup-card">
+            <div class="followup-card" onclick="openFollowupBreakdown('missed');">
                 <div class="followup-title">Missed</div>
                 <div class="followup-value"><?= $missedFollowup ?></div>
             </div>
@@ -813,6 +817,25 @@ $net_revenue = $revenue_subscription * 0.75; // minus 25%
                 // 🔹 Default 
                 form.action = "#";
             }
+
+            form.submit();
+        }
+
+        //for folowup
+        function openFollowupBreakdown(type) {
+
+            const form = document.getElementById('dashboardPostForm');
+
+            // Set mode based on card clicked
+            if (type === 'today') {
+                document.getElementById('f_mode').value = 'followup_today';
+            } else if (type === 'completed') {
+                document.getElementById('f_mode').value = 'followup_completed';
+            } else if (type === 'missed') {
+                document.getElementById('f_mode').value = 'followup_missed';
+            }
+            // Redirect to followup listing page
+            form.action = "/adminconsole/operations/lead_list.php";
 
             form.submit();
         }

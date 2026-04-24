@@ -43,6 +43,7 @@ if ($menu_id_override > 0) {
   }
 }
 
+
 /* loose LIKE match */
 if ((int)$can_view !== 1) {
   $like_pattern = '%' . $script_basename;
@@ -74,9 +75,12 @@ if ((int)$can_view !== 1) {
 }
 
 /* -------- page config -------- */
-$page_title = 'Employer List';
+$page_title = 'Employer Verification List';
 if (session_status() !== PHP_SESSION_ACTIVE) {
   session_start();
+}
+if (empty($_SESSION['csrf_token'])) {
+  $_SESSION['csrf_token'] = bin2hex(random_bytes(16));
 }
 if (!defined('DOMAIN_URL')) {
   define('DOMAIN_URL', '/');
@@ -123,6 +127,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $_GET['page'] = 1;
   }
 }
+
+
+
+
+
+
+/* Flash helper for modal messages */
+function flash_modal_and_redirect($html)
+{
+  $_SESSION['modal_html'] = $html;
+  $to = $_SERVER['PHP_SELF'] . (strpos($_SERVER['PHP_SELF'], '?') === false ? '?' : '&') . 'blocked=1';
+  header('Location: ' . $to);
+  exit;
+}
+
+/* ---- VERIFY USER HANDLER ---- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_user_id'])) {
+
+  $uid = (int)$_POST['verify_user_id'];
+  $status = (int)$_POST['verfied_status'];
+  $admin_id = (int)($_SESSION['admin_user']['id'] ?? 0);
+
+  if ($uid > 0) {
+
+    $stmt = $con->prepare("
+            UPDATE jos_app_users 
+            SET verfied_status=?,
+                verified_by=?,
+                verified_at=NOW()
+            WHERE id=?
+        ");
+
+    $stmt->bind_param("iii", $status, $admin_id, $uid);
+    $stmt->execute();
+    $stmt->close();
+  }
+}
+
+
 
 
 ob_start();
@@ -354,18 +397,19 @@ ob_start();
     });
 
   });
-   function toggleFilterBox() {
-      var box = document.getElementById('filterBox');
-      var btn = document.getElementById('toggleFilterBtn');
 
-      if (box.style.display === "none" || box.style.display === "") {
-        box.style.display = "block";
-        btn.innerText = "Hide Filters";
-      } else {
-        box.style.display = "none";
-        btn.innerText = "Show Filters";
-      }
+  function toggleFilterBox() {
+    var box = document.getElementById('filterBox');
+    var btn = document.getElementById('toggleFilterBtn');
+
+    if (box.style.display === "none" || box.style.display === "") {
+      box.style.display = "block";
+      btn.innerText = "Hide Filters";
+    } else {
+      box.style.display = "none";
+      btn.innerText = "Show Filters";
     }
+  }
 </script>
 
 <div class="master-wrap">
@@ -497,27 +541,27 @@ ob_start();
         exit;
       }
 
-      $chk = $con->prepare("
-        SELECT 1
-        FROM jos_app_users u
-        WHERE u.profile_type_id = 1
-          AND u.profile_id = ?
-          AND u.ac_manager_id = ?
-        LIMIT 1
-    ");
-      $chk->bind_param("ii", $rid, $logged_admin_id);
-      $chk->execute();
-      $chk->store_result();
-      $ok = ($chk->num_rows > 0);
-      $chk->close();
+      //   $chk = $con->prepare("
+      //     SELECT 1
+      //     FROM jos_app_users u
+      //     WHERE u.profile_type_id = 1
+      //       AND u.profile_id = ?
+      //       AND u.ac_manager_id = ?
+      //     LIMIT 1
+      // ");
+      //   $chk->bind_param("ii", $rid, $logged_admin_id);
+      //   $chk->execute();
+      //   $chk->store_result();
+      //   $ok = ($chk->num_rows > 0);
+      //   $chk->close();
 
-      if (!$ok) {
-        echo '<div class="alert warn">No records assigned.</div>';
-        echo '<div style="margin-top:10px"><a class="btn secondary" href="' . h($back_url) . '">Back to list</a></div>';
-        echo '</div></div>';
-        echo ob_get_clean();
-        exit;
-      }
+      //   if (!$ok) {
+      //     echo '<div class="alert warn">No records assigned.</div>';
+      //     echo '<div style="margin-top:10px"><a class="btn secondary" href="' . h($back_url) . '">Back to list</a></div>';
+      //     echo '</div></div>';
+      //     echo ob_get_clean();
+      //     exit;
+      //   }
 
       /* ====== Recruiter profile ====== */
       $sql = "
@@ -814,6 +858,7 @@ ob_start();
     $q                   = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
     $city_id             = isset($_GET['city_id']) ? trim((string)$_GET['city_id']) : '';
     $status_id           = isset($_GET['status_id']) ? (int)$_GET['status_id'] : 1;
+    $verified_filter     = isset($_GET['verified_filter']) ? (int)$_GET['verified_filter'] : -1;
     $kyc_status_id = isset($_GET['kyc_status_id']) ? $_GET['kyc_status_id'] : '';
     $referral_code_in    = isset($_GET['referral_code']) ? trim((string)$_GET['referral_code']) : '';
     $plan_access_in      = isset($_GET['plan_access']) ? (int)$_GET['plan_access'] : 0;
@@ -847,26 +892,14 @@ ob_start();
       }
     }
 
-    /* ---- Quick check: any assigned? ---- */
-    $chk = $con->prepare("SELECT 1 FROM jos_app_users WHERE profile_type_id=1 AND ac_manager_id=? LIMIT 1");
-    $chk->bind_param("i", $logged_admin_id);
-    $chk->execute();
-    $chk->store_result();
-    $has_assigned = ($chk->num_rows > 0);
-    $chk->close();
 
-    if (!$has_assigned) {
-      echo '<div class="alert warn">No records assigned.</div>';
-      echo '</div></div>';
-      echo ob_get_clean();
-      exit;
-    }
 
     /* ---- build SQL ---- */
     $sql_base = "
   FROM jos_app_users u
   LEFT JOIN jos_app_recruiter_profile rp ON (u.profile_type_id=1 AND rp.id=u.profile_id)
   LEFT JOIN jos_admin_users am ON am.id = u.ac_manager_assigned_by
+  LEFT JOIN jos_app_verification_status vs ON vs.status = u.verfied_status
 
   LEFT JOIN jos_app_users ur ON ur.id = u.referred_by
   LEFT JOIN jos_app_recruiter_profile rrp ON (ur.profile_type_id=1 AND rrp.id=ur.profile_id)
@@ -912,9 +945,9 @@ LEFT JOIN jos_app_kycstatus ks ON ks.id = kyc.status
     $params_common = [];
 
     $where_common[] = "u.profile_type_id = 1";
-    $where_common[] = "u.ac_manager_id = ?";
-    $types_common  .= "i";
-    $params_common[] = $logged_admin_id;
+    // $where_common[] = "u.ac_manager_id = ?";
+    // $types_common  .= "i";
+    // $params_common[] = $logged_admin_id;
 
     if ($q !== '') {
       $where_common[] = "(u.mobile_no LIKE CONCAT('%',?,'%')
@@ -935,6 +968,22 @@ LEFT JOIN jos_app_kycstatus ks ON ks.id = kyc.status
       $where_common[] = "u.status_id=?";
       $types_common .= 'i';
       $params_common[] = $status_id;
+    }
+    /* verified filter */
+    if ($verified_filter >= 0) {
+      $where_common[] = "u.verfied_status=?";
+      $types_common .= 'i';
+      $params_common[] = $verified_filter;
+    }
+    // ===== REMOVE VERIFIED FILTER FOR CARDS =====
+    $where_for_cards = $where_common;
+    $params_for_cards = $params_common;
+    $types_for_cards = $types_common;
+
+    if ($verified_filter >= 0) {
+      array_pop($where_for_cards);
+      array_pop($params_for_cards);
+      $types_for_cards = substr($types_for_cards, 0, -1);
     }
     /* ===== KYC Filter ===== */
     if ($kyc_status_id !== '') {
@@ -1040,10 +1089,13 @@ LEFT JOIN jos_app_kycstatus ks ON ks.id = kyc.status
         $order = ' ORDER BY u.id DESC';
     }
 
+
     /* total count */
-    $sql_count = "SELECT COUNT(DISTINCT u.id) AS c " . $sql_base . $sql_where;
+    $sql_count = "SELECT COUNT(*) AS c " . $sql_base . $sql_where;
     $stmt = $con->prepare($sql_count);
-    $stmt->bind_param($types, ...$params);
+    if ($types !== '') {
+      $stmt->bind_param($types, ...$params);
+    }
     $stmt->execute();
     $total = 0;
     $stmt->bind_result($total);
@@ -1063,14 +1115,44 @@ LEFT JOIN jos_app_kycstatus ks ON ks.id = kyc.status
       $offset = 0;
     }
 
+    /* ---- ALL USERS COUNT (ignore verified filter) ---- */
+    $where_all = $where;
+    $params_all = $params;
+    $types_all = $types;
+
+    /* remove verified filter condition */
+    if ($verified_filter >= 0) {
+      // remove last condition (verified filter)
+      array_pop($where_all);
+      array_pop($params_all);
+      $types_all = substr($types_all, 0, -1);
+    }
+
+    $sql_where_all = $where_all ? (' WHERE ' . implode(' AND ', $where_all)) : '';
+
+    $sql_count_all = "SELECT COUNT(*) AS c " . $sql_base . $sql_where_all;
+
+    $stmt_all = $con->prepare($sql_count_all);
+    if ($types_all !== '') {
+      $stmt_all->bind_param($types_all, ...$params_all);
+    }
+    $stmt_all->execute();
+    $stmt_all->bind_result($all_total);
+    $stmt_all->fetch();
+    $stmt_all->close();
+
     /* main query */
 
 
     $sql = "
 SELECT
-  u.id, u.mobile_no, u.profile_id, u.city_id, u.referral_code, u.myreferral_code,
+  u.id, u.mobile_no,u.profile_type_id, u.profile_id, u.city_id, u.referral_code, u.myreferral_code,
   u.referred_by, u.active_plan_id, u.status_id, u.created_at,  u.ac_manager_assigned_at,
   u.ac_manager_assigned_by,  am.name AS assigned_by_name,
+  vs.name AS verification_name,
+  u.verfied_status,
+  u.verified_by,
+  u.verified_at,
 
   rp.organization_name, rp.contact_person_name, rp.designation,rp.company_logo,
 
@@ -1100,40 +1182,83 @@ SELECT
     ?>
 
     <!-- ================== PLAN CARDS UI ================== -->
+    <?php
+    $status_cards = [];
+    $res_status = mysqli_query($con, "SELECT name, status FROM jos_app_verification_status");
+
+    while ($row_s = mysqli_fetch_assoc($res_status)) {
+      $status_cards[] = $row_s;
+    }
+    ?>
     <div class="cards-row">
-      <a class="stat-card <?= ($plan_id_filter == 0 ? 'active' : '') ?>"
-        href="<?= h(keep_params(['plan_id' => null, 'page' => 1])) ?>">
-        <div class="stat-title">Total Records</div>
-        <div class="stat-num"><?= (int)$cards_total ?></div>
+      <!-- ALL CARD -->
+      <a class="stat-card <?= ($verified_filter == -1 ? 'active' : '') ?>"
+        href="<?= h(keep_params(['verified_filter' => -1, 'page' => 1])) ?>">
+
+        <div class="stat-title">All</div>
+        <div class="stat-num"><?= (int)$all_total ?></div>
       </a>
 
-      <?php foreach ($subscription_plan_opts as $p):
-        $pid = (int)$p['id'];
-        $cnt = (int)($plan_counts[$pid] ?? 0);
-        // If you want to hide 0 count plans, uncomment:
-        // if ($cnt === 0) continue;
-        $isActive = ($plan_id_filter === $pid);
-      ?>
-        <a class="stat-card <?= $isActive ? 'active' : '' ?>"
-          href="<?= h(keep_params(['plan_id' => $pid, 'page' => 1])) ?>">
-          <div class="stat-title"><?= h($p['plan_name']) ?></div>
-          <div class="stat-num"><?= $cnt ?></div>
+      <?php foreach ($status_cards as $s): ?>
+
+        <?php
+        // count per status
+        $st = (int)$s['status'];
+
+        $where_card = $where_for_cards;
+        $types_card = $types_for_cards;
+        $params_card = $params_for_cards;
+
+        // add verification filter
+        $where_card[] = "u.verfied_status = ?";
+        $types_card .= 'i';
+        $params_card[] = $st;
+
+        $sql_where_card = ' WHERE ' . implode(' AND ', $where_card);
+
+        $sql_card = "SELECT COUNT(DISTINCT u.id) AS cnt " . $sql_base . $sql_where_card;
+
+        $stmt_card = $con->prepare($sql_card);
+
+        if ($types_card !== '') {
+          $stmt_card->bind_param($types_card, ...$params_card);
+        }
+
+        $stmt_card->execute();
+        $stmt_card->bind_result($cnt);
+        $stmt_card->fetch();
+        $stmt_card->close();
+
+        // active class
+        $active = ($verified_filter == $st) ? 'active' : '';
+        ?>
+
+        <a class="stat-card <?= $active ?>"
+          href="<?= h(keep_params(['verified_filter' => $st, 'page' => 1])) ?>">
+
+          <div class="stat-title"><?= htmlspecialchars($s['name']) ?></div>
+          <div class="stat-num"><?= (int)$cnt ?></div>
+
         </a>
+
       <?php endforeach; ?>
+
+
+      <!-- FILTER BUTTON -->
       <!-- Show / Hide Filter Button -->
-   <!-- Show / Hide Filter Button -->
-<div style="margin-left:auto; align-items:center;">
-  <button type="button"
-    onclick="toggleFilterBox()"
-    id="toggleFilterBtn"
-    class="btn secondary"
-    style="white-space:nowrap;">
-    Show Filters
-  </button>
-</div>
+      <div style="margin-left:auto; align-items:center;">
+        <button type="button"
+          onclick="toggleFilterBox()"
+          id="toggleFilterBtn"
+          class="btn secondary"
+          style="white-space:nowrap;">
+          Show Filters
+        </button>
+      </div>
+
     </div>
 
-    
+
 
 
     <form method="get"
@@ -1206,7 +1331,7 @@ SELECT
       <div class="filter-row">
 
         <div class="filter-group">
-          <label>Assigned From Date</label>
+          <label>Reg Date From</label>
           <input class="inp js-date-ddmmyyyy"
             type="text"
             name="created_from"
@@ -1215,7 +1340,7 @@ SELECT
         </div>
 
         <div class="filter-group">
-          <label>Assigned To Date</label>
+          <label>Reg Date To</label>
           <input class="inp js-date-ddmmyyyy"
             type="text"
             name="created_to"
@@ -1251,6 +1376,25 @@ SELECT
           </select>
         </div>
 
+        <div class="filter-group">
+          <label>Verification Status</label>
+          <select class="inp" name="verified_filter">
+            <option value="-1" <?= $verified_filter == -1 ? 'selected' : '' ?>>
+              Verification: Any
+            </option>
+
+            <?php
+            $vs_q = mysqli_query($con, "SELECT name, status FROM jos_app_verification_status");
+
+            while ($vs = mysqli_fetch_assoc($vs_q)) {
+            ?>
+              <option value="<?= $vs['status'] ?>"
+                <?= ($verified_filter == $vs['status']) ? 'selected' : '' ?>>
+                <?= htmlspecialchars($vs['name']) ?>
+              </option>
+            <?php } ?>
+          </select>
+        </div>
       </div>
 
       <!-- ROW 3 BUTTONS -->
@@ -1285,15 +1429,16 @@ SELECT
             <th>Reg Date</th>
             <th>Name / Profile</th>
             <th>Logo</th>
-            <th>Contact Info</th>
-            <th>Mobile</th>
+            <th>Contact Info/Mobile</th>
+            <!-- <th>Mobile</th> -->
             <th>Referred By</th>
             <th>Assigned By / Date</th>
             <th>Plan / Subscr.</th>
             <th>KYC Status</th>
             <th>Premium Jobs</th>
             <th>Standard Jobs</th>
-            <th>Actions</th>
+            <th style="width:145px;">Actions</th>
+            <th>Verification</th>
           </tr>
         </thead>
         <tbody>
@@ -1388,8 +1533,13 @@ SELECT
                 }
                 ?>
               </td>
-              <td><?= h($contact_info) ?></td>
-              <td><?= h($row['mobile_no']) ?></td>
+              <td>
+                <div><?= h($contact_info) ?></div>
+                <div style="white-space:nowrap; word-break:normal;">
+                  <?= h($row['mobile_no']) ?>
+                </div>
+              </td>
+              <!-- <td><?= h($row['mobile_no']) ?></td> -->
               <td>
                 <?php if ($refLinkHref) { ?>
                   <a class="ref-link" href="<?= h($refLinkHref) ?>"><?= $refByDisplay ?></a>
@@ -1410,47 +1560,6 @@ SELECT
                 </div>
               </td>
 
-              <!-- KYC -->
-              <!-- <td>
-                <?php
-                $kycName  = $row['kyc_status_name'] ?? '';
-                $kycId    = (int)($row['kyc_status_id'] ?? 0);
-                $recruiterProfileId = (int)$row['profile_id'];
-
-                if (!empty($kycName)) { ?>
-
-                  <form method="post"
-                    action="/adminconsole/operations/recruiter_kyc_report.php"
-                    style="margin:0;">
-
-                    <input type="hidden" name="recruiter_id" value="<?= $recruiterProfileId ?>">
-                    <input type="hidden" name="status" value="<?= $kycId ?>">
-
-                    <button type="submit"
-                      class="ref-link"
-                      style="background:none;border:none;padding:0;color:#3b82f6;cursor:pointer;">
-                      <?= h($kycName) ?>
-                    </button>
-                  </form>
-
-                <?php } else { ?>
-
-                  <form method="post"
-                    action="/adminconsole/operations/recruiter_kyc_report.php"
-                    style="margin:0;">
-
-                    <input type="hidden" name="recruiter_id" value="<?= $recruiterProfileId ?>">
-                    <input type="hidden" name="status" value="NOT_SUBMITTED">
-
-                    <button type="submit"
-                      class="badge danger"
-                      style="border:none;cursor:pointer;">
-                      Not Submitted
-                    </button>
-                  </form>
-
-                <?php } ?>
-              </td> -->
 
               <td>
                 <?php
@@ -1522,13 +1631,80 @@ SELECT
                   <?= $standardJobsCount ?>
                 <?php } ?>
               </td>
-             
-              <td><a class="btn secondary" href="<?= h($profileUrl) ?>">View</a>
-               <?php if ($logged_admin_role_id == 1) {?><a class="btn primary" style="margin:2px; white-space:nowrap;" href="<?= h(keep_params(['show_logs_user_id' => $row['id'], 'page' => null])) ?>">
-                Assign History
-              </a><?php } ?>
-            </td>
-            
+
+              <td>
+                <a class="btn secondary" href="<?= h($profileUrl) ?>">View</a>
+                <?php if ($logged_admin_role_id == 1) { ?><a class="btn primary" style="margin:2px; white-space:nowrap;" href="<?= h(keep_params(['show_logs_user_id' => $row['id'], 'page' => null])) ?>">
+                    Assign History
+                  </a><?php } ?>
+                <!-- Edit Employer Block  -->
+
+                <?php
+                $edit_action = '';
+                if ($row['profile_type_id'] == 1) {
+                  $edit_action = 'update_recruiter_profile.php';
+                } elseif ($row['profile_type_id'] == 2) {
+                  $edit_action = 'update_jobseeker_profile.php';
+                } elseif ($row['profile_type_id'] == 3) {
+                  //   $edit_action = 'update_promoter_profile.php';
+                  $edit_action = '#';
+                }
+                ?>
+
+                <form method="post" action="<?= h($edit_action) ?>" style="margin-top:6px;">
+
+                  <input type="hidden" name="user_id" value="<?= (int)$row['id'] ?>">
+                  <input type="hidden" name="profile_type_id" value="<?= (int)$row['profile_type_id'] ?>">
+                  <input type="hidden" name="profile_id" value="<?= (int)$row['profile_id'] ?>">
+                  <input type="hidden" name="csrf" value="<?= h($_SESSION['csrf_token']) ?>">
+                  <button type="submit" class="btn secondary">
+                    Edit Profile
+                  </button>
+
+                </form>
+              </td>
+
+              <td>
+                <!-- Verification Block -->
+                <?php
+                $status = (int)$row['verfied_status'];
+
+                if ($status == 1) {
+                  $color = '#16a34a'; // green
+                } elseif ($status == 0) {
+                  $color = '#dc2626'; // red
+                } else {
+                  $color = '#f59e0b'; // orange
+                }
+                ?>
+
+                <div class="verification-label" style="font-size:12px;color:<?= $color ?>;margin-bottom:4px;font-weight:600;">
+                  <?= htmlspecialchars($row['verification_name']) ?>
+                </div>
+
+
+                <form method="POST">
+
+                  <input type="hidden" name="verify_user_id" value="<?= (int)$row['id'] ?>">
+
+                  <?php
+                  $vs_query = "SELECT id, name, status FROM jos_app_verification_status";
+                  $vs_result = mysqli_query($con, $vs_query);
+                  ?>
+
+                  <select class="inp" name="verfied_status" style="min-width:180px">
+                    <?php while ($vs = mysqli_fetch_assoc($vs_result)) { ?>
+                      <option value="<?= $vs['status'] ?>"
+                        <?= ($row['verfied_status'] == $vs['status']) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($vs['name']) ?>
+                      </option>
+                    <?php } ?>
+                  </select>
+
+                  <button type="submit" class="btn primary" style="margin: 2px;">Update</button>
+
+                </form>
+              </td>
             </tr>
           <?php endwhile;
           $stmt->close(); ?>

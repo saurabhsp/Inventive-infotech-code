@@ -6,8 +6,8 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/initialize.php'; // $con, csrf_token(), verify_csrf()
 require_login();
 /* ---------------- Logged In User ---------------- */
-$loggedUserId = (int)($_SESSION['admin_user']['id'] ?? 0);
-$loggedRoleId = (int)($_SESSION['admin_user']['role_id'] ?? 0);
+$MY_ID = (int)($_SESSION['admin_user']['id'] ?? 0);
+$MY_ROLE_ID = (int)($_SESSION['admin_user']['role_id'] ?? 0);
 
 
 
@@ -73,6 +73,7 @@ function stmt_bind(mysqli_stmt $st, string $types, array $params): void
   call_user_func_array([$st, 'bind_param'], $refs);
 }
 
+
 /* ---------------- Load masters ---------------- */
 $statuses = []; // id => ['name'=>, 'code'=>]
 if (table_exists($con, $STATUSTBL)) {
@@ -132,91 +133,620 @@ if ($ADMINUSERS) {
 /* =========================
    ACTION HANDLERS
 ========================= */
+/* ---------------- POST handlers ---------------- */
+$err = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-  if (!verify_csrf($_POST['csrf'] ?? null)) {
-    echo json_encode(['ok' => false, 'msg' => 'Invalid CSRF']);
-    exit;
-  }
-
-  /* -------- DELETE -------- */
-  if (isset($_POST['delete'])) {
-
-    $id = (int)$_POST['id'];
-
-    $st = $con->prepare("DELETE FROM `$TABLE` WHERE id=?");
-    $st->bind_param("i", $id);
-
-    if ($st->execute()) {
-      header("Location: lead_list.php?ok=Deleted");
-      exit;
-    }
-  }
-
-
-  /* -------- STATUS UPDATE -------- */
-  if (isset($_POST['status_update'])) {
-
-    header('Content-Type: application/json');
+  /* ===== HISTORY AJAX (PUT THIS FIRST INSIDE POST) ===== */
+  if (isset($_POST['get_history'])) {
 
     $lead_id = (int)$_POST['lead_id'];
-    $status_id = (int)$_POST['to_status_id'];
-    $remark = trim($_POST['remark']);
-    $followup = parse_followup_to_db($_POST['followup_at'] ?? '');
-    $plan_id = (string)($_POST['onboarded_plan_id'] ?? '0');
+    $rows = [];
 
-    $st = $con->prepare("SELECT profile_type,status_id FROM `$TABLE` WHERE id=?");
-    $st->bind_param("i", $lead_id);
-    $st->execute();
-    $lead = $st->get_result()->fetch_assoc();
-    $st->close();
-
-    if (!$lead) {
-      echo json_encode(['ok' => false, 'msg' => 'Lead not found']);
-      exit;
-    }
-
-    $profile_type = (int)$lead['profile_type'];
-    $old_status = (int)$lead['status_id'];
-
-    if ($plan_id != '0') {
-      if (!plan_allowed_for_profile($plans, $plan_id, $profile_type)) {
-        echo json_encode(['ok' => false, 'msg' => 'Invalid plan']);
-        exit;
-      }
-    } else {
-      $plan_id = null;
-    }
-
-    $sql = "UPDATE `$TABLE`
-          SET status_id=?,
-              last_status_reason=?,
-              followup_at=?,
-              onboarded_plan_id=?
-          WHERE id=?";
+    $sql = "SELECT 
+            h.*,
+            s1.status_name AS from_status,
+            s2.status_name AS to_status,
+            u.name AS user_name
+          FROM `$HISTTBL` h
+          LEFT JOIN `$STATUSTBL` s1 ON s1.id = h.from_status_id
+          LEFT JOIN `$STATUSTBL` s2 ON s2.id = h.to_status_id
+          LEFT JOIN `$ADMINUSERS` u ON u.id = h.changed_by
+          WHERE h.lead_id = ?
+          ORDER BY h.id DESC";
 
     $st = $con->prepare($sql);
+    $st->bind_param("i", $lead_id);
+    $st->execute();
+    $res = $st->get_result();
 
-    stmt_bind($st, "isssi", [
-      $status_id,
-      $remark,
-      $followup,
-      $plan_id,
-      $lead_id
-    ]);
+    while ($r = $res->fetch_assoc()) {
+      $rows[] = [
+        'from' => $r['from_status'] ?? '—',
+        'to' => $r['to_status'] ?? '—',
+        'user' => $r['user_name'] ?? '—',
+        'date' => $r['changed_at'] ? date('d-m-Y h:i A', strtotime($r['changed_at'])) : '—',
+        'reason' => $r['reason'],
+        'next_followup_dt' => $r['next_followup_dt'] 
+      ? date('d-m-Y h:i A', strtotime($r['next_followup_dt'])) 
+      : '—',
+      ];
+    }
 
-    if (!$st->execute()) {
-      echo json_encode(['ok' => false, 'msg' => 'Update failed']);
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => true, 'rows' => $rows]);
+    exit;
+  }
+
+  $isModal = isset($_POST['status_update']);
+
+  if (!verify_csrf($_POST['csrf'] ?? null)) {
+    if ($isModal) {
+      header('Content-Type: application/json');
+      echo json_encode(['ok' => false, 'msg' => 'Invalid request.']);
+      exit;
+    }
+    $err = 'Invalid request.';
+  } else {
+
+    /* ===== Quick Status Update (modal) ===== */
+    if ($isModal) {
+
+      $lead_id   = (int)($_POST['lead_id'] ?? 0);
+      $to_status = (int)($_POST['to_status_id'] ?? 0);
+      $remark    = trim($_POST['remark'] ?? '');
+      $followup  = trim($_POST['followup_at'] ?? '');
+      $plan_id   = trim($_POST['onboarded_plan_id'] ?? '0'); // string
+
+      if ($lead_id <= 0) {
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => false, 'msg' => 'Invalid lead id.']);
+        exit;
+      }
+      if ($to_status <= 0 || !isset($statuses[$to_status])) {
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => false, 'msg' => 'Invalid status.']);
+        exit;
+      }
+      // if ($remark === '') {
+      //   header('Content-Type: application/json');
+      //   echo json_encode(['ok' => false, 'msg' => 'Remark is required.']);
+      //   exit;
+      // }
+
+      $st = $con->prepare("SELECT id,profile_type,status_id FROM `$TABLE` WHERE id=? LIMIT 1");
+      $st->bind_param('i', $lead_id);
+      $st->execute();
+      $lead = $st->get_result()->fetch_assoc();
+      $st->close();
+      if (!$lead) {
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => false, 'msg' => 'Lead not found.']);
+        exit;
+      }
+
+      $lead_pt = (int)($lead['profile_type'] ?? 1);
+      $from_status = (int)$lead['status_id'];
+      $to_code = $statuses[$to_status]['code'] ?? '';
+
+      $followup_db = null;
+      $plan_db = null;
+      $not_contactable_flag = 0;
+
+      if ($to_code === 'FOLLOW_UP') {
+        if ($followup === '') {
+          header('Content-Type: application/json');
+          echo json_encode(['ok' => false, 'msg' => 'Follow-up Date/Time is required.']);
+          exit;
+        }
+        $followup_db = parse_followup_to_db($followup);
+        if (!$followup_db) {
+          header('Content-Type: application/json');
+          echo json_encode(['ok' => false, 'msg' => 'Invalid follow-up date/time (use dd-mm-yyyy hh:mm AM/PM).']);
+          exit;
+        }
+      } elseif ($to_code === 'ON_BOARDED') {
+        if ($plan_id === '0' || $plan_id === '') {
+          header('Content-Type: application/json');
+          echo json_encode(['ok' => false, 'msg' => 'Please select On-boarded Plan.']);
+          exit;
+        }
+        $plan_id = (string)$plan_id;
+        if (!plan_allowed_for_profile($plans, $plan_id, $lead_pt)) {
+          header('Content-Type: application/json');
+          echo json_encode(['ok' => false, 'msg' => 'Selected plan is not valid for this profile type.']);
+          exit;
+        }
+        $plan_db = $plan_id;
+      } elseif ($to_code === 'NOT_CONTACTABLE') {
+        $not_contactable_flag = 1;
+      }
+
+      if ($to_code !== 'FOLLOW_UP') $followup_db = null;
+      if ($to_code !== 'ON_BOARDED') $plan_db = null;
+      if ($to_code !== 'NOT_CONTACTABLE') $not_contactable_flag = 0;
+
+      $sql = "UPDATE `$TABLE`
+              SET status_id=?,
+                  last_status_reason=?,
+                  followup_at=?,
+                  onboarded_plan_id=?,
+                  not_contactable_flag=?
+              WHERE id=?";
+      $st = $con->prepare($sql);
+      stmt_bind($st, "isssii", [$to_status, $remark, $followup_db, $plan_db, $not_contactable_flag, $lead_id]);
+      $ok = $st->execute();
+      $st->close();
+
+      if (!$ok) {
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => false, 'msg' => 'Update failed.']);
+        exit;
+      }
+
+      if (table_exists($con, $HISTTBL)) {
+        $meta = ['followup_at' => $followup_db, 'onboarded_plan_id' => $plan_db, 'mode' => 'modal'];
+        $meta_json = json_encode($meta, JSON_UNESCAPED_UNICODE);
+        $changed_by = $MY_ID ?: null;
+
+        $stH = $con->prepare("INSERT INTO `$HISTTBL` (lead_id,from_status_id,to_status_id,changed_by,reason,meta_json,next_followup_dt)
+                              VALUES (?,?,?,?,?,?,?)");
+        stmt_bind($stH, "iiiisss", [$lead_id, $from_status, $to_status, $changed_by, $remark, $meta_json, $followup_db]);
+        $stH->execute();
+        $stH->close();
+      }
+
+      header('Content-Type: application/json');
+      echo json_encode(['ok' => true, 'msg' => 'Status updated']);
       exit;
     }
 
-    $st->close();
+    /* ===== Delete ===== */
+    if (isset($_POST['delete'])) {
 
-    echo json_encode(['ok' => true, 'msg' => 'Updated']);
-    exit;
+      if (!user_can('delete', $MENU_ID, $con)) {
+        $err = 'You are not authorized to delete.';
+      } else {
+        $id = (int)($_POST['id'] ?? 0);
+        $st = $con->prepare("DELETE FROM `$TABLE` WHERE id=?");
+        $st->bind_param('i', $id);
+        if ($st->execute()) {
+          $st->close();
+          flash_redirect('Deleted successfully');
+        }
+        $err = 'Delete failed';
+        $st->close();
+      }
+    }
+
+
+    /* ===== Full Save (Add/Edit) ===== */
+    if (isset($_POST['save'])) {
+
+      $id = (int)($_POST['id'] ?? 0);
+      $profile_type   = (int)($_POST['profile_type'] ?? 1);
+      // Force profile type based on role
+      if ($MY_ROLE_ID == 3) {
+        $profile_type = 2; // Jobseeker only
+      } elseif ($MY_ROLE_ID == 13) {
+        $profile_type = 1; // Employer only
+      }
+      $company_name   = clean($_POST['company_name'] ?? '');
+      $owner_hr_name  = clean($_POST['owner_hr_name'] ?? '');
+      $sector         = clean($_POST['sector'] ?? '');
+      $candidate_name = clean($_POST['candidate_name'] ?? '');
+
+      $phone1        = clean($_POST['phone1'] ?? '');
+      $phone2        = clean($_POST['phone2'] ?? '');
+      $email         = clean($_POST['email'] ?? '');
+      $city_location = clean($_POST['city_location'] ?? '');
+
+      $source_id     = (int)($_POST['source_id'] ?? 0);
+      $status_id     = (int)($_POST['status_id'] ?? 0);
+      $assigned_to   = (int)($_POST['assigned_to'] ?? 0);
+      $source_detail = clean($_POST['source_detail'] ?? '');
+
+
+      $reason        = trim($_POST['last_status_reason'] ?? '');
+      $followup_ui   = trim($_POST['followup_at'] ?? '');
+      $plan_in       = trim($_POST['onboarded_plan_id'] ?? '0'); // string id
+
+      if ($id > 0 && !user_can('edit', $MENU_ID, $con)) {
+        $err = 'You are not authorized to edit.';
+      } elseif ($id === 0 && !user_can('add', $MENU_ID, $con)) {
+        $err = 'You are not authorized to add.';
+      }
+      if (!in_array($profile_type, [1, 2], true)) {
+        $err = 'Invalid profile type.';
+      } elseif ($profile_type === 1 && $company_name === '') {
+        $err = 'Company Name is required.';
+      } elseif ($profile_type === 2 && $candidate_name === '') {
+        $err = 'Jobseeker  Name is required.';
+      } elseif ($phone1 === '') {
+        $err = 'Contact - 1 is required.';
+      } elseif ($status_id <= 0 || !isset($statuses[$status_id])) {
+        $err = 'Please select a valid Status.';
+      } else {
+
+        $status_code = $statuses[$status_id]['code'] ?? '';
+
+        $followup_db = null;
+        $plan_db = null;
+        $not_contactable_flag = 0;
+
+        if ($status_code === 'FOLLOW_UP') {
+          if ($followup_ui === '') $err = 'Follow-up Date/Time is required.';
+          $followup_db = parse_followup_to_db($followup_ui);
+          if (!$followup_db) $err = $err ?: 'Invalid follow-up date/time (use dd-mm-yyyy hh:mm AM/PM).';
+          if ($reason === '') $err = $err ?: 'Follow-up remark is required.';
+        } elseif ($status_code === 'ON_BOARDED') {
+          if ($plan_in === '0' || $plan_in === '') $err = 'Please select On-boarded Plan.';
+          $plan_id = ($plan_in !== '0' && $plan_in !== '') ? (string)$plan_in : null;
+          if ($plan_id && !plan_allowed_for_profile($plans, $plan_id, $profile_type)) {
+            $err = 'Selected plan is not valid for this profile type.';
+          } else {
+            $plan_db = $plan_id;
+          }
+          if ($reason === '') $err = $err ?: 'Remark is required.';
+        } elseif ($status_code === 'NOT_INTERESTED') {
+          if ($reason === '') $err = 'Remark is required.';
+        } elseif ($status_code === 'NOT_CONTACTABLE') {
+          if ($reason === '') $err = 'Remark is required.';
+          $not_contactable_flag = 1;
+        }
+
+        if ($status_code !== 'FOLLOW_UP') $followup_db = null;
+        if ($status_code !== 'ON_BOARDED') $plan_db = null;
+        if ($status_code !== 'NOT_CONTACTABLE') $not_contactable_flag = 0;
+
+        if ($err === '') {
+
+          if ($profile_type === 1) {
+            $candidate_name = '';
+          } else {
+            $company_name = '';
+            $owner_hr_name = '';
+            $sector = '';
+          }
+
+          $old = null;
+          if ($id > 0) {
+            $st = $con->prepare("SELECT assigned_to,assigned_at,prev_assigned_to,status_id FROM `$TABLE` WHERE id=?");
+            $st->bind_param('i', $id);
+            $st->execute();
+            $old = $st->get_result()->fetch_assoc();
+            $st->close();
+          }
+
+          $source_id_db   = $source_id > 0 ? $source_id : null;
+          $assigned_to_db = $assigned_to > 0 ? $assigned_to : null;
+          $assigned_by_db = $MY_ID > 0 ? $MY_ID : null;
+
+          $assigned_at_db = null;
+          $reassigned_at_db = null;
+          $prev_assigned_to = null;
+
+          if ($id === 0) {
+            if ($assigned_to_db) $assigned_at_db = date('Y-m-d H:i:s');
+          } else {
+            $old_assigned = (int)($old['assigned_to'] ?? 0);
+            $old_assigned_at = $old['assigned_at'] ?? null;
+
+            $assigned_at_db = $old_assigned_at ?: ($assigned_to_db ? date('Y-m-d H:i:s') : null);
+
+            if ((int)$assigned_to_db !== $old_assigned) {
+              if ($old_assigned > 0) $prev_assigned_to = $old_assigned;
+              $reassigned_at_db = date('Y-m-d H:i:s');
+            }
+          }
+
+          if ($id > 0) {
+
+            $sql = "UPDATE `$TABLE`
+                    SET profile_type=?,
+                        company_name=?,
+                        owner_hr_name=?,
+                        sector=?,
+                        candidate_name=?,
+                        phone1=?,
+                        phone2=?,
+                        email=?,
+                        city_location=?,
+                        source_id=?,
+                        source_detail=?,
+                        status_id=?,
+                        assigned_to=?,
+                        assigned_by=?,
+                        assigned_at=?,
+                        reassigned_at=?,
+                        last_status_reason=?,
+                        followup_at=?,
+                        onboarded_plan_id=?,
+                        not_contactable_flag=?
+                    WHERE id=?";
+
+            $st = $con->prepare($sql);
+
+            $params = [
+              $profile_type,
+              $company_name,
+              $owner_hr_name,
+              $sector,
+              $candidate_name,
+              $phone1,
+              $phone2,
+              $email,
+              $city_location,
+              $source_id_db,
+              $source_detail,
+              $status_id,
+              $assigned_to_db,
+              $assigned_by_db,
+              $assigned_at_db,
+              $reassigned_at_db,
+              $reason,
+              $followup_db,
+              $plan_db,
+              $not_contactable_flag,
+              $id
+            ];
+
+            $types = "issssssssisiiisssssii"; // ✅ 21 params
+            stmt_bind($st, $types, $params);
+
+            $ok = $st->execute();
+            $st->close();
+
+            if ($ok) {
+              if ($prev_assigned_to) {
+                $st2 = $con->prepare("UPDATE `$TABLE` SET prev_assigned_to=? WHERE id=?");
+                $st2->bind_param('ii', $prev_assigned_to, $id);
+                $st2->execute();
+                $st2->close();
+              }
+
+              if (table_exists($con, $HISTTBL)) {
+                $old_status = (int)($old['status_id'] ?? 0);
+                if ($old_status !== $status_id) {
+                  $meta = ['followup_at' => $followup_db, 'onboarded_plan_id' => $plan_db, 'mode' => 'full_edit'];
+                  $meta_json = json_encode($meta, JSON_UNESCAPED_UNICODE);
+                  $changed_by = $MY_ID ?: null;
+
+                  $stH = $con->prepare("INSERT INTO `$HISTTBL` (lead_id,from_status_id,to_status_id,changed_by,reason,meta_json,next_followup_dt)
+                                      VALUES (?,?,?,?,?,?,?)");
+                  stmt_bind($stH, "iissss", [$id, $old_status, $status_id, $changed_by, $reason, $meta_json, $followup_db]);
+                  $stH->execute();
+                  $stH->close();
+                }
+              }
+
+              flash_redirect('Updated successfully');
+            } else {
+              $err = 'Update failed';
+            }
+          } else {
+
+            $sql = "INSERT INTO `$TABLE`
+                    (profile_type,company_name,owner_hr_name,sector,candidate_name,
+                     phone1,phone2,email,city_location,
+                     source_id,source_detail,status_id,
+                     assigned_to,assigned_by,assigned_at,reassigned_at,
+                     last_status_reason,followup_at,onboarded_plan_id,not_contactable_flag,
+                     created_by)
+                    VALUES
+                    (?,?,?,?,?,
+                     ?,?,?,?,
+                     ?,?,?,
+                     ?,?,?,?,
+                     ?,?,?,?,
+                     ?)";
+
+            $st = $con->prepare($sql);
+
+            $created_by_db = $MY_ID > 0 ? $MY_ID : null;
+
+            $params = [
+              $profile_type,
+              $company_name,
+              $owner_hr_name,
+              $sector,
+              $candidate_name,
+              $phone1,
+              $phone2,
+              $email,
+              $city_location,
+              $source_id_db,
+              $source_detail,
+              $status_id,
+              $assigned_to_db,
+              $assigned_by_db,
+              $assigned_at_db,
+              $reassigned_at_db,
+              $reason,
+              $followup_db,
+              $plan_db,
+              $not_contactable_flag,
+              $created_by_db
+            ];
+
+            $types = "issssssssisiiisssssii"; // ✅ 20 params
+            stmt_bind($st, $types, $params);
+
+            $ok = $st->execute();
+            $newId = (int)$st->insert_id;
+            $st->close();
+
+            if ($ok) {
+              if ($newId > 0 && table_exists($con, $HISTTBL)) {
+                $meta = ['followup_at' => $followup_db, 'onboarded_plan_id' => $plan_db, 'mode' => 'created'];
+                $meta_json = json_encode($meta, JSON_UNESCAPED_UNICODE);
+                $changed_by = $MY_ID ?: null;
+
+                $stH = $con->prepare("INSERT INTO `$HISTTBL` (lead_id,from_status_id,to_status_id,changed_by,reason,meta_json,next_followup_dt)
+                                    VALUES (?,NULL,?,?,?,?,?)");
+                stmt_bind($stH, "iissss", [$newId, $status_id, $changed_by, $reason, $meta_json, $followup_db]);
+                $stH->execute();
+                $stH->close();
+              }
+              flash_redirect('Saved successfully');
+            } else {
+              $err = 'Insert failed';
+            }
+          }
+        }
+      }
+    }
   }
 }
+
+// if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+//   if (isset($_POST['get_history'])) {
+
+//     $lead_id = (int)$_POST['lead_id'];
+//     $rows = [];
+
+//     $sql = "SELECT 
+//             h.*,
+//             s1.status_name AS from_status,
+//             s2.status_name AS to_status,
+//             u.name AS user_name
+//           FROM `$HISTTBL` h
+//           LEFT JOIN `$STATUSTBL` s1 ON s1.id = h.from_status_id
+//           LEFT JOIN `$STATUSTBL` s2 ON s2.id = h.to_status_id
+//           LEFT JOIN `$ADMINUSERS` u ON u.id = h.changed_by
+//           WHERE h.lead_id = ?
+//           ORDER BY h.id DESC";
+
+//     $st = $con->prepare($sql);
+//     $st->bind_param("i", $lead_id);
+//     $st->execute();
+//     $res = $st->get_result();
+
+//     while ($r = $res->fetch_assoc()) {
+//       $rows[] = [
+//         'from' => $r['from_status'] ?? '—',
+//         'to' => $r['to_status'] ?? '—',
+//         'user' => $r['user_name'] ?? '—',
+//         'date' => $r['changed_at'] ? date('d-m-Y h:i A', strtotime($r['changed_at'])) : '—',
+//         'reason' => $r['reason']
+//       ];
+//     }
+
+//     echo json_encode(['ok' => true, 'rows' => $rows]);
+//     exit;
+//   }
+
+//   if (!verify_csrf($_POST['csrf'] ?? null)) {
+//     echo json_encode(['ok' => false, 'msg' => 'Invalid CSRF']);
+//     exit;
+//   }
+
+//   /* -------- DELETE -------- */
+//   if (isset($_POST['delete'])) {
+
+//     $id = (int)$_POST['id'];
+
+//     $st = $con->prepare("DELETE FROM `$TABLE` WHERE id=?");
+//     $st->bind_param("i", $id);
+
+//     if ($st->execute()) {
+//       header("Location: lead_list.php?ok=Deleted");
+//       exit;
+//     }
+//   }
+
+
+//   /* -------- STATUS UPDATE -------- */
+//  if (isset($_POST['status_update'])) {
+
+//   header('Content-Type: application/json');
+
+//   $lead_id = (int)$_POST['lead_id'];
+//   $status_id = (int)$_POST['to_status_id'];
+//   $remark = trim($_POST['remark']);
+//   $followup = parse_followup_to_db($_POST['followup_at'] ?? '');
+//   $plan_id = (string)($_POST['onboarded_plan_id'] ?? '0');
+
+//   $st = $con->prepare("SELECT profile_type,status_id FROM `$TABLE` WHERE id=?");
+//   $st->bind_param("i", $lead_id);
+//   $st->execute();
+//   $lead = $st->get_result()->fetch_assoc();
+//   $st->close();
+
+//   if (!$lead) {
+//     echo json_encode(['ok' => false, 'msg' => 'Lead not found']);
+//     exit;
+//   }
+
+//   $profile_type = (int)$lead['profile_type'];
+//   $old_status = (int)$lead['status_id'];
+
+//   if ($plan_id != '0') {
+//     if (!plan_allowed_for_profile($plans, $plan_id, $profile_type)) {
+//       echo json_encode(['ok' => false, 'msg' => 'Invalid plan']);
+//       exit;
+//     }
+//   } else {
+//     $plan_id = null;
+//   }
+
+//   $sql = "UPDATE `$TABLE`
+//           SET status_id=?,
+//               last_status_reason=?,
+//               followup_at=?,
+//               onboarded_plan_id=?
+//           WHERE id=?";
+
+//   $st = $con->prepare($sql);
+
+//   stmt_bind($st, "isssi", [
+//     $status_id,
+//     $remark,
+//     $followup,
+//     $plan_id,
+//     $lead_id
+//   ]);
+
+//   if (!$st->execute()) {
+//     echo json_encode(['ok' => false, 'msg' => 'Update failed']);
+//     exit;
+//   }
+//   $st->close();
+
+//   /* ===== INSERT HISTORY ===== */
+//   if (table_exists($con, $HISTTBL)) {
+
+//     $meta = [
+//       'followup_at' => $followup,
+//       'onboarded_plan_id' => $plan_id,
+//       'mode' => 'modal'
+//     ];
+
+//     $meta_json = json_encode($meta);
+//     $changed_by = $MY_ID ?: null;
+
+//     $stH = $con->prepare("INSERT INTO `$HISTTBL`
+//       (lead_id, from_status_id, to_status_id, changed_by, reason, meta_json, next_followup_dt)
+//       VALUES (?,?,?,?,?,?,?)");
+
+//     stmt_bind($stH, "iiiisss", [
+//       $lead_id,
+//       $old_status,
+//       $status_id,
+//       $changed_by,
+//       $remark,
+//       $meta_json,
+//       $followup
+//     ]);
+
+//     $stH->execute();
+//     $stH->close();
+//   }
+
+//   echo json_encode(['ok' => true, 'msg' => 'Updated']);
+//   exit;
+// }
+// }
 /* ---------------- POST Filters (Advanced) ---------------- */
 $ptypePost   = isset($_POST['profile_type_id']) ? (int)$_POST['profile_type_id'] : 0;
 $acmPost     = isset($_POST['ac_manager_id']) ? (int)$_POST['ac_manager_id'] : 0;
@@ -309,37 +839,46 @@ if ($admin_id > 0) {
   if ($mode === 'followup_today') {
 
     $whereBase .= " AND EXISTS (
-        SELECT 1 FROM $HISTTBL h
-        JOIN $STATUSTBL s ON s.id = h.to_status_id
-        WHERE h.lead_id = l.id
-        AND s.status_code = 'FOLLOW_UP'
-        AND DATE(h.next_followup_dt) = CURDATE()
-    )";
+      SELECT 1 FROM $HISTTBL h
+      JOIN $STATUSTBL s ON s.id = h.to_status_id
+      WHERE h.lead_id = l.id
+      AND s.status_code = 'FOLLOW_UP'
+      AND DATE(h.next_followup_dt) = CURDATE()
+      AND (l.assigned_to = $admin_id OR l.created_by = $admin_id)
+  )";
   }
 
   if ($mode === 'followup_missed') {
 
     $whereBase .= " AND EXISTS (
-        SELECT 1 FROM $HISTTBL h
-        JOIN $STATUSTBL s ON s.id = h.to_status_id
-        WHERE h.lead_id = l.id
-        AND s.status_code = 'FOLLOW_UP'
-        AND h.next_followup_dt < NOW()
-    )";
+      SELECT 1 FROM $HISTTBL h
+      JOIN $STATUSTBL s ON s.id = h.to_status_id
+      WHERE h.lead_id = l.id
+      AND s.status_code = 'FOLLOW_UP'
+      AND h.next_followup_dt < NOW()
+      AND (l.assigned_to = $admin_id OR l.created_by = $admin_id)
+  )";
   }
 
-  if ($mode === 'followup_completed') {
+ if ($mode === 'followup_completed') {
 
-    $whereBase .= " AND EXISTS (
-        SELECT 1 FROM $HISTTBL h1
-        JOIN $STATUSTBL s1 ON s1.id = h1.to_status_id
-        JOIN $HISTTBL h2 ON h2.lead_id = h1.lead_id AND h2.id > h1.id
-        JOIN $STATUSTBL s2 ON s2.id = h2.to_status_id
-        WHERE h1.lead_id = l.id
-        AND s1.status_code = 'FOLLOW_UP'
-        AND s2.status_code != 'FOLLOW_UP'
-    )";
-  }
+  $whereBase .= " AND EXISTS (
+    SELECT 1 FROM $HISTTBL h1
+    JOIN $STATUSTBL s1 ON s1.id = h1.to_status_id
+    JOIN $HISTTBL h2 ON h2.lead_id = h1.lead_id AND h2.id > h1.id
+    JOIN $STATUSTBL s2 ON s2.id = h2.to_status_id
+    WHERE h1.lead_id = l.id
+    AND s1.status_code = 'FOLLOW_UP'
+    AND s2.status_code != 'FOLLOW_UP'
+    AND (
+      l.assigned_by = $admin_id
+      OR (
+        (l.assigned_by IS NULL OR l.assigned_by = 0)
+        AND l.created_by = $admin_id
+      )
+    )
+  )";
+}
 }
 if ($admin_id > 0) {
 
@@ -369,11 +908,11 @@ if ($dateFrom && $dateTo) {
 if (empty($mode)) {
 
   // If NOT Super Admin (role_id != 1)
-  if ($loggedRoleId !== 1 && $loggedUserId > 0) {
+  if ($MY_ROLE_ID !== 1 && $MY_ID > 0) {
 
     $whereBase .= " AND (l.created_by = ? OR l.assigned_to = ?)";
-    $bindBase[] = $loggedUserId;
-    $bindBase[] = $loggedUserId;
+    $bindBase[] = $MY_ID;
+    $bindBase[] = $MY_ID;
     $typesBase .= 'ii';
   }
 }
@@ -761,7 +1300,7 @@ padding-top:100px;
       </div>
 
 
-      <?php if ($loggedRoleId === 1): ?> <!-- Super Admin Only -->
+      <?php if ($MY_ROLE_ID === 1): ?> <!-- Super Admin Only -->
         <select name="ptype" class="inp">
           <option value="0">All Types</option>
           <option value="1" <?= $ptype === 1 ? 'selected' : '' ?>>Employer</option>
@@ -784,7 +1323,7 @@ padding-top:100px;
         <?php endforeach; ?>
       </select>
 
-      <?php if ($loggedRoleId === 1): ?> <!-- Super Admin Only -->
+      <?php if ($MY_ROLE_ID === 1): ?> <!-- Super Admin Only -->
 
         <select name="assignee" class="inp">
           <option value="0">All Assignees</option>
@@ -825,7 +1364,7 @@ padding-top:100px;
           <th>On-boarded Plan</th>
           <th>Assigned By</th>
           <th>Assigned To</th>
-          <th>Updated</th>
+          <th>Followup Date</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -869,7 +1408,7 @@ padding-top:100px;
               <small style="color:#9ca3af"><?= h($assignedAt) ?></small>
             </td>
             <td><?= h($assName) ?></td>
-            <td><?= h(fmt_dt($r['updated_at'] ?? null)) ?></td>
+            <td><?= !empty($r['followup_at']) ? h(fmt_dt($r['followup_at'])) : '—' ?></td>
             <!-- <td>
 
               <button class="btn secondary" style=""
@@ -902,7 +1441,11 @@ padding-top:100px;
                 <button class="btn secondary"
                   onclick='openStatusModal(<?= (int)$r["id"] ?>,
       <?= json_encode($r, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
-                  Update Status
+                  Details
+                </button>
+                <button class="btn secondary" type="button"
+                  onclick="openHistoryModal(<?= (int)$r['id'] ?>)">
+                  History & Update
                 </button>
 
                 <a class="btn secondary"
@@ -929,16 +1472,15 @@ padding-top:100px;
 </div>
 
 
-<!-- STATUS UPDATE MODAL -->
-<div id="statusModal" class="pac-modal">
+<div id="historyModal" class="pac-modal">
   <div class="pac-panel">
+
     <div class="pac-head">
-      <h3 style="margin:0">Update Lead Status</h3>
-      <button class="btn gray" type="button" onclick="closeStatusModal()">Close</button>
+      <h3 style="margin:0">Lead History & Update Status</h3>
+      <button class="btn gray" onclick="closeHistoryModal()">Close</button>
     </div>
 
-    <div id="leadLabels" class="pac-labelgrid"></div>
-
+    <!-- STATUS UPDATE (same as existing) -->
     <hr style="opacity:.18;margin:14px 0">
 
     <form id="statusForm" method="post" class="pac-grid3">
@@ -978,6 +1520,44 @@ padding-top:100px;
         <span id="m_msg" style="color:#9ca3af"></span>
       </div>
     </form>
+
+    <hr style="margin:15px 0;opacity:.2">
+
+    <!-- HISTORY TABLE -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Sr No.</th>
+            <th>Date</th>
+            <th>Lead Status</th>
+            <th>Followup Date</th>
+            <th>Updated by</th>
+            <th>Remark</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr>
+            <td colspan="5">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- Status Update Modal -->
+<div id="statusModal" class="pac-modal">
+  <div class="pac-panel">
+    <div class="pac-head">
+      <h3 style="margin:0"> Lead Status</h3>
+      <button class="btn gray" type="button" onclick="closeStatusModal()">Close</button>
+    </div>
+
+    <div id="leadLabels" class="pac-labelgrid"></div>
+
+
   </div>
 </div>
 <script>
@@ -1060,6 +1640,7 @@ padding-top:100px;
       ["Source", row.source_name || "—"],
       ["Current Status", row.status_name || "—"],
       ["On-boarded Plan", row.onboarded_plan_name || "—"],
+      ["Follow-up", row.followup_at ? row.followup_at : '—'],
       ["Assigned To", row.assigned_to || "—"],
       ["Updated", row.updated_at || "—"]
     ];
@@ -1135,41 +1716,88 @@ padding-top:100px;
 
   }
 
-  document.getElementById("statusForm").addEventListener("submit", async function(e) {
-
+  document.getElementById('statusForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-
-    const msg = document.getElementById("m_msg");
-
-    msg.innerHTML = "Saving...";
+    const msg = document.getElementById('m_msg');
+    msg.style.color = '#9ca3af';
+    msg.textContent = 'Saving...';
 
     const fd = new FormData(this);
-
-    const res = await fetch("", {
-      method: "POST",
+    const res = await fetch(location.href, {
+      method: 'POST',
       body: fd
     });
+    const data = await res.json().catch(() => ({
+      ok: false,
+      msg: 'Invalid server response'
+    }));
 
-    const data = await res.json();
-
-    if (data.ok) {
-
-      msg.innerHTML = "Saved";
-
-      setTimeout(() => {
-        location.reload();
-      }, 500);
-
-    } else {
-
-      msg.innerHTML = data.msg;
-
+    if (!data.ok) {
+      msg.textContent = data.msg || 'Failed';
+      msg.style.color = '#fca5a5';
+      return;
     }
-
+    msg.textContent = data.msg || 'Updated';
+    msg.style.color = '#86efac';
+    setTimeout(() => location.reload(), 300);
   });
 
   function confirmDelete() {
     return confirm("Are you sure you want to delete this lead?");
+  }
+</script>
+<script>
+  function openHistoryModal(id) {
+    document.getElementById('historyModal').style.display = 'block';
+
+    // ✅ FIX HERE
+    document.getElementById('m_lead_id').value = id;
+
+    const tbody = document.getElementById('historyBody');
+    tbody.innerHTML = `<tr><td colspan="6">Loading...</td></tr>`;
+
+    const fd = new FormData();
+    fd.append('get_history', '1');
+    fd.append('lead_id', id);
+
+    fetch(location.href, {
+        method: 'POST',
+        body: fd
+      })
+      .then(res => res.json())
+      .then(data => {
+
+        if (!data.rows.length) {
+          tbody.innerHTML = `<tr><td colspan="6">No history found</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data.rows.map((r, i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td>${r.date}</td>
+        <td>${r.to}</td>
+        <td>${r.next_followup_dt}</td>
+        <td>${r.user}</td>
+        <td>${r.reason || '-'}</td>
+      </tr>
+    `).join('');
+      });
+    // 🔥 ADD THIS BELOW
+    if (window.flatpickr) {
+      flatpickr(document.getElementById('m_followup_at'), {
+        enableTime: true,
+        time_24hr: false,
+        dateFormat: "d-m-Y h:i K",
+        allowInput: true,
+        appendTo: document.getElementById('historyModal')
+      });
+    }
+  }
+
+
+  function closeHistoryModal() {
+    document.getElementById('historyModal').style.display = 'none';
   }
 </script>
 

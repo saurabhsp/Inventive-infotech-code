@@ -2406,7 +2406,7 @@ ob_start();
                                         <div style="display:flex;flex-direction:column;gap:4px">
                                             <a class="btn secondary" href="<?= h($viewHref) ?>">View</a>
 
-                                            <?php if ($logged_admin_role_id == 1) { ?><a class="btn primary" style="margin:2px; white-space:nowrap;" href="<?= h(keep_params(['show_logs_user_id' => $row['id'], 'page' => null])) ?>">
+                                            <?php if ($logged_admin_role_id == 1) { ?><a class="btn primary" target="_blank" style="margin:2px; white-space:nowrap;" href="<?= h(keep_params(['show_logs_user_id' => $row['id'], 'page' => null])) ?>">
                                                     Assign History
                                                 </a><?php } ?>
 
