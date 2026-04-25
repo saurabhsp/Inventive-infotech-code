@@ -203,13 +203,47 @@ $stmt->close();
         display: flex;
         gap: 10px;
     }
+
+    .form-group {
+        position: relative;
+    }
+
+    .suggestion-box {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: #0f172a;
+        /* border: 1px solid #334155; */
+        width: 100%;
+        z-index: 9999;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+
+    .suggestion-item {
+        padding: 8px 10px;
+        cursor: pointer;
+    }
+
+    .suggestion-item:hover {
+        background: #1e293b;
+    }
+
+    .suggestion-box {
+        display: none;
+    }
 </style>
 
 <div class="master-wrap">
 
     <div class="headbar">
-        <h2>Edit Recruiter Profile</h2>
+        <h2>Edit Employer Profile</h2>
+        <div style="margin-left:auto;display:flex;gap:8px">
+            <a href="javascript:history.back()" class="btn secondary">← Back to List</a>
+        </div>
     </div>
+
 
     <div class="card" style="max-width:900px">
 
@@ -273,17 +307,20 @@ $stmt->close();
 
                 <div class="form-group">
                     <label class="lbl">District</label>
-                    <input class="inp" name="district" value="<?= h($data['district']) ?>">
+                    <input class="inp" id="districtInput" value="<?= h($data['district']) ?>" name="district" autocomplete="off">
+                    <div id="districtSuggestions" class="suggestion-box"></div>
                 </div>
 
                 <div class="form-group">
                     <label class="lbl">City</label>
-                    <input class="inp" name="city_id" value="<?= h($data['city_id']) ?>">
+                    <input class="inp" id="cityInput" value="<?= h($data['city_id']) ?>" name="city_id" autocomplete="off">
+                    <div id="citySuggestions" class="suggestion-box"></div>
                 </div>
 
                 <div class="form-group">
                     <label class="lbl">Locality</label>
-                    <input class="inp" name="locality_id" value="<?= h($data['locality_id']) ?>">
+                    <input class="inp" id="localityInput" value="<?= h($data['locality_id']) ?>" name="locality_id" autocomplete="off">
+                    <div id="localitySuggestions" class="suggestion-box"></div>
                 </div>
 
             </div>
@@ -297,3 +334,197 @@ $stmt->close();
 
     </div>
 </div>
+<script>
+    // =========================
+    // CLOSE ALL SUGGESTION BOXES
+    // =========================
+    function closeAllSuggestions() {
+        document.getElementById("districtSuggestions").style.display = "none";
+        document.getElementById("citySuggestions").style.display = "none";
+        document.getElementById("localitySuggestions").style.display = "none";
+    }
+
+    // =========================
+    // CLICK OUTSIDE â†’ CLOSE
+    // =========================
+    document.addEventListener("click", function(e) {
+
+        if (!e.target.closest(".form-group")) {
+            closeAllSuggestions();
+        }
+
+    });
+    document.addEventListener("focusin", function(e) {
+
+        // if clicked inside one field â†’ close others only
+        if (e.target.id === "districtInput") {
+            document.getElementById("citySuggestions").style.display = "none";
+            document.getElementById("localitySuggestions").style.display = "none";
+        }
+
+        if (e.target.id === "cityInput") {
+            document.getElementById("districtSuggestions").style.display = "none";
+            document.getElementById("localitySuggestions").style.display = "none";
+        }
+
+        if (e.target.id === "localityInput") {
+            document.getElementById("districtSuggestions").style.display = "none";
+            document.getElementById("citySuggestions").style.display = "none";
+        }
+
+    });
+
+    let service;
+    let placeService;
+
+    let selectedDistrict = "";
+    let selectedCity = "";
+
+    /* =========================
+    INIT GOOGLE
+    ========================= */
+    function initCityAutocomplete() {
+
+        service = new google.maps.places.AutocompleteService();
+        placeService = new google.maps.places.PlacesService(document.createElement('div'));
+
+    }
+
+    /* =========================
+    DISTRICT SEARCH
+    ========================= */
+    document.getElementById("districtInput").addEventListener("keyup", function() {
+
+        let query = this.value;
+        if (query.length < 2) return;
+
+        service.getPlacePredictions({
+            input: query,
+            types: ['(regions)'],
+            componentRestrictions: {
+                country: "in"
+            }
+        }, function(predictions) {
+
+            let box = document.getElementById("districtSuggestions");
+            box.innerHTML = "";
+            box.style.display = "block";
+
+            predictions.forEach(p => {
+
+                // ðŸ”¥ FILTER by district text
+                if (selectedDistrict && !p.description.includes(selectedDistrict)) return;
+
+                let div = document.createElement("div");
+                div.className = "suggestion-item";
+                div.innerText = p.description;
+
+                div.onclick = function() {
+                    selectedDistrict = p.description; // âœ… correct
+                    document.getElementById("districtInput").value = p.description;
+                    closeAllSuggestions();
+                }
+
+                box.appendChild(div);
+            });
+
+        });
+
+    });
+
+
+    /* =========================
+    CITY SEARCH (FILTER BY DISTRICT)
+    ========================= */
+    document.getElementById("cityInput").addEventListener("keyup", function() {
+
+        let query = this.value;
+        if (query.length < 2) return;
+
+        service.getPlacePredictions({
+            input: query,
+            types: ['(cities)'],
+            componentRestrictions: {
+                country: "in"
+            }
+        }, function(predictions) {
+
+            let box = document.getElementById("citySuggestions");
+            box.innerHTML = "";
+            box.style.display = "block";
+
+            predictions.forEach(p => {
+
+                // ðŸ”¥ FILTER by district text
+                // if (selectedDistrict && !p.description.includes(selectedDistrict)) return;
+
+                let div = document.createElement("div");
+                div.className = "suggestion-item";
+                div.innerText = p.description;
+
+                div.onclick = function() {
+
+                    selectedCity = p.description;
+                    document.getElementById("cityInput").value = p.description;
+                    closeAllSuggestions();
+
+                }
+
+                box.appendChild(div);
+            });
+
+        });
+
+    });
+
+
+    /* =========================
+    LOCALITY SEARCH (FILTER BY CITY)
+    ========================= */
+    document.getElementById("localityInput").addEventListener("keyup", function() {
+
+        let query = this.value;
+        if (query.length < 2) return;
+
+        service.getPlacePredictions({
+            input: query,
+            componentRestrictions: {
+                country: "in"
+            }
+        }, function(predictions) {
+
+            let box = document.getElementById("localitySuggestions");
+            box.innerHTML = "";
+            box.style.display = "block";
+
+            predictions.forEach(p => {
+
+                // ðŸ”¥ FILTER by city
+                if (selectedCity && !p.description.includes(selectedCity)) return;
+
+                if (
+                    p.types.includes("sublocality") ||
+                    p.types.includes("neighborhood")
+                ) {
+
+                    let div = document.createElement("div");
+                    div.className = "suggestion-item";
+                    div.innerText = p.description;
+
+                    div.onclick = function() {
+
+                        document.getElementById("localityInput").value = p.description;
+                        closeAllSuggestions();
+
+                    }
+
+                    box.appendChild(div);
+                }
+
+            });
+
+        });
+
+    });
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCokcdTmQxRaopu75ourz-nNmZNie1wQkY&libraries=places&callback=initCityAutocomplete" async defer></script>
