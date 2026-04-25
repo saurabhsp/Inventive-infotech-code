@@ -917,8 +917,8 @@ $gstmt->close();
         altInput: true,
         altFormat: "d-m-Y", // 👀 what user sees
         dateFormat: "Y-m-d", // 📤 what gets submitted
-        allowInput: true,
-        defaultDate: document.getElementById("birthdate").value
+        allowInput: true
+        // defaultDate: document.getElementById("birthdate").value
 
     });
 </script>
