@@ -4,7 +4,13 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/initialize.php'; // $con, csrf_token(), verify_csrf()
 require_login();
+// if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
+//   echo "<pre>";
+//   print_r($_POST);
+//   exit;
+
+// }
 
 /* ============================================================
    lead.php — CRM Leads (UPDATED)
@@ -1397,7 +1403,7 @@ ob_start(); ?>
               <th>Lead Status</th>
               <th>Followup Date</th>
               <th>Updated by</th>
-              <th>Remark</th>
+              <th>Reason</th>
             </tr>
           </thead>
           <tbody id="historyBody">
@@ -1637,11 +1643,18 @@ ob_start(); ?>
             <option value="0">— Not assigned —</option>
             <?php $av = (int)$val('assigned_to', 0);
             foreach ($adminUsers as $uid => $nm): ?>
-              <option value="<?= $uid ?>" <?= $av === $uid ? 'selected' : '' ?>><?= h($nm) ?></option>
+              <option value="<?= $uid ?>" <?= $av === $uid ? 'selected' : '' ?>>
+                <?= h($nm) ?>
+              </option>
             <?php endforeach; ?>
           </select>
           <div class="pac-hint"></div>
         </div>
+      <?php endif; ?>
+
+      <!-- ✅ ADD THIS -->
+      <?php if ($MY_ROLE_ID != 1): ?>
+        <input type="hidden" name="assigned_to" value="<?= h($val('assigned_to')) ?>">
       <?php endif; ?>
 
       <!-- Employer -->
