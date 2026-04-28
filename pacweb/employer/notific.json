@@ -1,0 +1,604 @@
+[
+    {
+        "id": 3801,
+        "datetime": "20-09-2025 12:07 AM",
+        "title": "📢 New Job Opportunity! ✨🚀",
+        "msg": "New Supervisor opening at Inventive Infotech Pvt Ltd. Apply now and take your next big step!",
+        "type": "job",
+        "typeid": 107,
+        "job_listing_type": 2,
+        "job_id": 107,
+        "application_id": 0,
+        "action_type": 0,
+        "readstatus": 0,
+        "useridfrom": 6,
+        "useridto": 1
+    },
+    {
+        "id": 3532,
+        "datetime": "19-09-2025 06:00 PM",
+        "title": "📢 New Job Opportunity! ✨🚀",
+        "msg": "New Supervisor opening at Inventive Infotech Pvt Ltd. Apply now and take your next big step!",
+        "type": "job",
+        "typeid": 107,
+        "job_listing_type": 2,
+        "job_id": 107,
+        "application_id": 0,
+        "action_type": 0,
+        "readstatus": 0,
+        "useridfrom": 6,
+        "useridto": 1
+    },
+    {
+        "id": 3005,
+        "datetime": "03-09-2025 12:51 PM",
+        "title": "📢 New Job Opportunity! ✨🚀",
+        "msg": "New Telecaller opening at Pacific Placements And Business Consultancy. Apply now and take your next big step!",
+        "type": "job",
+        "typeid": 65,
+        "job_listing_type": 2,
+        "job_id": 65,
+        "application_id": 0,
+        "action_type": 0,
+        "readstatus": 0,
+        "useridfrom": 6,
+        "useridto": 1
+    },
+    {
+        "id": 454,
+        "datetime": "29-08-2025 07:25 PM",
+        "title": "Application status updated",
+        "msg": "Your application (ID: 30) is now: Contacted by HR",
+        "type": "status_update",
+        "typeid": 30,
+        "job_listing_type": 2,
+        "job_id": 27,
+        "application_id": 30,
+        "action_type": 0,
+        "readstatus": 1,
+        "useridfrom": 3,
+        "useridto": 1
+    },
+    {
+        "id": 430,
+        "datetime": "29-08-2025 06:34 PM",
+        "title": "📅 Interview Scheduled",
+        "msg": "Your interview is scheduled at 30-08-2025 05:34 PM via Face to Face",
+        "type": "Interview_Notice",
+        "typeid": 30,
+        "job_listing_type": 2,
+        "job_id": 27,
+        "application_id": 30,
+        "action_type": 0,
+        "readstatus": 0,
+        "useridfrom": 6,
+        "useridto": 1
+    },
+    {
+        "id": 137,
+        "datetime": "27-08-2025 02:30 PM",
+        "title": "👀 Profile Viewed by Sakal News Satara",
+        "msg": "Sakal News Satara viewed your application.",
+        "type": "Application_Action",
+        "typeid": 22,
+        "job_listing_type": 1,
+        "job_id": 4,
+        "application_id": 22,
+        "action_type": 3,
+        "readstatus": 0,
+        "useridfrom": 6,
+        "useridto": 1
+    },
+    {
+        "id": 15,
+        "datetime": "23-08-2025 02:39 PM",
+        "title": "📞 Call Received for ATM Operator",
+        "msg": "Pravin Arvind Shinde just called you via the app. Tap to view their profile.",
+        "type": "Job_Actionlog",
+        "typeid": 13,
+        "job_listing_type": 2,
+        "job_id": 2,
+        "application_id": 1,
+        "action_type": 1,
+        "readstatus": 1,
+        "useridfrom": 4,
+        "useridto": 1
+    },
+    {
+        "id": 5,
+        "datetime": "23-08-2025 02:21 PM",
+        "title": "New Job Application Received for ATM Operator",
+        "msg": "Pravin Arvind Shinde has applied for your job post.",
+        "type": "Applicant_Profile",
+        "typeid": 1,
+        "job_listing_type": 2,
+        "job_id": 2,
+        "application_id": 1,
+        "action_type": 0,
+        "readstatus": 1,
+        "useridfrom": 4,
+        "useridto": 1
+    }
+]
+
+Array ( [
+    0
+] => Array ( [id
+] => 3801 [datetime
+] => 20-09-2025 12: 07 AM [title
+] => 📢 New Job Opportunity! ✨🚀 [msg
+] => New Supervisor opening at Inventive Infotech Pvt Ltd. Apply now and take your next big step! [type
+] => job [typeid
+] => 107 [job_listing_type
+] => 2 [job_id
+] => 107 [application_id
+] => 0 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 6 [useridto
+] => 1 ) [
+    1
+] => Array ( [id
+] => 3532 [datetime
+] => 19-09-2025 06: 00 PM [title
+] => 📢 New Job Opportunity! ✨🚀 [msg
+] => New Supervisor opening at Inventive Infotech Pvt Ltd. Apply now and take your next big step! [type
+] => job [typeid
+] => 107 [job_listing_type
+] => 2 [job_id
+] => 107 [application_id
+] => 0 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 6 [useridto
+] => 1 ) [
+    2
+] => Array ( [id
+] => 3005 [datetime
+] => 03-09-2025 12: 51 PM [title
+] => 📢 New Job Opportunity! ✨🚀 [msg
+] => New Telecaller opening at Pacific Placements And Business Consultancy. Apply now and take your next big step! [type
+] => job [typeid
+] => 65 [job_listing_type
+] => 2 [job_id
+] => 65 [application_id
+] => 0 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 6 [useridto
+] => 1 ) [
+    3
+] => Array ( [id
+] => 2928 [datetime
+] => 03-09-2025 12: 50 PM [title
+] => 📢 New Job Opportunity! ✨🚀 [msg
+] => New Telecaller opening at Pacific Placements And Business Consultancy. Apply now and take your next big step! [type
+] => job [typeid
+] => 64 [job_listing_type
+] => 2 [job_id
+] => 64 [application_id
+] => 0 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 6 [useridto
+] => 1 ) [
+    4
+] => Array ( [id
+] => 2850 [datetime
+] => 03-09-2025 12: 49 PM [title
+] => 📢 New Job Opportunity! ✨🚀 [msg
+] => New Telecaller opening at Pacific Placements And Business Consultancy. Apply now and take your next big step! [type
+] => job [typeid
+] => 63 [job_listing_type
+] => 2 [job_id
+] => 63 [application_id
+] => 0 [action_type
+] => 0 [readstatus
+] => 1 [useridfrom
+] => 6 [useridto
+] => 1 ) [
+    5
+] => Array ( [id
+] => 2772 [datetime
+] => 03-09-2025 12: 49 PM [title
+] => 📢 New Job Opportunity! ✨🚀 [msg
+] => New Telecaller opening at Pacific Placements And Business Consultancy. Apply now and take your next big step! [type
+] => job [typeid
+] => 62 [job_listing_type
+] => 2 [job_id
+] => 62 [application_id
+] => 0 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 6 [useridto
+] => 1 ) [
+    6
+] => Array ( [id
+] => 2694 [datetime
+] => 03-09-2025 12: 47 PM [title
+] => 📢 New Job Opportunity! ✨🚀 [msg
+] => New Marketing Executive opening at Rohini Enterprize S. Apply now and take your next big step! [type
+] => job [typeid
+] => 61 [job_listing_type
+] => 2 [job_id
+] => 61 [application_id
+] => 0 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 20 [useridto
+] => 1 ) [
+    7
+] => Array ( [id
+] => 2514 [datetime
+] => 03-09-2025 08: 41 AM [title
+] => 📢 New Job Opportunity! ✨🚀 [msg
+] => New Software Developer opening at Bhakti Infotech Private Limited. Apply now and take your next big step! [type
+] => job [typeid
+] => 59 [job_listing_type
+] => 2 [job_id
+] => 59 [application_id
+] => 0 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 12 [useridto
+] => 1 ) [
+    8
+] => Array ( [id
+] => 1579 [datetime
+] => 03-09-2025 07: 29 AM [title
+] => 📢 New Job Opportunity! ✨🚀 [msg
+] => New Software Developer opening at Bhakti Infotech Private Limited. Apply now and take your next big step! [type
+] => job [typeid
+] => 47 [job_listing_type
+] => 2 [job_id
+] => 47 [application_id
+] => 0 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 12 [useridto
+] => 1 ) [
+    9
+] => Array ( [id
+] => 535 [datetime
+] => 31-08-2025 02: 39 PM [title
+] => 📢 New Job Opportunity! ✨🚀 [msg
+] => New Sales Manager opening at Dinesh Chavan. Apply now and take your next big step! [type
+] => job [typeid
+] => 33 [job_listing_type
+] => 2 [job_id
+] => 33 [application_id
+] => 0 [action_type
+] => 0 [readstatus
+] => 1 [useridfrom
+] => 8 [useridto
+] => 1 ) [
+    10
+] => Array ( [id
+] => 490 [datetime
+] => 30-08-2025 11: 47 AM [title
+] => 📢 New Job Opportunity! ✨🚀 [msg
+] => New Sales Manager opening at Pacific Placements and Business Consultancy Pvt Ltd. Apply now and take your next big step! [type
+] => job [typeid
+] => 15 [job_listing_type
+] => 1 [job_id
+] => 15 [application_id
+] => 0 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 1 [useridto
+] => 1 ) [
+    11
+] => Array ( [id
+] => 470 [datetime
+] => 30-08-2025 07: 09 AM [title
+] => 📢 New Job Opportunity! ✨🚀 [msg
+] => New Fire Fighter opening at Pacific Placements and Business Consultancy Pvt Ltd. Apply now and take your next big step! [type
+] => job [typeid
+] => 14 [job_listing_type
+] => 1 [job_id
+] => 14 [application_id
+] => 0 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 1 [useridto
+] => 1 ) [
+    12
+] => Array ( [id
+] => 458 [datetime
+] => 30-08-2025 07: 00 AM [title
+] => 📢 New Job Opportunity! ✨🚀 [msg
+] => New Fire Fighter opening at Pacific Placements and Business Consultancy Pvt Ltd. Apply now and take your next big step! [type
+] => job [typeid
+] => 13 [job_listing_type
+] => 1 [job_id
+] => 13 [application_id
+] => 0 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 1 [useridto
+] => 1 ) [
+    13
+] => Array ( [id
+] => 454 [datetime
+] => 29-08-2025 07: 25 PM [title
+] => Application status updated [msg
+] => Your application (ID: 30) is now: Contacted by HR [type
+] => status_update [typeid
+] => 30 [job_listing_type
+] => 2 [job_id
+] => 27 [application_id
+] => 30 [action_type
+] => 0 [readstatus
+] => 1 [useridfrom
+] => 3 [useridto
+] => 1 ) [
+    14
+] => Array ( [id
+] => 453 [datetime
+] => 29-08-2025 07: 15 PM [title
+] => Application status updated [msg
+] => Your application (ID: 30) is now: Contacted by HR [type
+] => Contacted by HR [typeid
+] => 30 [job_listing_type
+] => 2 [job_id
+] => 27 [application_id
+] => 30 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 3 [useridto
+] => 1 ) [
+    15
+] => Array ( [id
+] => 430 [datetime
+] => 29-08-2025 06: 34 PM [title
+] => 📅 Interview Scheduled [msg
+] => Your interview is scheduled at 30-08-2025 05: 34 PM via Face to Face [type
+] => Interview_Notice [typeid
+] => 30 [job_listing_type
+] => 2 [job_id
+] => 27 [application_id
+] => 30 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 6 [useridto
+] => 1 ) [
+    16
+] => Array ( [id
+] => 417 [datetime
+] => 29-08-2025 04: 18 PM [title
+] => 📅 Interview Scheduled [msg
+] => Your interview is scheduled at 28-08-2025 11: 00 AM via Video Interview [type
+] => Interview_Notice [typeid
+] => 22 [job_listing_type
+] => 2 [job_id
+] => 4 [application_id
+] => 22 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 6 [useridto
+] => 1 ) [
+    17
+] => Array ( [id
+] => 416 [datetime
+] => 29-08-2025 04: 15 PM [title
+] => 📅 Interview Scheduled [msg
+] => Your interview is scheduled at 28-08-2025 11: 00 AM via Video Interview [type
+] => Interview_Notice [typeid
+] => 22 [job_listing_type
+] => 2 [job_id
+] => 4 [application_id
+] => 22 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 6 [useridto
+] => 1 ) [
+    18
+] => Array ( [id
+] => 256 [datetime
+] => 29-08-2025 06: 33 AM [title
+] => 📢 ATM Operator Opportunity! ✨🚀 [msg
+] => New ATM Operator opening at Sakal News Satara. Apply now and take your next big step! [type
+] => job [typeid
+] => 25 [job_listing_type
+] => 2 [job_id
+] => 25 [application_id
+] => 0 [action_type
+] => 0 [readstatus
+] => 0 [useridfrom
+] => 5 [useridto
+] => 1 ) [
+    19
+] => Array ( [id
+] => 137 [datetime
+] => 27-08-2025 02: 30 PM [title
+] => 👀 Profile Viewed by Sakal News Satara [msg
+] => Sakal News Satara viewed your application. [type
+] => Application_Action [typeid
+] => 22 [job_listing_type
+] => 1 [job_id
+] => 4 [application_id
+] => 22 [action_type
+] => 3 [readstatus
+] => 0 [useridfrom
+] => 6 [useridto
+] => 1 ) [
+    20
+] => Array ( [id
+] => 15 [datetime
+] => 23-08-2025 02: 39 PM [title
+] => 📞 Call Received for ATM Operator [msg
+] => Pravin Arvind Shinde just called you via the app. Tap to view their profile. [type
+] => Job_Actionlog [typeid
+] => 13 [job_listing_type
+] => 2 [job_id
+] => 2 [application_id
+] => 1 [action_type
+] => 1 [readstatus
+] => 1 [useridfrom
+] => 4 [useridto
+] => 1 ) [
+    21
+] => Array ( [id
+] => 14 [datetime
+] => 23-08-2025 02: 37 PM [title
+] => 📞 Call Received for ATM Operator [msg
+] => Pravin Arvind Shinde just called you via the app. Tap to view their profile. [type
+] => Job_Actionlog [typeid
+] => 12 [job_listing_type
+] => 2 [job_id
+] => 2 [application_id
+] => 1 [action_type
+] => 1 [readstatus
+] => 1 [useridfrom
+] => 4 [useridto
+] => 1 ) [
+    22
+] => Array ( [id
+] => 13 [datetime
+] => 23-08-2025 02: 36 PM [title
+] => 📞 Call Received for ATM Operator [msg
+] => Pravin Arvind Shinde just called you via the app. Tap to view their profile. [type
+] => Job_Actionlog [typeid
+] => 11 [job_listing_type
+] => 2 [job_id
+] => 2 [application_id
+] => 1 [action_type
+] => 1 [readstatus
+] => 1 [useridfrom
+] => 4 [useridto
+] => 1 ) [
+    23
+] => Array ( [id
+] => 12 [datetime
+] => 23-08-2025 02: 36 PM [title
+] => 📞 Call Received for ATM Operator [msg
+] => Pravin Arvind Shinde just called you via the app. Tap to view their profile. [type
+] => Job_Actionlog [typeid
+] => 10 [job_listing_type
+] => 2 [job_id
+] => 2 [application_id
+] => 1 [action_type
+] => 1 [readstatus
+] => 1 [useridfrom
+] => 4 [useridto
+] => 1 ) [
+    24
+] => Array ( [id
+] => 11 [datetime
+] => 23-08-2025 02: 36 PM [title
+] => 📞 Call Received for ATM Operator [msg
+] => Pravin Arvind Shinde just called you via the app. Tap to view their profile. [type
+] => Job_Actionlog [typeid
+] => 9 [job_listing_type
+] => 2 [job_id
+] => 2 [application_id
+] => 1 [action_type
+] => 1 [readstatus
+] => 0 [useridfrom
+] => 4 [useridto
+] => 1 ) [
+    25
+] => Array ( [id
+] => 10 [datetime
+] => 23-08-2025 02: 35 PM [title
+] => 📞 Call Received for ATM Operator [msg
+] => Pravin Arvind Shinde just called you via the app. Tap to view their profile. [type
+] => Job_Actionlog [typeid
+] => 8 [job_listing_type
+] => 2 [job_id
+] => 2 [application_id
+] => 1 [action_type
+] => 1 [readstatus
+] => 0 [useridfrom
+] => 4 [useridto
+] => 1 ) [
+    26
+] => Array ( [id
+] => 9 [datetime
+] => 23-08-2025 02: 25 PM [title
+] => 📞 Call Received for ATM Operator [msg
+] => Pravin Arvind Shinde just called you via the app. Tap to view their profile. [type
+] => Job_Actionlog [typeid
+] => 7 [job_listing_type
+] => 2 [job_id
+] => 2 [application_id
+] => 1 [action_type
+] => 1 [readstatus
+] => 1 [useridfrom
+] => 4 [useridto
+] => 1 ) [
+    27
+] => Array ( [id
+] => 5 [datetime
+] => 23-08-2025 02: 21 PM [title
+] => New Job Application Received for ATM Operator [msg
+] => Pravin Arvind Shinde has applied for your job post. [type
+] => Applicant_Profile [typeid
+] => 1 [job_listing_type
+] => 2 [job_id
+] => 2 [application_id
+] => 1 [action_type
+] => 0 [readstatus
+] => 1 [useridfrom
+] => 4 [useridto
+] => 1 ) [
+    28
+] => Array ( [id
+] => 4 [datetime
+] => 23-08-2025 02: 19 PM [title
+] => 📞 Call Received for ATM Operator [msg
+] => Pravin Arvind Shinde just called you via the app. Tap to view their profile. [type
+] => Job_Actionlog [typeid
+] => 6 [job_listing_type
+] => 2 [job_id
+] => 2 [application_id
+] => 0 [action_type
+] => 1 [readstatus
+] => 0 [useridfrom
+] => 4 [useridto
+] => 1 ) [
+    29
+] => Array ( [id
+] => 3 [datetime
+] => 23-08-2025 02: 18 PM [title
+] => 📞 Call Received for ATM Operator [msg
+] => Pravin Arvind Shinde just called you via the app. Tap to view their profile. [type
+] => Job_Actionlog [typeid
+] => 5 [job_listing_type
+] => 2 [job_id
+] => 2 [application_id
+] => 0 [action_type
+] => 1 [readstatus
+] => 0 [useridfrom
+] => 4 [useridto
+] => 1 ) [
+    30
+] => Array ( [id
+] => 2 [datetime
+] => 23-08-2025 01: 22 PM [title
+] => 📞 Call Received for Kitchen Helper [msg
+] => Pravin Arvind Shinde just called you via the app. Tap to view their profile. [type
+] => Job_Actionlog [typeid
+] => 4 [job_listing_type
+] => 2 [job_id
+] => 1 [application_id
+] => 0 [action_type
+] => 1 [readstatus
+] => 0 [useridfrom
+] => 4 [useridto
+] => 1 ) [
+    31
+] => Array ( [id
+] => 1 [datetime
+] => 23-08-2025 01: 22 PM [title
+] => 📞 Call Received for Kitchen Helper [msg
+] => Pravin Arvind Shinde just called you via the app. Tap to view their profile. [type
+] => Job_Actionlog [typeid
+] => 3 [job_listing_type
+] => 2 [job_id
+] => 1 [application_id
+] => 0 [action_type
+] => 1 [readstatus
+] => 0 [useridfrom
+] => 4 [useridto
+] => 1 ) )

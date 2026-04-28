@@ -1,50 +1,82 @@
 <?php
 session_start();
 require_once 'includes/session.php';
+require_once 'includes/db_config.php';
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 /* ===============================
-   ✅ LOGIN CHECK
+   âœ… LOGIN CHECK
 ================================ */
 if (empty($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
 }
 
-/* ===============================
-   ✅ DB CONNECTION
-================================ */
-require_once 'includes/db_config.php';
-
 $userid = $_SESSION['user_id'];
 
+/* ===============================
+   âœ… API URLs
+================================ */
+$getApi = API_BASE_URL . "getNotificationlist.php";
+$updateApi = API_BASE_URL . "updatenotification.php";
 
-$url = API_BASE_URL . "getNotificationlist.php";
-// $url = "https://pacificconnect2.0.inv51.in/webservices/getNotificationlist.php";
+/* ===============================
+   âœ… MARK AS READ
+================================ */
+if (isset($_GET['read_id'])) {
 
-$data = [
+    $data = json_encode([
+        "notification_id" => intval($_GET['read_id'])
+    ]);
+
+    $ch = curl_init($updateApi);
+
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $data,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => 10
+    ]);
+
+    curl_exec($ch);
+    curl_close($ch);
+
+    // redirect
+    if (isset($_GET['redirect']) && $_GET['redirect'] == 'referral') {
+        header("Location: referral_list.php");
+    } else {
+        header("Location: promotor_notification.php");
+    }
+    exit;
+}
+
+/* ===============================
+   âœ… FETCH NOTIFICATIONS
+================================ */
+$postData = json_encode([
     "userid" => $userid
-];
+]);
 
-$options = [
-    "http" => [
-        "header"  => "Content-Type: application/json\r\n",
-        "method"  => "POST",
-        "content" => json_encode($data),
-    ]
-];
+$ch = curl_init($getApi);
 
-$context  = stream_context_create($options);
-$response = file_get_contents($url, false, $context);
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $postData,
+    CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT => 10
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
 
 $result = json_decode($response, true);
 ?>
-
-
-
-
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -53,87 +85,63 @@ $result = json_decode($response, true);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notifications | Pacific iConnect</title>
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/style.css">
 
     <style>
         :root {
             --primary: #483EA8;
-            --primary-light: #eceaf9;
             --blue-btn: #2563eb;
-            --text-dark: #1a1a1a;
             --text-muted: #64748b;
             --border-light: #e2e8f0;
             --bg-body: #f8fafc;
             --white: #ffffff;
             --info-bg: #f8faff;
-            --unread-dot: #cbd5e1;
-            --location-icon: #ef4444;
         }
 
-        * {
-
+        body {
+            background: var(--bg-body);
             font-family: 'Segoe UI', Roboto, sans-serif;
         }
 
-
-
-
-
-        .back-btn {
-            font-size: 1.2rem;
-            color: var(--text-dark);
-            cursor: pointer;
-        }
-
-        .header-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-        }
-
-        .user-icon {
-            font-size: 1.5rem;
-            color: var(--blue-btn);
-        }
-
-        /* --- MAIN CONTENT --- */
         .notifications-container {
             max-width: 900px;
             margin: 30px auto;
             padding: 0 20px;
         }
 
-        /* --- NOTIFICATION CARD (MATCHING DESKTOP STYLE) --- */
         .noti-card {
             background: var(--white);
             border-radius: 12px;
             border: 1px solid var(--border-light);
             margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-            overflow: hidden;
             position: relative;
-            transition: 0.2s;
         }
 
-        .noti-card:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
-        }
-
-        /* Status Dot */
-        .unread-indicator {
+        /* ðŸ”µðŸ”˜ DOT STYLE */
+        .status-dot {
             position: absolute;
             top: 20px;
             right: 20px;
             width: 10px;
             height: 10px;
-            background: var(--unread-dot);
             border-radius: 50%;
         }
 
-        /* Top Bar of Card */
+        .dot-blue {
+            background: #ef4444;
+        }
+
+        /* unread */
+        .dot-grey {
+            background: #cbd5e1;
+        }
+
+        /* read */
+
         .noti-header {
-            padding: 20px 25px;
+            padding: 20px;
             display: flex;
             align-items: center;
             gap: 15px;
@@ -146,137 +154,62 @@ $result = json_decode($response, true);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
-        }
-
-        .icon-call {
             background: #f1f5f9;
-            color: #333;
-        }
-
-        .icon-location {
-            background: #fef2f2;
-            color: var(--location-icon);
         }
 
         .noti-title {
-            font-size: 1.05rem;
             font-weight: 700;
-            color: var(--text-dark);
         }
 
-        /* Content Area (Grey background like Applications List) */
         .noti-body {
             background: var(--info-bg);
-            padding: 15px 25px;
-            border-top: 1px solid #f1f5f9;
-            border-bottom: 1px solid #f1f5f9;
-            font-size: 0.95rem;
+            padding: 15px 20px;
             color: var(--text-muted);
-            line-height: 1.5;
         }
 
-        /* Footer Area */
         .noti-footer {
-            padding: 12px 25px;
+            padding: 10px 20px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-        }
-
-        .noti-time {
-            font-size: 0.8rem;
-            color: #94a3b8;
-            font-weight: 600;
         }
 
         .view-link {
-            font-size: 0.85rem;
             color: var(--blue-btn);
-            font-weight: 700;
+            font-weight: 600;
             text-decoration: none;
-        }
-
-        /* --- MOBILE ADJUSTMENTS --- */
-        @media (max-width: 600px) {
-            header {
-                height: 60px;
-            }
-
-            .notifications-container {
-                margin: 15px auto;
-                padding: 0 15px;
-            }
-
-            .noti-header {
-                padding: 15px;
-            }
-
-            .noti-body {
-                padding: 15px;
-                font-size: 0.9rem;
-            }
-
-            .noti-footer {
-                padding: 10px 15px;
-            }
         }
 
         .text-center {
             text-align: center;
             margin-top: 40px;
-            font-size: 1rem;
-            color: #64748b;
-            font-weight: 600;
         }
     </style>
 </head>
 
 <body>
 
-
     <?php include "includes/preloader.php"; ?>
     <?php include "includes/promoter_header.php"; ?>
 
     <div class="notifications-container">
 
-        <?php if ($result['status'] && !empty($result['notifications'])): ?>
+        <?php if (!empty($result['notifications'])): ?>
 
             <?php foreach ($result['notifications'] as $noti): ?>
 
                 <div class="noti-card">
 
-                    <?php if ($noti['readstatus'] == 0): ?>
-                        <div class="unread-indicator"></div>
-                    <?php endif; ?>
+                    <!-- ðŸ”µ / âšª STATUS DOT -->
+                    <div class="status-dot <?php echo ($noti['readstatus'] == 0) ? 'dot-blue' : 'dot-grey'; ?>"></div>
 
                     <div class="noti-header">
-
-                        <?php
-                        // icon based on action_type
-                        $iconClass = "fa-bell";
-                        $iconBox = "icon-call";
-
-                        if ($noti['action_type'] == 1) {
-                            $iconClass = "fa-phone";
-                            $iconBox = "icon-call";
-                        } elseif ($noti['action_type'] == 2) {
-                            $iconClass = "fa-whatsapp";
-                            $iconBox = "icon-call";
-                        } elseif ($noti['action_type'] == 3) {
-                            $iconClass = "fa-map-marker-alt";
-                            $iconBox = "icon-location";
-                        }
-                        ?>
-
-                        <div class="icon-box <?php echo $iconBox; ?>">
-                            <i class="fas <?php echo $iconClass; ?>"></i>
+                        <div class="icon-box">
+                            <i class="fas fa-bell"></i>
                         </div>
 
                         <div class="noti-title">
                             <?php echo htmlspecialchars($noti['title']); ?>
                         </div>
-
                     </div>
 
                     <div class="noti-body">
@@ -284,11 +217,18 @@ $result = json_decode($response, true);
                     </div>
 
                     <div class="noti-footer">
-                        <span class="noti-time">
-                            <?php echo $noti['datetime']; ?>
-                        </span>
+                        <span><?php echo $noti['datetime']; ?></span>
 
-                        <a href="#" class="view-link">View Details</a>
+                        <!-- ALWAYS CLICKABLE -->
+                        <?php if ($noti['readstatus'] == 0): ?>
+                            <a href="?read_id=<?php echo $noti['id']; ?>&redirect=referral" class="view-link">
+                                View Details
+                            </a>
+                        <?php else: ?>
+                            <a href="referral_list.php" class="view-link">
+                                View Details
+                            </a>
+                        <?php endif; ?>
                     </div>
 
                 </div>
@@ -298,13 +238,13 @@ $result = json_decode($response, true);
         <?php else: ?>
 
             <div class="text-center">
-                <p><?php echo $result['message'] ?> </p>
+                <p>No notifications found</p>
             </div>
-
 
         <?php endif; ?>
 
     </div>
+
 </body>
 
 </html>

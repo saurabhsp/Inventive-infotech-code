@@ -346,62 +346,64 @@ $applicationsTbl = 'jos_app_applications';
 if ($range === 'lifetime') {
 
     $stmt = $con->prepare("
-        SELECT 
-            COUNT(A.id) AS total_applications,            
-            SUM(CASE WHEN A.job_listing_type = 1 THEN 1 ELSE 0 END) 
-                AS premium_applications,                
-            SUM(CASE WHEN A.job_listing_type = 2 THEN 1 ELSE 0 END) 
-                AS standard_applications
-        FROM jos_app_applications A
-        LEFT JOIN jos_app_jobvacancies JV 
-               ON A.job_listing_type = 2 
-               AND A.job_id = JV.id
-        LEFT JOIN jos_app_walkininterviews WI 
-               ON A.job_listing_type = 1 
-               AND A.job_id = WI.id
-        LEFT JOIN jos_app_users U
-               ON (
-                    (A.job_listing_type = 2 AND JV.recruiter_id = U.id)
-                    OR
-                    (A.job_listing_type = 1 AND WI.recruiter_id = U.id)
-                  )
-        WHERE U.ac_manager_id = ?
-        AND U.profile_type_id = 1
+       SELECT 
+    COUNT(A.id) AS total_applications,
+
+    COALESCE(SUM(CASE WHEN A.job_listing_type = 1 THEN 1 ELSE 0 END), 0) 
+        AS premium_applications,
+
+    COALESCE(SUM(CASE WHEN A.job_listing_type = 2 THEN 1 ELSE 0 END), 0) 
+        AS standard_applications
+
+FROM jos_app_applications A
+
+LEFT JOIN jos_app_jobvacancies JV 
+    ON A.job_listing_type = 2 AND A.job_id = JV.id
+
+LEFT JOIN jos_app_walkininterviews WI 
+    ON A.job_listing_type = 1 AND A.job_id = WI.id
+
+LEFT JOIN jos_app_users U
+    ON (
+        (A.job_listing_type = 2 AND JV.recruiter_id = U.id)
+        OR
+        (A.job_listing_type = 1 AND WI.recruiter_id = U.id)
+    )
+    AND U.ac_manager_id = ?
+    AND U.profile_type_id = 1
     ");
 
     $stmt->bind_param("i", $logged_admin_id);
 } else {
 
     $stmt = $con->prepare("
-        SELECT 
-            COUNT(A.id) AS total_applications,
-            
-            SUM(CASE WHEN A.job_listing_type = 1 THEN 1 ELSE 0 END) 
-                AS premium_applications,
-                
-            SUM(CASE WHEN A.job_listing_type = 2 THEN 1 ELSE 0 END) 
-                AS standard_applications
+    SELECT 
+    COUNT(A.id) AS total_applications,
 
-        FROM jos_app_applications A
+    COALESCE(SUM(CASE WHEN A.job_listing_type = 1 THEN 1 ELSE 0 END), 0) 
+        AS premium_applications,
 
-        LEFT JOIN jos_app_jobvacancies JV 
-               ON A.job_listing_type = 2 
-               AND A.job_id = JV.id
+    COALESCE(SUM(CASE WHEN A.job_listing_type = 2 THEN 1 ELSE 0 END), 0) 
+        AS standard_applications
 
-        LEFT JOIN jos_app_walkininterviews WI 
-               ON A.job_listing_type = 1 
-               AND A.job_id = WI.id
+FROM jos_app_applications A
 
-        LEFT JOIN jos_app_users U
-               ON (
-                    (A.job_listing_type = 2 AND JV.recruiter_id = U.id)
-                    OR
-                    (A.job_listing_type = 1 AND WI.recruiter_id = U.id)
-                  )
+LEFT JOIN jos_app_jobvacancies JV 
+    ON A.job_listing_type = 2 AND A.job_id = JV.id
 
-        WHERE U.ac_manager_id = ?
-        AND U.profile_type_id = 1
-        AND A.application_date BETWEEN ? AND ?
+LEFT JOIN jos_app_walkininterviews WI 
+    ON A.job_listing_type = 1 AND A.job_id = WI.id
+
+LEFT JOIN jos_app_users U
+    ON (
+        (A.job_listing_type = 2 AND JV.recruiter_id = U.id)
+        OR
+        (A.job_listing_type = 1 AND WI.recruiter_id = U.id)
+    )
+    AND U.ac_manager_id = ?
+    AND U.profile_type_id = 1
+
+WHERE A.application_date BETWEEN ? AND ?
     ");
 
     $stmt->bind_param("iss", $logged_admin_id, $from, $to);
@@ -412,7 +414,6 @@ $stmt->execute();
 $res = $stmt->get_result();
 $appRow = $res->fetch_assoc();
 $stmt->close();
-
 
 // Applications
 $totalApplications   = (int)($appRow['total_applications'] ?? 0);

@@ -319,6 +319,14 @@ ob_start();
 </style>
 
 <script>
+  function openInNewTab(form) {
+    // create a unique window name (optional but safer)
+    const winName = "editProfile_" + Date.now();
+    // open blank tab first
+    const newTab = window.open('', winName);
+    form.target = winName;
+    form.submit();
+  }
   document.addEventListener('DOMContentLoaded', function() {
     if (window.flatpickr) {
       flatpickr(".js-date-ddmmyyyy", {
@@ -1298,21 +1306,19 @@ SELECT
 
         <div class="filter-group">
           <label>KYC Status</label>
-          <select class="inp" name="kyc_status_id">
-            <option value="">All KYC Status</option>
+          <select name="kyc_status_id" class="inp">
+            <option value="">All</option>
+          
+            <option value="NOT_SUBMITTED" <?= $kyc_status_id === 'NOT_SUBMITTED' ? 'selected' : '' ?>>Not Submitted (no docs)</option>
 
-            <?php foreach ($kycStatuses as $st): ?>
-              <option value="<?= (int)$st['id'] ?>"
-                <?= ($kyc_status_id !== '' && (int)$kyc_status_id === (int)$st['id']) ? 'selected' : '' ?>>
-                <?= h($st['name']) ?>
-              </option>
-            <?php endforeach; ?>
 
-            <option value="NOT_SUBMITTED"
-              <?= ($kyc_status_id === 'NOT_SUBMITTED') ? 'selected' : '' ?>>
-              Not Submitted
-            </option>
-
+            <?php
+            $kycStatuses = mysqli_query($con, "SELECT id, name FROM jos_app_kycstatus ORDER BY id");
+            while ($s = mysqli_fetch_assoc($kycStatuses)) {
+              $selected = ($kyc_status_id == $s['id']) ? 'selected' : '';
+              echo "<option value='{$s['id']}' $selected>{$s['name']}</option>";
+            }
+            ?>
           </select>
         </div>
 
@@ -1634,7 +1640,7 @@ SELECT
 
               <td>
                 <a class="btn secondary" href="<?= h($profileUrl) ?>">View</a>
-                <?php if ($logged_admin_role_id == 1) { ?><a class="btn primary" style="margin:2px; white-space:nowrap;" href="<?= h(keep_params(['show_logs_user_id' => $row['id'], 'page' => null])) ?>">
+                <?php if ($logged_admin_role_id == 1) { ?><a class="btn primary" target="_blank" style="margin:2px; white-space:nowrap;" href="<?= h(keep_params(['show_logs_user_id' => $row['id'], 'page' => null])) ?>">
                     Assign History
                   </a><?php } ?>
                 <!-- Edit Employer Block  -->
@@ -1651,8 +1657,7 @@ SELECT
                 }
                 ?>
 
-                <form method="post" action="<?= h($edit_action) ?>" style="margin-top:6px;">
-
+                <form method="post" action="<?= h($edit_action) ?>" style="margin-top:6px;" onsubmit="openInNewTab(this); return false;">
                   <input type="hidden" name="user_id" value="<?= (int)$row['id'] ?>">
                   <input type="hidden" name="profile_type_id" value="<?= (int)$row['profile_type_id'] ?>">
                   <input type="hidden" name="profile_id" value="<?= (int)$row['profile_id'] ?>">

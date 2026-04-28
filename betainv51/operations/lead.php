@@ -1697,16 +1697,22 @@ ob_start(); ?>
         <input name="city_location" class="inp" value="<?= h($val('city_location')) ?>" placeholder="City / Location">
       </div>
 
-      <div>
+      <div style="<?= $isEdit ? 'display:none;' : '' ?>">
         <label>Status*</label>
         <select name="status_id" id="status_id" class="inp" required>
           <?php foreach ($statuses as $sid => $s): ?>
-            <option value="<?= $sid ?>" <?= $curStatus === $sid ? 'selected' : '' ?> data-code="<?= h($s['code']) ?>"><?= h($s['name']) ?></option>
+            <option value="<?= $sid ?>" <?= $curStatus === $sid ? 'selected' : '' ?> data-code="<?= h($s['code']) ?>">
+              <?= h($s['name']) ?>
+            </option>
           <?php endforeach; ?>
         </select>
       </div>
 
-      <div id="box_followup" class="hide">
+      <?php if ($isEdit): ?>
+        <input type="hidden" name="status_id" value="<?= h($curStatus) ?>">
+      <?php endif; ?>
+
+      <div id="box_followup" style="<?= $isEdit ? 'display:none;' : '' ?>">
         <label>Follow-up Date/Time*</label>
         <input type="text" name="followup_at" id="followup_at" class="inp"
           placeholder="dd-mm-yyyy hh:mm AM/PM"
@@ -1716,11 +1722,23 @@ ob_start(); ?>
                   ?>">
       </div>
 
-      <div id="box_plan" class="hide">
+      <?php if ($isEdit): ?>
+        <input type="hidden" name="followup_at"
+          value="<?php
+                  $fv = $val('followup_at', '');
+                  if ($fv) echo h(date('d-m-Y h:i A', strtotime($fv)));
+                  ?>">
+      <?php endif; ?>
+
+      <div id="box_plan" style="<?= $isEdit ? 'display:none;' : '' ?>">
         <label>On-boarded Plan*</label>
         <select name="onboarded_plan_id" id="plan_select" class="inp"></select>
         <div class="pac-hint">Plans shown as per Profile Type (and common plans).</div>
       </div>
+
+      <?php if ($isEdit): ?>
+        <input type="hidden" name="onboarded_plan_id" value="<?= h($curPlan) ?>">
+      <?php endif; ?>
 
       <div class="full">
         <label>Reason / Notes</label>
@@ -1768,6 +1786,7 @@ ob_start(); ?>
 
       function toggleStatusExtras() {
         var sel = byId('status_id');
+        if (!sel) return; // safety
         var opt = sel.options[sel.selectedIndex];
         var code = (opt && opt.getAttribute('data-code')) ? opt.getAttribute('data-code') : '';
         setHide(byId('box_followup'), code !== 'FOLLOW_UP');

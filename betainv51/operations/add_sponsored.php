@@ -1140,21 +1140,21 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
 
             <div class="form-group">
                 <label>Country</label>
-                <input type="text" id="loc_country">
+                <input type="text" id="loc_country" placeholder="Enter Country">
                 <div id="countrySuggestions" class="suggestion-box"></div>
 
             </div>
 
             <div class="form-group">
                 <label>State</label>
-                <input type="text" id="loc_state">
+                <input type="text" id="loc_state" placeholder="Enter State">
                 <div id="stateSuggestions" class="suggestion-box"></div>
 
             </div>
 
             <div class="form-group">
                 <label>District</label>
-                <input type="text" id="loc_district">
+                <input type="text" id="loc_district" placeholder="Enter District">
                 <div id="districtSuggestions" class="suggestion-box"></div>
 
             </div>
@@ -1179,7 +1179,7 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
 
             <div class="form-group">
                 <label>Locality</label>
-                <input type="text" id="loc_locality">
+                <input type="text" id="loc_locality" placeholder="Enter Locality">
                 <div id="localitySuggestions" class="suggestion-box"></div>
             </div>
 
@@ -1509,8 +1509,56 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
                     value = parts[0].trim();
                     selectedDistrict = value;
                 } else if (type === "city") {
-                    value = parts[0].trim();
-                    selectedCity = value;
+
+                    placeService.getDetails({
+                        placeId: item.place_id,
+                        fields: ["address_components", "name"]
+                    }, function(place, status) {
+
+                        if (status !== "OK") return;
+
+                        let country = "";
+                        let state = "";
+                        let district = "";
+                        let city = "";
+
+                        place.address_components.forEach(function(c) {
+
+                            if (c.types.includes("country")) {
+                                country = c.long_name;
+                            }
+
+                            if (c.types.includes("administrative_area_level_1")) {
+                                state = c.long_name;
+                            }
+
+                            if (
+                                c.types.includes("administrative_area_level_3")
+                            ) {
+                                district = c.long_name;
+                            }
+
+                            if (c.types.includes("locality")) {
+                                city = c.long_name;
+                            }
+                        });
+
+                        selectedCountry = country;
+                        selectedState = state;
+                        selectedDistrict = district;
+                        selectedCity = city;
+
+                        document.getElementById("loc_country").value = country;
+                        document.getElementById("loc_state").value = state;
+                        document.getElementById("loc_district").value = district;
+                        document.getElementById("loc_city").value = city;
+
+                        // ✅ HIDE SUGGESTIONS HERE
+                        box.style.display = "none";
+                        box.innerHTML = "";
+                    });
+
+                    return;
                 }
 
                 /* LOCALITY SPECIAL LOGIC */
@@ -1535,7 +1583,7 @@ if ($view_mode == 'images' && $sponsored_id > 0) {
                 /* SET INPUT VALUE */
 
                 document.getElementById(inputId).value = value;
-
+                box.style.display = "none";
                 box.innerHTML = "";
 
             };

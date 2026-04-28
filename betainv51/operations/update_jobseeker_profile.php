@@ -10,11 +10,14 @@ function h($s)
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 }
 
-function redirect_with_msg($msg)
-{
-    header("Location: users.php?msg=" . urlencode($msg));
-    exit;
-}
+// function redirect_with_msg($msg)
+// {
+//     header("Location: users.php?msg=" . urlencode($msg));
+//     exit;
+// }
+
+$success_msg = "";
+$error_msg = "";
 
 
 /* =========================
@@ -93,7 +96,8 @@ curl_close($curl);
 
 if (isset($_POST['update_profile'])) {
     if ($user_id <= 0 || $profile_id <= 0) {
-        redirect_with_msg("Invalid user");
+        // redirect_with_msg("Invalid user");
+        $error_msg = "Invalid user";
     }
     /* candidate profile fields */
     $candidate_name   = trim($_POST['candidate_name'] ?? '');
@@ -201,12 +205,14 @@ if (isset($_POST['update_profile'])) {
 
         $con->commit();
 
-        redirect_with_msg("Jobseeker profile updated successfully");
+        $success_msg = "Profile updated successfully";
     } catch (Exception $e) {
 
         $con->rollback();
 
-        redirect_with_msg("Update failed: " . $e->getMessage());
+        $error_msg = "Update failed: " . $e->getMessage();
+
+        // redirect_with_msg("Update failed: " . $e->getMessage());
     }
 }
 
@@ -559,7 +565,43 @@ $gstmt->close();
         background: #475569;
         border-radius: 10px;
     }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-box {
+        background: #090e1b;
+        padding: 40px;
+        border-radius: 10px;
+        text-align: center;
+    }
 </style>
+
+<div id="successModal" class="modal">
+    <div class="modal-box">
+        <h3>Success</h3>
+        <p><?= isset($success_msg) ? $success_msg : '' ?></p>
+        <button class="btn primary" onclick="handleOk()">OK</button>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
 
 <div class="master-wrap">
 
@@ -590,7 +632,7 @@ $gstmt->close();
                 <div class="form-group">
                     <label class="lbl">Email</label>
                     <input class="inp" name="email" value="<?= h($data['email']) ?>">
-                </div>            
+                </div>
 
                 <div class="form-group">
                     <label class="lbl">Gender</label>
@@ -611,10 +653,10 @@ $gstmt->close();
                     $birthdate_val = '';
 
                     if (!empty($data['birthdate']) && $data['birthdate'] != '0000-00-00') {
-                        $birthdate_val = $data['birthdate']; 
+                        $birthdate_val = $data['birthdate'];
                     }
                     ?>
-                    <input class="inp"  value="<?= h($birthdate_val) ?>" placeholder="DD-MM-YYYY" type="text" id="birthdate" name="birthdate" >
+                    <input class="inp" value="<?= h($birthdate_val) ?>" placeholder="DD-MM-YYYY" type="text" id="birthdate" name="birthdate">
                 </div>
 
                 <div class="form-group full">
@@ -762,6 +804,17 @@ $gstmt->close();
 
     </div>
 </div>
+<?php if (!empty($success_msg)): ?>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById("successModal").style.display = "flex";
+        });
+
+        function handleOk() {
+            window.close(); // ✅ NOW IT WILL WORK
+        }
+    </script>
+<?php endif; ?>
 <script>
     function toggleJobDropdown() {
         let box = document.getElementById("jobDropdown");

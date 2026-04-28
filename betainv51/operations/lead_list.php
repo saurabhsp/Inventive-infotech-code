@@ -10,6 +10,13 @@ $MY_ID = (int)($_SESSION['admin_user']['id'] ?? 0);
 $MY_ROLE_ID = (int)($_SESSION['admin_user']['role_id'] ?? 0);
 
 
+// if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+//   echo "<pre>";
+//   print_r($_POST);
+//   exit;
+
+// }
 
 global $con;
 
@@ -19,6 +26,7 @@ $STATUSTBL = 'jos_app_crm_lead_statuses';
 $SOURCETBL = 'jos_app_crm_lead_sources';
 $PLANTBL   = 'jos_app_subscription_plans';
 $HISTTBL   = 'jos_app_crm_lead_status_history';
+$MENUTBL   = 'jos_admin_menu';
 
 /* ---------------- Helpers ---------------- */
 function h($s)
@@ -51,6 +59,41 @@ function fmt_dt($dt)
 {
   return $dt ? date('d-m-Y h:i A', strtotime($dt)) : '—';
 }
+function fetch_menu_info(mysqli $con, string $MENUTBL): array
+{
+  $out = ['id' => 0, 'menu_name' => '', 'menu_link' => ''];
+  if (!table_exists($con, $MENUTBL)) return $out;
+
+  $paths = current_script_paths();
+
+  foreach ($paths as $p) {
+    $sql = "SELECT id, menu_name, menu_link FROM `$MENUTBL` WHERE menu_link=? LIMIT 1";
+    if ($st = $con->prepare($sql)) {
+      $st->bind_param('s', $p);
+      $st->execute();
+      if ($r = $st->get_result()->fetch_assoc()) {
+        $st->close();
+        return $r;
+      }
+      $st->close();
+    }
+  }
+  return $out;
+}
+/* ---------------- Flash redirect ---------------- */
+function flash_redirect(string $msg = 'Saved')
+{
+?>
+  <script>
+    if (document.referrer && document.referrer !== window.location.href) {
+      window.location.href = document.referrer + (document.referrer.includes('?') ? '&' : '?') + 'ok=<?= urlencode($msg) ?>';
+    } else {
+      window.location.href = 'lead_list.php?ok=<?= urlencode($msg) ?>';
+    }
+  </script>
+<?php
+  exit;
+}
 
 function parse_followup_to_db($v)
 {
@@ -72,7 +115,41 @@ function stmt_bind(mysqli_stmt $st, string $types, array $params): void
   array_unshift($refs, $types);
   call_user_func_array([$st, 'bind_param'], $refs);
 }
+$menu = fetch_menu_info($con, $MENUTBL);
+// $page_title = $menu['menu_name'] ?: $page_title;
+$MENU_ID    = (int)($menu['id'] ?? 0);
+function user_can($action, $MENU_ID, $con)
+{
+  $user_id = (int)($_SESSION['admin_user']['id'] ?? 0);
+  $role_id = (int)($_SESSION['admin_user']['role_id'] ?? 0);
 
+  // Super Admin → allow all
+  if ($role_id === 1) return true;
+
+  // Example permission table check (adjust if needed)
+  $sql = "SELECT can_add, can_edit, can_delete 
+          FROM jos_admin_permissions 
+          WHERE role_id=? AND menu_id=? LIMIT 1";
+
+  $st = $con->prepare($sql);
+  $st->bind_param("ii", $role_id, $MENU_ID);
+  $st->execute();
+  $perm = $st->get_result()->fetch_assoc();
+  $st->close();
+
+  if (!$perm) return false;
+
+  switch ($action) {
+    case 'add':
+      return (int)$perm['can_add'] === 1;
+    case 'edit':
+      return (int)$perm['can_edit'] === 1;
+    case 'delete':
+      return (int)$perm['can_delete'] === 1;
+    default:
+      return false;
+  }
+}
 
 /* ---------------- Load masters ---------------- */
 $statuses = []; // id => ['name'=>, 'code'=>]

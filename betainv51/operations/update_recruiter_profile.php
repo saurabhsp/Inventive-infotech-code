@@ -9,12 +9,13 @@ function h($s)
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 }
 
-function redirect_with_msg($msg)
-{
-    header("Location: users.php?msg=" . urlencode($msg));
-    exit;
-}
-
+// function redirect_with_msg($msg)
+// {
+//     header("Location: users.php?msg=" . urlencode($msg));
+//     exit;
+// }
+$success_msg = "";
+$error_msg = "";
 /* =========================
    GET IDS FROM POST OR SELF
 ========================= */
@@ -66,7 +67,8 @@ else {
 
 if (isset($_POST['update_profile'])) {
     if ($user_id <= 0 || $profile_id <= 0) {
-        redirect_with_msg("Invalid user");
+        // redirect_with_msg("Invalid user");
+          $error_msg = "Invalid user";
     }
 
     $organization_name   = trim($_POST['organization_name']);
@@ -145,11 +147,12 @@ if (isset($_POST['update_profile'])) {
 
         $con->commit();
 
-        redirect_with_msg("Profile updated successfully");
+            $success_msg = "Profile updated successfully";
     } catch (Exception $e) {
 
         $con->rollback();
-        redirect_with_msg("Update failed");
+        $error_msg = "Update failed: " . $e->getMessage();
+
     }
 }
 
@@ -233,7 +236,36 @@ $stmt->close();
     .suggestion-box {
         display: none;
     }
+
+ .modal {
+    display: none;
+    position: fixed;
+    z-index: 99999; /* 🔥 ADD THIS */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    justify-content: center;
+    align-items: center;
+}
+
+    .modal-box {
+        background: #090e1b;
+        padding: 40px;
+        border-radius: 10px;
+        text-align: center;
+    }
 </style>
+<div id="successModal" class="modal">
+    <div class="modal-box">
+        <h3>Success</h3>
+        <p><?= isset($success_msg) ? $success_msg : '' ?></p>
+        <button class="btn primary" onclick="handleOk()">OK</button>
+    </div>
+</div>
+
+
 
 <div class="master-wrap">
 
@@ -334,7 +366,20 @@ $stmt->close();
 
     </div>
 </div>
+<?php if (!empty($success_msg)): ?>
 <script>
+document.addEventListener("DOMContentLoaded", function() {
+    document.getElementById("successModal").style.display = "flex";
+});
+
+function handleOk() {
+    window.close();
+    window.history.back(); // fallback
+}
+</script>
+<?php endif; ?>
+<script>
+    
     // =========================
     // CLOSE ALL SUGGESTION BOXES
     // =========================
@@ -455,7 +500,7 @@ $stmt->close();
 
             predictions.forEach(p => {
 
-                // ðŸ”¥ FILTER by district text
+                //  FILTER by district text
                 // if (selectedDistrict && !p.description.includes(selectedDistrict)) return;
 
                 let div = document.createElement("div");

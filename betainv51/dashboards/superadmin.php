@@ -8,6 +8,27 @@ if (!isset($con)) die("Database not initialized.");
 
 date_default_timezone_set('Asia/Kolkata');
 
+/* ---------------- LOGGED IN USER ---------------- */
+$me = function_exists('current_user') ? current_user() : [];
+
+$logged_admin_id   = (int)($me['id'] ?? 0);
+// $logged_admin_id   = 1;
+$logged_admin_name = htmlspecialchars($me['name'] ?? '', ENT_QUOTES, 'UTF-8');
+
+$logged_role_id = (int)($me['role_id'] ?? 0);
+$logged_role_name = '';
+
+if ($logged_role_id > 0) {
+    $stmt = $con->prepare("SELECT name FROM jos_admin_roles WHERE id = ?");
+    $stmt->bind_param("i", $logged_role_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($row = $res->fetch_assoc()) {
+        $logged_role_name = $row['name'];
+    }
+    $stmt->close();
+}
+
 /* ---------------- HELPERS ---------------- */
 if (!function_exists('h')) {
     function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
@@ -206,6 +227,207 @@ return $html ?: '<div style="opacity:.6;">No Data</div>';
 ?>
 
 <!-- ================= DASHBOARD UI ================= -->
+<style>
+    .wrapper {
+            max-width: 1200px;
+            margin: auto;
+            padding: 30px;
+        }
+
+        h1 {
+            margin: 0 0 5px 0;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: none;
+        }
+
+        .range-buttons button {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-right: 6px;
+            transition: .2s;
+        }
+
+        .range-buttons button:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .section-label {
+            margin: 25px 0 15px;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 15px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: .2s;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+        }
+
+        /* UPDATED CARD TITLE (more visible + bold) */
+        .card-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 0.3px;
+            margin-bottom: 5px;
+        }
+
+        .card-value {
+            font-size: 34px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .kpi-card {
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .btn-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--primary);
+            font-size: 12px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .btn-link:hover {
+            text-decoration: underline;
+        }
+
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 8px;
+        }
+
+        .actions {
+            margin-top: 20px;
+        }
+
+        .actions a {
+            color: var(--primary);
+            text-decoration: none;
+            margin-right: 15px;
+        }
+
+        .actions a:hover {
+            text-decoration: underline;
+        }
+
+        /* Today date line */
+        .todayline {
+            margin-top: 6px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        /* follow up css card */
+        .followup-grid {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            /* allow wrapping */
+        }
+
+        .followup-card {
+            flex: 1;
+            min-width: 220px;
+            /* controls when it breaks */
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+            transition: .2s;
+        }
+
+        .followup-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .followup-title {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .followup-value {
+            background: #3b82f6;
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .topbar {
+            position: static !important;
+            top: auto !important;
+            z-index: auto !important;
+        }
+</style>
+    <div class="wrapper">
+
+        <div class="topbar">
+            <div>
+                <h1> <?php if (!empty($logged_role_name)) : ?>
+                        <?= htmlspecialchars($logged_role_name) ?>
+                    <?php else: ?>
+                        Dashboard
+                    <?php endif; ?></h1>
+                <div class="muted">Stats for <?= $logged_admin_name ?></div>
+                <div id="todayDate" class="todayline"></div>
+            </div>
+
+            <!-- <div class="range-buttons">
+                <a href="?range=daily"><button type="button">Today</button></a>
+                <a href="?range=monthly"><button type="button">This Month</button></a>
+                <a href="?range=lifetime"><button type="button">Lifetime</button></a>
+            </div> -->
+
+        </div>
+
 
 <div class="grid-5" style="margin-bottom:18px;">
   <div class="mini-card"><div class="label">My Recruiters</div><div class="value"><?=$myRecruitersCount?></div></div>
@@ -214,37 +436,4 @@ return $html ?: '<div style="opacity:.6;">No Data</div>';
   <div class="mini-card"><div class="label">Promoters</div><div class="value"><?=$promoters?></div></div>
 </div>
 
-<div class="grid-2" style="margin-bottom:18px;">
-  <div class="panel">
-    <div class="section-title">Employers Plans</div>
-    <?=render_rows($recruiterPlans)?>
-  </div>
-  <div class="panel">
-    <div class="section-title">Job Seekers Plans</div>
-    <?=render_rows($jobseekerPlans)?>
-  </div>
-</div>
-
-<div class="grid-2" style="margin-bottom:18px;">
-  <div class="panel">
-    <div class="section-title">Premium Job Status</div>
-    <?=render_rows($walkinStatus)?>
-  </div>
-  <div class="panel">
-    <div class="section-title">Standard Job Status</div>
-    <?=render_rows($vacancyStatus)?>
-  </div>
-</div>
-
-<div class="panel">
-  <div class="grid-2">
-    <div>
-      <div class="section-title">Premium Applications</div>
-      <?=render_rows($appStatusType1)?>
-    </div>
-    <div>
-      <div class="section-title">Standard Applications</div>
-      <?=render_rows($appStatusType2)?>
-    </div>
-  </div>
 </div>

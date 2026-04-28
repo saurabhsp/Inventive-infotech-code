@@ -11,6 +11,12 @@ if (!$con) {
 require_once __DIR__ . '/../includes/auth.php';
 require_login();
 
+$employer_id = 0;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $employer_id = isset($_POST['recruiter_id']) ? (int)$_POST['recruiter_id'] : 0;
+}
+
 /* ----------------------------
    ACL: view-only guard
    ---------------------------- */
@@ -61,7 +67,9 @@ try {
       $stmt->bind_param('i', $current_user_id);
       $stmt->execute();
       $stmt->bind_result($rid);
-      if ($stmt->fetch()) { $role_id = (int)$rid; }
+      if ($stmt->fetch()) {
+        $role_id = (int)$rid;
+      }
       $stmt->close();
     }
 
@@ -73,7 +81,9 @@ try {
         $stmt->bind_param('ii', $role_id, $menu_id);
         $stmt->execute();
         $stmt->bind_result($cv);
-        if ($stmt->fetch()) { $can_view = (int)$cv; }
+        if ($stmt->fetch()) {
+          $can_view = (int)$cv;
+        }
         $stmt->close();
       }
 
@@ -82,7 +92,9 @@ try {
         ob_start(); ?>
         <link rel="stylesheet" href="/adminconsole/assets/ui.css">
         <div class="master-wrap" style="padding:40px">
-          <div class="headbar"><h2 style="margin:0">Access denied</h2></div>
+          <div class="headbar">
+            <h2 style="margin:0">Access denied</h2>
+          </div>
           <div class="card" style="padding:20px;margin-top:12px">
             <div style="font-size:18px;font-weight:700;color:#fff">403 — Access denied</div>
             <div style="color:#9ca3af;margin-top:8px">
@@ -198,7 +210,7 @@ if ($position_id > 0) {
 }
 
 /* ======================================================================
-   MODE: Candidate Profile Details  (?candidate={userid})
+   MODE: Employer Profile Details  (?candidate={userid})
    ====================================================================== */
 if (isset($_GET['candidate'])) {
   $userid = (int)$_GET['candidate'];
@@ -244,10 +256,11 @@ if (isset($_GET['candidate'])) {
       <div class="headbar">
         <h2 style="margin:0">Premium Jobs List</h2>
         <div style="margin-left:auto;display:flex;gap:8px">
+
           <?php if ($returnUrl): ?>
-            <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back to Position Summary</a>
+            <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back</a>
           <?php endif; ?>
-          <a class="btn secondary" href="<?= h(keep_params(['candidate' => null])) ?>">← Back</a>
+          <a class="btn secondary" href="premium_jobs_report.php">← Back</a>
         </div>
       </div>
       <div class="card" style="padding:20px">
@@ -287,7 +300,7 @@ if (isset($_GET['candidate'])) {
   <link rel="stylesheet" href="/adminconsole/assets/ui.css">
   <div class="master-wrap">
     <div class="headbar">
-      <h2 style="margin:0"><?= h($row['candidate_name'] ?: 'Candidate') ?></h2>
+      <h2 style="margin:0"><?= h($row['candidate_name'] ?: 'Employer') ?></h2>
       <div style="margin-left:auto;display:flex;gap:8px">
         <?php if ($returnUrl): ?>
           <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back to Position Summary</a>
@@ -382,12 +395,14 @@ if (isset($_GET['apps'])) {
                  a.userid,
                  a.application_date,
                  a.status_id,
+                 s.name AS status_name,
                  a.interview_date_time,
                  cp.candidate_name,
                  cp.mobile_no,
                  cp.email
           FROM jos_app_applications a
           LEFT JOIN jos_app_candidate_profile cp ON cp.userid = a.userid
+          LEFT JOIN jos_app_applicationstatus s ON s.id = a.status_id
           WHERE a.job_listing_type = 1 AND a.job_id = ?
           ORDER BY a.application_date DESC";
   $stmt = $con->prepare($sql);
@@ -404,13 +419,15 @@ if (isset($_GET['apps'])) {
   <link rel="stylesheet" href="/adminconsole/assets/ui.css">
   <div class="master-wrap">
     <div class="headbar">
-      <h2 style="margin:0">Applications — <?= h($job['job_position'] ?? ('Job #' . $jobId)) ?></h2>
+      <h2 style="margin:0">Applications — <?= h($job['job_position'] ?? ('Job #' . $jobId)) ?> (<?= (int)count($rows) ?>)</h2>
       <div style="margin-left:auto;display:flex;gap:8px">
+
         <?php if ($returnUrl): ?>
-          <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back to Position Summary</a>
+          <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back</a>
+        <?php else: ?>
+          <a class="btn secondary" href="premium_jobs_report.php">← Back</a>
         <?php endif; ?>
-        <a class="btn secondary" href="<?= h(keep_params(['apps' => null])) ?>">← Back</a>
-        <span class="badge">Total: <?= (int)count($rows) ?></span>
+        <!-- <span class="badge">Total: <?= (int)count($rows) ?></span> -->
       </div>
     </div>
 
@@ -421,7 +438,7 @@ if (isset($_GET['apps'])) {
             <tr>
               <th>Sr No.</th>
               <th>Application ID</th>
-              <th>Candidate</th>
+              <th>Employer</th>
               <th>Contact</th>
               <th>Applied On</th>
               <th>Status</th>
@@ -450,7 +467,7 @@ if (isset($_GET['apps'])) {
                 echo implode('<br>', $contact);
                 echo '</td>';
                 echo '<td>' . h(fmt_date($r['application_date'])) . '</td>';
-                echo '<td>' . h((string)$r['status_id']) . '</td>';
+                echo '<td>' . h((string)$r['status_name']) . '</td>';
                 echo '<td>' . h(safe_date_label($r['interview_date_time'])) . '</td>';
                 echo '<td><a class="btn secondary" href="' . $viewCandUrl . '" target="_blank" rel="noopener">View Details</a></td>';
                 echo '</tr>';
@@ -487,6 +504,26 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
                  rp.organization_name AS recruiter_org,
                  rp.company_logo,
                  rp.mobile_no AS recruiter_mobile_no,
+                 -- Applications
+        (SELECT COUNT(*) FROM jos_app_applications a 
+         WHERE a.job_listing_type=1 AND a.job_id=w.id) AS apps_count,
+
+        -- Visits
+        (SELECT COUNT(*) FROM jos_app_jobvisitlog v 
+         WHERE v.job_listing_type=1 AND v.job_id=w.id) AS visit_count,
+
+        -- Calls
+        (SELECT COUNT(*) FROM jos_app_jobaction_logs al 
+         WHERE al.job_listing_type=1 AND al.job_id=w.id AND al.action_type=1) AS call_count,
+
+        -- Chat (WhatsApp)
+        (SELECT COUNT(*) FROM jos_app_jobaction_logs al 
+         WHERE al.job_listing_type=1 AND al.job_id=w.id AND al.action_type=2) AS whatsapp_count,
+
+        -- Location
+        (SELECT COUNT(*) FROM jos_app_jobaction_logs al 
+         WHERE al.job_listing_type=1 AND al.job_id=w.id AND al.action_type=3) AS location_count,
+
                  (SELECT COUNT(*) FROM jos_app_applications a WHERE a.job_listing_type=1 AND a.job_id=w.id) AS apps_count,
                  (SELECT GROUP_CONCAT(DISTINCT TRIM(s.title) ORDER BY s.title SEPARATOR ', ')
                   FROM jos_crm_skills s 
@@ -512,7 +549,7 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
           LEFT JOIN jos_app_recruiter_profile rp ON w.recruiter_id  = rp.id
           WHERE w.id = ? LIMIT 1";
   $stmt = $con->prepare($sql);
-  $stmt->bind_param('i',$id);
+  $stmt->bind_param('i', $id);
   $stmt->execute();
   $res = $stmt->get_result();
   $row = $res->fetch_assoc();
@@ -558,15 +595,28 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
     <div class="headbar">
       <h2 style="margin:0"><?= h($row ? ($row['job_position'] ?: 'Job Details') : 'Job not found') ?></h2>
       <div style="margin-left:auto;display:flex;gap:8px">
-        <?php if ($returnUrl): ?>
-          <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back to Position Summary</a>
-        <?php endif; ?>
-        <?php if ($row) {
-          $appsUrl = h(keep_params(['apps' => (int)$row['id']]));
+
+        <?php
+        if ($row) {
+
+          $currentUrl = $_SERVER['REQUEST_URI'];
+
+          $basePath = '/adminconsole/operations/standard_jobs_report.php';
+
+          $appsUrl = $basePath
+            . '?apps=' . (int)$row['id']
+            . '&return=' . urlencode($currentUrl);
         ?>
-          <a class="btn secondary" href="<?= $appsUrl ?>" target="_blank">View Applications (<?= (int)$row['apps_count'] ?>)</a>
+          <a class="btn secondary" href="<?= h($appsUrl) ?>" target="_blank">
+            View Applications (<?= (int)$row['apps_count'] ?>)
+          </a>
         <?php } ?>
-        <a class="btn secondary" href="<?= h(keep_params(['view' => null])) ?>">← Back to List</a>
+
+        <?php if ($returnUrl): ?>
+          <a class="btn secondary" href="<?= h($returnUrl) ?>">← Back to List</a>
+        <?php else: ?>
+          <a class="btn secondary" href="premium_jobs_report.php">← Back to List</a>
+        <?php endif; ?>
         <button class="btn secondary" onclick="window.print()">Print</button>
       </div>
     </div>
@@ -602,6 +652,32 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
               <span class="badge" title="Valid till" style="background:#231d0b;color:#fde68a;border:1px solid #3f2f0a">Valid: <?= h($validOn) ?><?= $row['valid_till_time'] ? ' • ' . h($row['valid_till_time']) : '' ?></span>
             <?php } ?>
             <span class="badge" style="background:#101a2e;border:1px solid #1f2e50;color:#cbd5e1">Applications: <?= (int)$row['apps_count'] ?></span>
+            <form method="POST" action="job_action_log.php" target="_blank" style="display:flex;gap:8px">
+
+              <input type="hidden" name="job_id" value="<?= (int)$row['id'] ?>">
+              <input type="hidden" name="job_listing_type" value="1">
+
+              <!-- Visits -->
+              <button type="submit" name="action_type" value="4" class="badge" style="background:#101a2e;border:1px solid #1f2e50;color:#cbd5e1;cursor:pointer">
+                Visits: <?= (int)($row['visit_count'] ?? 0) ?>
+              </button>
+
+              <!-- Calls -->
+              <button type="submit" name="action_type" value="1" class="badge" style="background:#101a2e;border:1px solid #1f2e50;color:#cbd5e1;cursor:pointer">
+                Calls: <?= (int)($row['call_count'] ?? 0) ?>
+              </button>
+
+              <!-- Chat -->
+              <button type="submit" name="action_type" value="2" class="badge" style="background:#101a2e;border:1px solid #1f2e50;color:#cbd5e1;cursor:pointer">
+                Chat: <?= (int)($row['whatsapp_count'] ?? 0) ?>
+              </button>
+
+              <!-- Location -->
+              <button type="submit" name="action_type" value="3" class="badge" style="background:#101a2e;border:1px solid #1f2e50;color:#cbd5e1;cursor:pointer">
+                Location: <?= (int)($row['location_count'] ?? 0) ?>
+              </button>
+
+            </form>
           </div>
         </div>
 
@@ -732,7 +808,7 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
                 <tr>
                   <th>Sr No.</th>
                   <th>Application ID</th>
-                  <th>Candidate</th>
+                  <th>Employer</th>
                   <th>Contact</th>
                   <th>Applied On</th>
                   <th>Status</th>
@@ -929,6 +1005,15 @@ $locality  = get_str('locality', '');
 $where = [];
 $types = '';
 $params = [];
+
+// Apply Employer filter only if recruiter_id exists
+if ($employer_id > 0) {
+  $where[] = "w.recruiter_id = ?";
+  $types  .= 'i';
+  $params[] = $employer_id;
+}
+
+
 if ($q !== '') {
   $where[] = "(w.company_name LIKE CONCAT('%',?,'%') OR j.name LIKE CONCAT('%',?,'%'))";
   $types .= 'ss';
@@ -1055,83 +1140,83 @@ ob_start(); ?>
   </div>
 
   <div class="card">
-   <form method="get" style="display:flex;flex-direction:column;gap:16px">
+    <form method="get" style="display:flex;flex-direction:column;gap:16px">
 
-  <?php if ($position_id > 0): ?>
-    <input type="hidden" name="position_id" value="<?= (int)$position_id ?>">
-  <?php endif; ?>
-  <?php if ($returnUrl): ?>
-    <input type="hidden" name="return" value="<?= h($returnUrl) ?>">
-  <?php endif; ?>
+      <?php if ($position_id > 0): ?>
+        <input type="hidden" name="position_id" value="<?= (int)$position_id ?>">
+      <?php endif; ?>
+      <?php if ($returnUrl): ?>
+        <input type="hidden" name="return" value="<?= h($returnUrl) ?>">
+      <?php endif; ?>
 
-  <!-- ROW 1 (4 columns) -->
-  <div style="
+      <!-- ROW 1 (4 columns) -->
+      <div style="
       display:grid;
       grid-template-columns:repeat(4, 1fr);
       gap:16px;
   ">
-    <input class="inp" type="text" name="q"
-           value="<?= h($q) ?>"
-           placeholder="Search job/company...">
+        <input class="inp" type="text" name="q"
+          value="<?= h($q) ?>"
+          placeholder="Search job/company...">
 
-    <select class="inp" name="status">
-      <option value="" <?= $status_in===''?'selected':'' ?>>Status: Any</option>
-      <option value="active" <?= $status_in==='active'?'selected':'' ?>>Active</option>
-      <option value="inactive" <?= $status_in==='inactive'?'selected':'' ?>>Inactive</option>
-    </select>
+        <select class="inp" name="status">
+          <option value="" <?= $status_in === '' ? 'selected' : '' ?>>Status: Any</option>
+          <option value="active" <?= $status_in === 'active' ? 'selected' : '' ?>>Active</option>
+          <option value="inactive" <?= $status_in === 'inactive' ? 'selected' : '' ?>>Inactive</option>
+        </select>
 
-    <input class="inp datepick" type="text" name="created_from"
-           value="<?= h($created_from_raw) ?>"
-           placeholder="From Date">
+        <input class="inp datepick" type="text" name="created_from"
+          value="<?= h($created_from_raw) ?>"
+          placeholder="DD-MM-YYYY">
 
-    <input class="inp datepick" type="text" name="created_to"
-           value="<?= h($created_to_raw) ?>"
-           placeholder="To Date">
-  </div>
+        <input class="inp datepick" type="text" name="created_to"
+          value="<?= h($created_to_raw) ?>"
+          placeholder="DD-MM-YYYY">
+      </div>
 
-  <!-- ROW 2 (4 columns) -->
-  <div style="
+      <!-- ROW 2 (4 columns) -->
+      <div style="
       display:grid;
       grid-template-columns:repeat(4, 1fr);
       gap:16px;
   ">
-    <select class="inp" name="sort">
-      <?php foreach ($SORT_MAP as $k=>$v): ?>
-        <option value="<?= $k ?>" <?= $sort===$k?'selected':'' ?>>
-          <?= h($k) ?>
-        </option>
-      <?php endforeach; ?>
-    </select>
+        <select class="inp" name="sort">
+          <?php foreach ($SORT_MAP as $k => $v): ?>
+            <option value="<?= $k ?>" <?= $sort === $k ? 'selected' : '' ?>>
+              <?= h($k) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
 
-    <input class="inp" type="text" name="state"
-           value="<?= h($state) ?>"
-           placeholder="Search State">
+        <input class="inp" type="text" name="state"
+          value="<?= h($state) ?>"
+          placeholder="Search State">
 
-    <input class="inp" type="text" name="city"
-           value="<?= h($city) ?>"
-           placeholder="Search City">
+        <input class="inp" type="text" name="city"
+          value="<?= h($city) ?>"
+          placeholder="Search City">
 
-    <input class="inp" type="text" name="locality"
-           value="<?= h($locality) ?>"
-           placeholder="Search Locality">
-  </div>
+        <input class="inp" type="text" name="locality"
+          value="<?= h($locality) ?>"
+          placeholder="Search Locality">
+      </div>
 
-  <!-- BUTTON ROW -->
-  <div style="display:flex;gap:12px;">
-    <button class="btn primary" type="submit">Apply</button>
+      <!-- BUTTON ROW -->
+      <div style="display:flex;gap:12px;">
+        <button class="btn primary" type="submit">Apply</button>
 
-    <a class="btn secondary"
-       href="<?= h(keep_params(['view'=>'last50','page'=>1])) ?>">
-       Last <?= $DEFAULT_PAGE_SIZE ?>
-    </a>
+        <a class="btn secondary"
+          href="<?= h(keep_params(['view' => 'last50', 'page' => 1])) ?>">
+          Last <?= $DEFAULT_PAGE_SIZE ?>
+        </a>
 
-    <a class="btn secondary"
-       href="<?= h(keep_params(['view'=>'all','page'=>1])) ?>">
-       View All
-    </a>
-  </div>
+        <a class="btn secondary"
+          href="<?= h(keep_params(['view' => 'all', 'page' => 1])) ?>">
+          View All
+        </a>
+      </div>
 
-</form>
+    </form>
 
 
     <div style="display:flex;align-items:center;gap:12px;margin:8px 0 12px">

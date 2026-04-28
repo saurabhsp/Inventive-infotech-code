@@ -7,7 +7,7 @@ if (!isset($_SESSION['user'])) {
     header("Location: ../login.php");
     exit();
 }
-
+unset($_SESSION['candidate_id'], $_SESSION['application_id'], $_SESSION['job_cp_id'], $_SESSION['job_listing_type']);
 
 $url = API_BASE_URL . "getNotificationlist.php";
 // $url = "https://pacificconnect2.0.inv51.in/webservices/getNotificationlist.php";
@@ -28,12 +28,13 @@ $context  = stream_context_create($options);
 $response = file_get_contents($url, false, $context);
 
 $result = json_decode($response, true);
+
+/* ===============================
+   âœ… MARK AS READ
+================================ */
+
+
 ?>
-
-
-
-
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -134,6 +135,42 @@ $result = json_decode($response, true);
             gap: 15px;
         }
 
+        .noti-card {
+            background: var(--white);
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        /* ðŸ”µðŸ”˜ DOT STYLE */
+        .status-dot {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .dot-blue {
+            background: #ef4444;
+        }
+
+        /* unread */
+        .dot-grey {
+            background: #cbd5e1;
+        }
+
+        /* read */
+
+        .noti-header {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
         .icon-box {
             width: 45px;
             height: 45px;
@@ -227,6 +264,7 @@ $result = json_decode($response, true);
     ?>
     <div class="notification-page">
         <div class="notifications-container">
+            <?php print_r($result['notifications']); ?>
 
             <?php if ($result['status'] && !empty($result['notifications'])): ?>
 
@@ -234,9 +272,9 @@ $result = json_decode($response, true);
 
                     <div class="notifications-card">
 
-                        <?php if ($noti['readstatus'] == 0): ?>
-                            <div class="unread-indicator"></div>
-                        <?php endif; ?>
+                        <div class="status-dot <?php echo ($noti['readstatus'] == 0) ? 'dot-blue' : 'dot-grey'; ?>"></div>
+
+
 
                         <div class="notifications-header">
 
@@ -276,7 +314,54 @@ $result = json_decode($response, true);
                                 <?php echo $noti['datetime']; ?>
                             </span>
 
-                            <a href="#" class="view-link">View Details</a>
+                            <!-- ALWAYS CLICKABLE -->
+                            <?php if ($noti['type'] == "Applicant_Profile"): ?>
+
+                                <form action="candidate_profile.php" method="POST" class="noti-form">
+                                    <input type="hidden" name="candidate_id" value="<?php echo $noti['useridfrom']; ?>">
+                                    <input type="hidden" name="job_listing_type" value="<?php echo $noti['job_listing_type']; ?>">
+                                    <input type="hidden" name="application_id" value="<?php echo $noti['application_id']; ?>">
+                                    <input type="hidden" name="job_cp_id" value="<?php echo $noti['job_id']; ?>">
+                                    <input type="hidden" name="notification_id" value="<?php echo $noti['id']; ?>">
+
+                                    <button type="button"
+                                        class="view-link mark-read-btn"
+                                        data-id="<?php echo $noti['id']; ?>"
+                                        data-read="<?php echo $noti['readstatus']; ?>"
+                                        style="background:none;border:none;cursor:pointer;">
+                                        View Details
+                                    </button>
+                                </form>
+
+                            <?php elseif ($noti['type'] == "Job_Actionlog"): ?>
+
+                                <!-- Job Action Log -->
+                                <form action="candidate_profile.php" method="POST" class="noti-form">
+                                    <input type="hidden" name="candidate_id" value="<?php echo $noti['useridfrom']; ?>">
+                                    <input type="hidden" name="job_listing_type" value="<?php echo $noti['job_listing_type']; ?>">
+                                    <input type="hidden" name="job_cp_id" value="<?php echo $noti['job_id']; ?>">
+                                    <input type="hidden" name="notification_id" value="<?php echo $noti['id']; ?>">
+                                    <input type="hidden" name="readstatus" value="<?php echo $noti['readstatus']; ?>">
+
+                                    <button type="button"
+                                        class="view-link mark-read-btn"
+                                        data-id="<?php echo $noti['id']; ?>"
+                                        data-read="<?php echo $noti['readstatus']; ?>"
+                                        style="background:none;border:none;cursor:pointer;">
+                                        View Details
+                                    </button>
+                                </form>
+
+                            <?php else: ?>
+
+                                <!-- keep normal behavior for other types -->
+                                <a href="?read_id=<?php echo $noti['id']; ?>" class="view-link">
+                                    View Details
+                                </a>
+
+                            <?php endif; ?>
+
+
                         </div>
 
                     </div>
@@ -294,6 +379,40 @@ $result = json_decode($response, true);
     <?php include "includes/bottom-bar.php"; ?>
     <script>
         window.onload = () => document.getElementById("global-preloader")?.remove();
+    </script>
+    <script>
+        document.querySelectorAll('.mark-read-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+
+                let form = this.closest('form');
+                let notificationId = this.dataset.id;
+                let readStatus = this.dataset.read;
+
+                // If already read → just submit
+                if (readStatus == 1) {
+                    form.submit();
+                    return;
+                }
+
+                // Otherwise mark as read first
+                fetch("<?php echo API_BASE_URL; ?>updatenotification.php", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            notification_id: parseInt(notificationId)
+                        })
+                    })
+                    .then(() => {
+                        form.submit(); // redirect after API call
+                    })
+                    .catch(() => {
+                        form.submit(); // fallback (still go)
+                    });
+
+            });
+        });
     </script>
 </body>
 

@@ -11,15 +11,18 @@ require_once "../web_api/includes/db_config.php";
 
 // Get values first
 $candidate_id = $_POST['candidate_id'] ?? $_SESSION['candidate_id'] ?? null;
-$application_id = $_POST['application_id'] ?? $_SESSION['application_id'] ?? null;
-$job_cp_id = $_POST['job_cp_id'] ?? $_SESSION['job_cp_id'] ?? null;
+$application_id = $_POST['application_id'] ?? $_SESSION['application_id'] ?? 0;
+$job_cp_id = $_POST['job_cp_id'] ?? $_SESSION['job_cp_id'] ?? 0;
+$job_listing_type = $_POST['job_listing_type'] ?? $_SESSION['job_listing_type'] ?? null;
 
 // Then store in session (only if coming from POST)
 if (isset($_POST['candidate_id'])) {
     $_SESSION['candidate_id'] = $candidate_id;
     $_SESSION['application_id'] = $application_id;
     $_SESSION['job_cp_id'] = $job_cp_id; // âœ… ADD THIS
+    $_SESSION['job_listing_type'] = $job_listing_type; // âœ… ADD THIS
 }
+
 
 if (!$candidate_id && !$application_id) {
     header("Location: applications.php");
@@ -28,59 +31,55 @@ if (!$candidate_id && !$application_id) {
 
 // API call
 
-// ================= CALL / CHAT ACTION API =================
-if (isset($_POST['call_action']) || isset($_POST['chat_action'])) {
 
-    $action_type = isset($_POST['call_action']) ? 1 : 2;
+// if (isset($_POST['call_action']) || isset($_POST['chat_action'])) {
 
-    // ðŸ”§ You must have these values (set properly)
-    $job_listing_type = $_POST['job_listing_type'] ?? 1;
+//     $action_type = isset($_POST['call_action']) ? 1 : 2;
 
-    $action_api = API_BASE_URL . "addAppactionlog.php";
+//     // ðŸ”§ You must have these values (set properly)
+//     $job_listing_type = $_POST['job_listing_type'] ?? 1;
 
-    $payload = [
-        "action_type" => $action_type,
-        "userid" => $userid,
-        CURLOPT_CONNECTTIMEOUT => 5,
-        CURLOPT_TIMEOUT        => 10,
-        "job_id" => $job_cp_id,
-        "job_listing_type" => $job_listing_type, //1 for walking and 2 for job vacancy
-        "application_id" => $application_id
-    ];
+//     $action_api = API_BASE_URL . "addAppactionlog.php";
 
-    $ch = curl_init($action_api);
+//     $payload = [
+//         "action_type" => $action_type,
+//         "userid" => $userid,
+//         "job_id" => $job_cp_id,
+//         "job_listing_type" => $job_listing_type, // 1 for walking and 2 for job vacancy
+//         "application_id" => $application_id
+//     ];
 
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_CONNECTTIMEOUT => 5,
-        CURLOPT_TIMEOUT        => 10,
-        CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
-        CURLOPT_POSTFIELDS => json_encode($payload)
-    ]);
+//     $ch = curl_init($action_api);
 
-    $api_response = curl_exec($ch);
-    curl_close($ch);
+//     curl_setopt_array($ch, [
+//         CURLOPT_RETURNTRANSFER => true,
+//         CURLOPT_POST => true,
+//         CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
+//         CURLOPT_POSTFIELDS => json_encode($payload)
+//     ]);
 
-    $result = json_decode($api_response, true);
+//     $api_response = curl_exec($ch);
+//     curl_close($ch);
 
-    // âœ… HANDLE RESPONSE
-    if (!empty($result['status'])) {
-        $_SESSION['success_message'] = $result['message'] ?? "Action completed";
-        //APACTION ADD
-        if ($action_type == 1) {
-            echo "<script>window.location.href='tel:{$candidate['mobile_no']}';</script>";
-        }
-        if ($action_type == 2) {
-            echo "<script>window.open('https://wa.me/91{$candidate['mobile_no']}', '_blank');</script>";
-        }
-    } else {
-        $_SESSION['error_message'] = $result['message'] ?? "Something went wrong";
-    }
+//     $result = json_decode($api_response, true);
 
-    header("Location: " . $_SERVER['PHP_SELF']);
-    exit;
-}
+//     // âœ… HANDLE RESPONSE
+//     if (!empty($result['status'])) {
+//         $_SESSION['success_message'] = $result['message'] ?? "Action completed";
+//         //APACTION ADD
+//         if ($action_type == 1) {
+//             echo "<script>window.location.href='tel:{$candidate['mobile_no']}';</script>";
+//         }
+//         if ($action_type == 2) {
+//             echo "<script>window.open('https://wa.me/91{$candidate['mobile_no']}', '_blank');</script>";
+//         }
+//     } else {
+//         $_SESSION['error_message'] = $result['message'] ?? "Something went wrong";
+//     }
+
+//     header("Location: " . $_SERVER['PHP_SELF']);
+//     exit;
+// }
 
 // STATUS DROPDOWN FOR MODAL
 $status_modal_api = API_BASE_URL . "getApplicationstatus.php";
@@ -91,8 +90,6 @@ $ch = curl_init($status_modal_api);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
-    CURLOPT_CONNECTTIMEOUT => 5,
-    CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
     CURLOPT_POSTFIELDS => json_encode($status_modal_request)
 ]);
@@ -116,8 +113,6 @@ $data = json_encode([
 $ch = curl_init($url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "Content-Type: application/json"
@@ -143,8 +138,6 @@ $ch = curl_init($interview_api);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
-    CURLOPT_CONNECTTIMEOUT => 5,
-    CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
     CURLOPT_POSTFIELDS => json_encode([])
 ]);
@@ -168,7 +161,8 @@ if (isset($_POST['schedule_interview'])) {
     $interview_type_id = $_POST['interview_type_id'];
 
     // $schedule_api = API_BASE_URL . "scheduleInterview.php";
-    $schedule_api =  "https://pacificconnect2.0.inv51.in/webservices/scheduleInterview.php";
+    // $schedule_api =  "https://pacificconnect2.0.inv51.in/webservices/scheduleInterview.php";
+    $schedule_api =  "https://beta.inv51.in/webservices/scheduleInterview.php";
 
     $schedule_request = [
         "application_id" => $application_id,
@@ -184,8 +178,6 @@ if (isset($_POST['schedule_interview'])) {
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
-        CURLOPT_CONNECTTIMEOUT => 5,
-        CURLOPT_TIMEOUT        => 10,
         CURLOPT_HTTPHEADER => [
             "Content-Type: application/json"
         ],
@@ -200,6 +192,7 @@ if (isset($_POST['schedule_interview'])) {
 
 
     if ($schedule_result['status'] == true) {
+        // $_SESSION['success_message'] = $result['message'] ?? "Action completed";
         $_SESSION['success_message'] = $schedule_result['message'] ?? "Interview Scheduled Successfully";
     } else {
         $_SESSION['error_message'] = $schedule_result['message'] ?? "Something went wrong";
@@ -210,6 +203,70 @@ if (isset($_POST['schedule_interview'])) {
 }
 
 
+// ================= CALL / CHAT ACTION API =================
+if (isset($_POST['call_action']) || isset($_POST['chat_action'])) {
+
+    $action_type = isset($_POST['call_action']) ? 1 : 2;
+    // print_r( $action_type);
+    // exit;
+    $mobile = preg_replace('/\D/', '', $candidate['mobile_no']); // remove all non-numeric
+
+    // 👉 If application_id = 0 → skip API
+    if (empty($application_id) || $application_id == 0) {
+
+        if ($action_type == 1) {
+            echo "<script>window.location.href='tel:{$mobile}';</script>";
+        }
+
+        if ($action_type == 2) {
+            echo "<script>window.location.href='https://wa.me/91{$mobile}';</script>";
+        }
+
+        exit; // ❗ stop here, no API call
+    }
+
+    // 👉 ELSE → call API
+    $job_listing_type = $_POST['job_listing_type'] ?? 1;
+
+    $action_api = API_BASE_URL . "addAppactionlog.php";
+
+    $payload = [
+        "action_type" => $action_type,
+        "userid" => $userid,
+        "job_id" => $job_cp_id,
+        "job_listing_type" => $job_listing_type,
+        "application_id" => $application_id
+    ];
+
+    $ch = curl_init($action_api);
+
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
+        CURLOPT_POSTFIELDS => json_encode($payload)
+    ]);
+
+    $api_response = curl_exec($ch);
+    curl_close($ch);
+
+    $result = json_decode($api_response, true);
+
+    if (!empty($result['status'])) {
+
+        if ($action_type == 1) {
+            echo "<script>window.location.href='tel:{$mobile}';</script>";
+        }
+
+        if ($action_type == 2) {
+            echo "<script>window.open('https://wa.me/91{$mobile}', '_blank');</script>";
+        }
+    } else {
+        $_SESSION['error_message'] = $result['message'] ?? "Something went wrong";
+    }
+
+    exit;
+}
 
 
 
@@ -233,8 +290,6 @@ if (isset($_POST['update_status'])) {
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
-        CURLOPT_CONNECTTIMEOUT => 5,
-        CURLOPT_TIMEOUT        => 10,
         CURLOPT_HTTPHEADER => [
             "Content-Type: application/json"
         ],
@@ -793,7 +848,7 @@ if (isset($_POST['update_status'])) {
             <div class="card-actions">
                 <form method="POST" style="display:inline;">
                     <input type="hidden" name="job_id" value="<?= $job_cp_id ?? 0 ?>">
-                    <input type="hidden" name="job_listing_type" value="1">
+                    <input type="hidden" name="job_listing_type" value="<?= $job_listing_type ?>">
                     <button type="submit" name="call_action" class="btn btn-outline">
                         <i class="fas fa-phone"></i> Call
                     </button>
@@ -801,19 +856,22 @@ if (isset($_POST['update_status'])) {
 
                 <form method="POST" style="display:inline;">
                     <input type="hidden" name="job_id" value="<?= $job_cp_id ?? 0 ?>">
-                    <input type="hidden" name="job_listing_type" value="1">
+                    <input type="hidden" name="job_listing_type" value="<?= $job_listing_type ?>">
                     <button type="submit" name="chat_action" class="btn btn-outline">
                         <i class="fas fa-comment-dots"></i> Chat
                     </button>
                 </form>
-                <button class="btn btn-outline btn-full-width"
-                    onclick="openInterviewModal('interviewModal', <?= $application_id ?>)">
-                    <i class="fas fa-users"></i> Schedule Interview
-                </button>
-                <button class="btn btn-outline btn-full-width"
-                    onclick="openStatusModal('statusModal', <?= $application_id ?>)">
-                    Update Status
-                </button>
+                <?php if (!empty($application_id) &&  $application_id != 0): ?>
+
+                    <button class="btn btn-outline btn-full-width"
+                        onclick="openInterviewModal('interviewModal', <?= $application_id ?>)">
+                        <i class="fas fa-users"></i> Schedule Interview
+                    </button>
+                    <button class="btn btn-outline btn-full-width"
+                        onclick="openStatusModal('statusModal', <?= $application_id ?>)">
+                        Update Status
+                    </button>
+                <?php endif; ?>
             </div>
 
         </div>

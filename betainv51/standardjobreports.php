@@ -533,6 +533,25 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
             rp.organization_name AS recruiter_org,
             rp.company_logo,
             rp.mobile_no AS recruiter_mobile_no,
+             -- Applications
+    (SELECT COUNT(*) FROM jos_app_applications a 
+     WHERE a.job_listing_type=2 AND a.job_id=jv.id) AS apps_count,
+
+    -- Visits
+    (SELECT COUNT(*) FROM jos_app_jobvisitlog v 
+     WHERE v.job_listing_type=2 AND v.job_id=jv.id) AS visit_count,
+
+    -- Calls
+    (SELECT COUNT(*) FROM jos_app_jobaction_logs al 
+     WHERE al.job_listing_type=2 AND al.job_id=jv.id AND al.action_type=1) AS call_count,
+
+    -- Chat (WhatsApp)
+    (SELECT COUNT(*) FROM jos_app_jobaction_logs al 
+     WHERE al.job_listing_type=2 AND al.job_id=jv.id AND al.action_type=2) AS whatsapp_count,
+
+    -- Location
+    (SELECT COUNT(*) FROM jos_app_jobaction_logs al 
+     WHERE al.job_listing_type=2 AND al.job_id=jv.id AND al.action_type=3) AS location_count,
             (SELECT COUNT(*) FROM jos_app_applications a WHERE a.job_listing_type=2 AND a.job_id=jv.id) AS apps_count
           FROM jos_app_jobvacancies jv
           LEFT JOIN jos_crm_jobpost jp ON jv.job_position_id = jp.id
@@ -646,6 +665,34 @@ if (isset($_GET['view']) && $_GET['view'] !== '' && ctype_digit((string)$_GET['v
               <span class="badge" style="background:#0b3b2a;color:#a7f3d0;border:1px solid #14532d"><?= h($row['job_status']) ?></span>
             <?php } ?>
             <span class="badge" style="background:#101a2e;border:1px solid #1f2e50;color:#cbd5e1">Applications: <?= (int)$row['apps_count'] ?></span>
+          
+
+             <form method="POST" action="job_action_log.php" target="_blank" style="display:flex;gap:8px">
+
+              <input type="hidden" name="job_id" value="<?= (int)$row['id'] ?>">
+              <input type="hidden" name="job_listing_type" value="2">
+
+              <!-- Visits -->
+              <button type="submit" name="action_type" value="4" class="badge" style="background:#101a2e;border:1px solid #1f2e50;color:#cbd5e1;cursor:pointer">
+                Visits: <?= (int)($row['visit_count'] ?? 0) ?>
+              </button>
+
+              <!-- Calls -->
+              <button type="submit" name="action_type" value="1" class="badge" style="background:#101a2e;border:1px solid #1f2e50;color:#cbd5e1;cursor:pointer">
+                Calls: <?= (int)($row['call_count'] ?? 0) ?>
+              </button>
+
+              <!-- Chat -->
+              <button type="submit" name="action_type" value="2" class="badge" style="background:#101a2e;border:1px solid #1f2e50;color:#cbd5e1;cursor:pointer">
+                Chat: <?= (int)($row['whatsapp_count'] ?? 0) ?>
+              </button>
+
+              <!-- Location -->
+              <button type="submit" name="action_type" value="3" class="badge" style="background:#101a2e;border:1px solid #1f2e50;color:#cbd5e1;cursor:pointer">
+                Location: <?= (int)($row['location_count'] ?? 0) ?>
+              </button>
+
+            </form>
           </div>
         </div>
 

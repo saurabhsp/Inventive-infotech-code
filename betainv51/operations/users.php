@@ -1016,42 +1016,40 @@ SELECT
                 } elseif ($row['profile_type_id'] == 2) {
                   $edit_action = 'update_jobseeker_profile.php';
                 } elseif ($row['profile_type_id'] == 3) {
-                //   $edit_action = 'update_promoter_profile.php';
+                  //   $edit_action = 'update_promoter_profile.php';
                   $edit_action = '#';
                 }
                 ?>
 
-                <form method="post" action="<?= h($edit_action) ?>" style="margin-top:6px;">
+                  <!-- <form method="post" action="<?= h($edit_action) ?>" style="margin-top:6px;" onsubmit="openInNewTab(this); return false;">
+                    <input type="hidden" name="user_id" value="<?= (int)$row['id'] ?>">
+                    <input type="hidden" name="profile_type_id" value="<?= (int)$row['profile_type_id'] ?>">
+                    <input type="hidden" name="profile_id" value="<?= (int)$row['profile_id'] ?>">
+                    <input type="hidden" name="csrf" value="<?= h($_SESSION['csrf_token']) ?>">
 
-                  <input type="hidden" name="user_id" value="<?= (int)$row['id'] ?>">
-                  <input type="hidden" name="profile_type_id" value="<?= (int)$row['profile_type_id'] ?>">
-                  <input type="hidden" name="profile_id" value="<?= (int)$row['profile_id'] ?>">
-                  <input type="hidden" name="csrf" value="<?= h($_SESSION['csrf_token']) ?>">
+                    <button type="submit" class="btn secondary">
+                      Edit Profile
+                    </button>
+                  </form> -->
+                  <!-- Verification Block -->
+                  <div style="font-size:12px;color:#6b7280;margin-bottom:4px">
+                    Verified:
+                  </div>
 
-                  <button type="submit" class="btn secondary">
-                    Edit Profile
-                  </button>
+                  <form method="post" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
 
-                </form>
-                <!-- Verification Block -->
-                <div style="font-size:12px;color:#6b7280;margin-bottom:4px">
-                  Verified:
-                </div>
+                    <input type="hidden" name="verify_user_id" value="<?= (int)$row['id'] ?>">
 
-                <form method="post" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                    <select class="inp" name="verfied_status" style="min-width:180px" required>
+                      <option value="0" <?= (isset($row['verfied_status']) && $row['verfied_status'] == 0) ? 'selected' : '' ?>>Not Verified</option>
+                      <option value="1" <?= (isset($row['verfied_status']) && $row['verfied_status'] == 1) ? 'selected' : '' ?>>Verified</option>
+                    </select>
 
-                  <input type="hidden" name="verify_user_id" value="<?= (int)$row['id'] ?>">
+                    <button class="btn primary" type="submit">Submit</button>
 
-                  <select class="inp" name="verfied_status" style="min-width:180px" required>
-                    <option value="0" <?= (isset($row['verfied_status']) && $row['verfied_status'] == 0) ? 'selected' : '' ?>>Not Verified</option>
-                    <option value="1" <?= (isset($row['verfied_status']) && $row['verfied_status'] == 1) ? 'selected' : '' ?>>Verified</option>
-                  </select>
+                  </form>
 
-                  <button class="btn primary" type="submit">Submit</button>
-
-                </form>
-
-                <!-- <?php if (!empty($row['verfied_status']) && !empty($row['verified_at'])) { ?>
+                  <!-- <?php if (!empty($row['verfied_status']) && !empty($row['verified_at'])) { ?>
                   <div style="font-size:11px;color:#059669">
                     Verified at: <?= date('d M Y H:i', strtotime($row['verified_at'])) ?>
                   </div>
@@ -1093,6 +1091,14 @@ SELECT
   </div>
 </div>
 <script>
+  // function openInNewTab(form) {
+  //           // create a unique window name (optional but safer)
+  //           const winName = "editProfile_" + Date.now();
+  //           // open blank tab first
+  //           const newTab = window.open('', winName);
+  //           form.target = winName;
+  //           form.submit();
+  //       }
   document.addEventListener("DOMContentLoaded", function() {
     flatpickr(".flatpickr", {
       altInput: true, // user sees formatted date

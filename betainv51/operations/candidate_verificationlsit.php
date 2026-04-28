@@ -2422,8 +2422,7 @@ ob_start();
                                             }
                                             ?>
 
-                                            <form method="post" action="<?= h($edit_action) ?>" style="margin-top:6px;">
-
+                                            <form method="post" action="<?= h($edit_action) ?>" style="margin-top:6px;" onsubmit="openInNewTab(this); return false;">
                                                 <input type="hidden" name="user_id" value="<?= (int)$row['id'] ?>">
                                                 <input type="hidden" name="profile_type_id" value="<?= (int)$row['profile_type_id'] ?>">
                                                 <input type="hidden" name="profile_id" value="<?= (int)$row['profile_id'] ?>">
@@ -2504,6 +2503,14 @@ ob_start();
     </div>
 
     <script>
+        function openInNewTab(form) {
+            // create a unique window name (optional but safer)
+            const winName = "editProfile_" + Date.now();
+            // open blank tab first
+            const newTab = window.open('', winName);
+            form.target = winName;
+            form.submit();
+        }
         const jobPositions = <?= json_encode($job_positions_opts) ?>;
         const preSelected = <?= json_encode($preferred_job_ids) ?>;
 
