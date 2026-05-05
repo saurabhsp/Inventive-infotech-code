@@ -81,7 +81,7 @@
         "msg": "Sakal News Satara viewed your application.",
         "type": "Application_Action",
         "typeid": 22,
-        "job_listing_type": 1,
+        "job_listing_type": 1,//prem
         "job_id": 4,
         "application_id": 22,
         "action_type": 3,

@@ -6,15 +6,44 @@ require_once "includes/db_config.php";
 $user = $_SESSION['user'];
 $active = "applications";
 $userid = $user['id'];
-$job_id = $_POST['job_id'] ?? 27;
-$application_id = $_POST['application_id'] ?? 30;
+$job_id = $_POST['job_id'] ?? 0;
+$application_id = $_POST['application_id'] ?? 0;
 unset($_SESSION['candidate_id'], $_SESSION['application_id']);
+
+// print_r($_POST);
+// exit;
 
 /* Example session */
 $recruiter_id = $user['profile_id']; // recruiter profile id
 $status_id = $_POST['status_id'] ?? 6;
 
+// MARK AS READ USING API
+$updateApi = API_BASE_URL . "updatenotification.php";
 
+if (isset($_POST['read_id'])) {
+    $data = json_encode([
+        "notification_id" => intval($_POST['read_id'])
+    ]);
+
+    $ch = curl_init($updateApi);
+
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $data,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json'
+        ],
+
+        // ✅ ADD THIS
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => 10
+    ]);
+
+    curl_exec($ch);
+    curl_close($ch);
+
+}
 
 
 $application = null;
@@ -156,7 +185,7 @@ if (isset($_POST['schedule_interview'])) {
         "updated_by" => $userid
     ];
 
-    print_r( $schedule_request);exit;
+    // print_r( $schedule_request);exit;
 
     $ch = curl_init($schedule_api);
 

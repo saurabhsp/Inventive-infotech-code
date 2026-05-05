@@ -1187,31 +1187,30 @@ else
     $date_to   = get_str('to', '');
 }
 
-$dashboard_company_names = [];
-if ($dashboard_admin_id > 0) {
+// Dashboard filter (ONLY when coming from dashboard)
+$dashboard_filter_sql = "";
+$dashboard_filter_types = "";
+$dashboard_filter_binds = [];
 
-    $sqlCompanies = "
-        SELECT DISTINCT rp.organization_name
-        FROM jos_app_users u
-        JOIN jos_app_recruiter_profile rp ON rp.id = u.id
-        WHERE u.ac_manager_id = ?
-        AND u.profile_type_id = 1
-        AND rp.organization_name IS NOT NULL
-        AND rp.organization_name != ''
-    ";
+if ($is_from_dashboard && $dashboard_admin_id > 0) {
 
-    $stmtComp = $con->prepare($sqlCompanies);
-    $stmtComp->bind_param("i", $dashboard_admin_id);
-    $stmtComp->execute();
-    $resComp = $stmtComp->get_result();
+    $dashboard_filter_sql = "
+    AND EXISTS (
+        SELECT 1 
+        FROM jos_app_users U
+        WHERE 
+            U.profile_type_id = 1
+            AND U.ac_manager_id = ?
+            AND (
+                (A.job_listing_type = 2 AND U.profile_id = JV.recruiter_id)
+                OR
+                (A.job_listing_type = 1 AND U.profile_id = JW.recruiter_id)
+            )
+    )";
 
-    while ($rowComp = $resComp->fetch_assoc()) {
-        $dashboard_company_names[] = $rowComp['organization_name'];
-    }
-
-    $stmtComp->close();
+    $dashboard_filter_types = "i";
+    $dashboard_filter_binds[] = $dashboard_admin_id;
 }
-
 
 /* convert dd-mm-yyyy to yyyy-mm-dd */
 if ($date_from)
@@ -1324,25 +1323,11 @@ if ($company_name !== '') {
     $params_cards[] = "%" . $company_name . "%";
 }
 
-// 🔹 Dashboard company filter (AC Manager filter)
-// 🔹 Dashboard company filter (AC Manager filter)
-if ($dashboard_admin_id > 0 && !empty($dashboard_company_names)) {
-
-    $placeholders = implode(',', array_fill(0, count($dashboard_company_names), '?'));
-
-    $sql_cards .= " AND (
-        JW.company_name IN ($placeholders)
-        OR JV.company_name IN ($placeholders)
-        OR RP1.organization_name IN ($placeholders)
-        OR RP2.organization_name IN ($placeholders)
-    )";
-
-    $types_cards .= str_repeat('s', count($dashboard_company_names) * 4);
-
-    foreach ($dashboard_company_names as $c) $params_cards[] = $c;
-    foreach ($dashboard_company_names as $c) $params_cards[] = $c;
-    foreach ($dashboard_company_names as $c) $params_cards[] = $c;
-    foreach ($dashboard_company_names as $c) $params_cards[] = $c;
+// 🔹 Dashboard  filter
+if ($dashboard_filter_sql !== "") {
+    $sql_cards .= $dashboard_filter_sql;
+    $types_cards .= $dashboard_filter_types;
+    $params_cards = array_merge($params_cards, $dashboard_filter_binds);
 }
 
 $sql_cards .= " GROUP BY A.status_id";
@@ -1452,26 +1437,11 @@ if ($company_name !== '') {
   $binds[] = "%" . $company_name . "%";
 }
 
-// 🔹 Dashboard company filter (Main list)
-if ($dashboard_admin_id > 0 && !empty($dashboard_company_names)) {
-
-    $placeholders = implode(',', array_fill(0, count($dashboard_company_names), '?'));
-
-    $sql[] = "AND (
-        JW.company_name IN ($placeholders)
-        OR JV.company_name IN ($placeholders)
-        OR RP1.organization_name IN ($placeholders)
-        OR RP2.organization_name IN ($placeholders)
-    )";
-
-    $types .= str_repeat('s', count($dashboard_company_names) * 4);
-
-    foreach ($dashboard_company_names as $c) $binds[] = $c;
-    foreach ($dashboard_company_names as $c) $binds[] = $c;
-    foreach ($dashboard_company_names as $c) $binds[] = $c;
-    foreach ($dashboard_company_names as $c) $binds[] = $c;
+if ($dashboard_filter_sql !== "") {
+    $sql[] = $dashboard_filter_sql;
+    $types .= $dashboard_filter_types;
+    $binds = array_merge($binds, $dashboard_filter_binds);
 }
-
 
 $sql[] = "ORDER BY A.application_date DESC, A.id DESC";
 $sql[] = "LIMIT " . (int)$limit;

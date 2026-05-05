@@ -204,6 +204,25 @@ function get_str($key, $default = '')
 {
     return isset($_GET[$key]) ? trim((string)$_GET[$key]) : $default;
 }
+function format_validity($start, $end)
+{
+    if (!$start || !$end) return '';
+
+    $d1 = new DateTime($start);
+    $d2 = new DateTime($end);
+
+    $diff = $d1->diff($d2);
+
+    if ($diff->y > 0) {
+        return $diff->y . ' yr' . ($diff->y > 1 ? 's' : '');
+    }
+
+    if ($diff->m > 0) {
+        return $diff->m . ' mo' . ($diff->m > 1 ? 's' : '');
+    }
+
+    return $diff->d . ' day' . ($diff->d > 1 ? 's' : '');
+}
 
 /* date input: accept multiple formats, return Y-m-d (or null) */
 function dfmt_in($dateStr)
@@ -619,7 +638,9 @@ ob_start();
                                 <td><span class="badge pt"><?= h($r['profile_name'] ?: ($ptype_opts[$r['profile_type_id']] ?? 'Unknown')) ?></span></td>
                                 <td>
                                     <?= h($r['plan_name']) ?><br>
-                                    <span class="muted"><?= (int)$r['validity_months'] ?> mo</span>
+                                    <span class="muted">
+                                        <?= h(format_validity($r['start_date'], $r['end_date'])) ?>
+                                    </span>
                                 </td>
                                 <td class="mono"><?= h($r['payment_id']) ?></td>
                                 <td><?= h($r['payment_status']) ?></td>

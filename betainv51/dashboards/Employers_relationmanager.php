@@ -361,9 +361,9 @@ if ($range === 'lifetime') {
                AND A.job_id = WI.id
         LEFT JOIN jos_app_users U
                ON (
-                    (A.job_listing_type = 2 AND JV.recruiter_id = U.id)
+                    (A.job_listing_type = 2 AND JV.recruiter_id = U.profile_id )
                     OR
-                    (A.job_listing_type = 1 AND WI.recruiter_id = U.id)
+                    (A.job_listing_type = 1 AND WI.recruiter_id = U.profile_id )
                   )
         WHERE U.ac_manager_id = ?
         AND U.profile_type_id = 1
@@ -394,9 +394,9 @@ if ($range === 'lifetime') {
 
         LEFT JOIN jos_app_users U
                ON (
-                    (A.job_listing_type = 2 AND JV.recruiter_id = U.id)
+                    (A.job_listing_type = 2 AND JV.recruiter_id = U.profile_id)
                     OR
-                    (A.job_listing_type = 1 AND WI.recruiter_id = U.id)
+                    (A.job_listing_type = 1 AND WI.recruiter_id = U.profile_id)
                   )
 
         WHERE U.ac_manager_id = ?
